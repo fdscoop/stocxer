@@ -79,6 +79,19 @@
             </div>
         </div>
 
+        <!-- Authentication Status -->
+        <div id="authStatus" class="bg-gray-800 rounded-lg p-4 mb-6 border-l-4 border-yellow-400">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h3 class="text-lg font-semibold text-yellow-400">🔐 Market Data Authentication</h3>
+                    <p id="authStatusText" class="text-gray-300 text-sm">Checking authentication status...</p>
+                </div>
+                <button id="fyersAuthBtn" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded text-sm hidden">
+                    Connect Fyers Account
+                </button>
+            </div>
+        </div>
+
         <!-- Status Bar -->
         <div id="statusBar" class="bg-gray-800 rounded-lg p-4 mb-6 hidden">
             <div class="flex justify-between items-center">
@@ -222,28 +235,59 @@
                     }
                 } else if (response.status === 401 && data.detail?.error === 'fyers_auth_required') {
                     // Fyers authentication required
-                    const confirmAuth = confirm(
-                        'Market data access requires Fyers API authentication.\\n\\n' +
-                        'You will be redirected to Fyers to authorize TradeWise.\\n\\n' +
-                        'Click OK to continue or Cancel to go back.'
-                    );
-                    
-                    if (confirmAuth) {
-                        // Redirect to Fyers authentication
-                        window.location.href = data.detail.auth_url;
-                    }
+                    const authModal = document.createElement('div');
+                    authModal.innerHTML = `
+                        <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                            <div class="bg-gray-800 p-6 rounded-lg max-w-md mx-4">
+                                <div class="text-center">
+                                    <div class="text-6xl mb-4">🔐</div>
+                                    <h2 class="text-xl font-bold text-cyan-400 mb-4">Fyers Authentication Required</h2>
+                                    <p class="text-gray-300 mb-6">To fetch live market data and scan stocks, you need to connect your Fyers account.</p>
+                                    <div class="flex gap-3 justify-center">
+                                        <button onclick="window.open('${data.detail.auth_url}', '_blank'); this.closest('.fixed').remove();" 
+                                                class="px-6 py-2 bg-cyan-600 hover:bg-cyan-700 rounded text-white">
+                                            Connect Fyers Account
+                                        </button>
+                                        <button onclick="this.closest('.fixed').remove()" 
+                                                class="px-6 py-2 bg-gray-600 hover:bg-gray-700 rounded text-white">
+                                            Cancel
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    document.body.appendChild(authModal);
                 } else if (response.status === 401 && data.detail?.error === 'fyers_token_expired') {
                     // Fyers token expired
-                    const confirmReauth = confirm(
-                        'Your Fyers authentication has expired (tokens last 24 hours).\\n\\n' +
-                        'You need to re-authenticate to continue scanning stocks.\\n\\n' +
-                        'Click OK to re-authenticate or Cancel to go back.'
-                    );
-                    
-                    if (confirmReauth) {
-                        // Redirect to Fyers authentication
-                        window.location.href = data.detail.auth_url;
-                    }
+                    const expiredModal = document.createElement('div');
+                    expiredModal.innerHTML = `
+                        <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                            <div class="bg-gray-800 p-6 rounded-lg max-w-md mx-4">
+                                <div class="text-center">
+                                    <div class="text-6xl mb-4">⏰</div>
+                                    <h2 class="text-xl font-bold text-yellow-400 mb-4">Authentication Expired</h2>
+                                    <p class="text-gray-300 mb-6">Your Fyers authentication has expired (tokens last 24 hours). Please re-authenticate to continue.</p>
+                                    <div class="flex gap-3 justify-center">
+                                        <button onclick="window.open('${data.detail.auth_url}', '_blank'); this.closest('.fixed').remove();" 
+                                                class="px-6 py-2 bg-yellow-600 hover:bg-yellow-700 rounded text-white">
+                                            Re-authenticate
+                                        </button>
+                                        <button onclick="this.closest('.fixed').remove()" 
+                                                class="px-6 py-2 bg-gray-600 hover:bg-gray-700 rounded text-white">
+                                            Cancel
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    document.body.appendChild(expiredModal);
+                } else if (response.status === 401) {
+                    // Supabase authentication expired
+                    alert('Your session has expired. Please login again.');
+                    localStorage.removeItem('authToken');
+                    window.location.href = '/login.html';
                 } else {
                     // Other errors
                     const errorMsg = data.detail?.message || data.detail || data.message || 'Unknown error';
@@ -403,6 +447,44 @@
             statusBar.classList.toggle('hidden', show);
         }
 
+        // Check Fyers authentication status
+        async function checkFyersAuth() {
+            if (!authToken) return;
+            
+            try {
+                const response = await fetch(`${API_BASE}/api/fyers/token`, {
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`
+                    }
+                });
+                
+                const authStatusDiv = document.getElementById('authStatus');
+                const authStatusText = document.getElementById('authStatusText');
+                const fyersAuthBtn = document.getElementById('fyersAuthBtn');
+                
+                if (response.ok) {
+                    // Fyers token exists
+                    authStatusDiv.className = 'bg-gray-800 rounded-lg p-4 mb-6 border-l-4 border-green-400';
+                    authStatusText.innerHTML = '✅ Market data access ready - your Fyers account is connected.';
+                    fyersAuthBtn.classList.add('hidden');
+                } else {
+                    // No Fyers token
+                    authStatusDiv.className = 'bg-gray-800 rounded-lg p-4 mb-6 border-l-4 border-yellow-400';
+                    authStatusText.innerHTML = '⚠️ Market data access required - click to connect your Fyers account.';
+                    fyersAuthBtn.classList.remove('hidden');
+                    fyersAuthBtn.onclick = () => {
+                        fetch(`${API_BASE}/auth/url`)
+                        .then(res => res.json())
+                        .then(data => window.open(data.auth_url, '_blank'));
+                    };
+                }
+            } catch (error) {
+                console.error('Auth check error:', error);
+                const authStatusText = document.getElementById('authStatusText');
+                authStatusText.innerHTML = '❌ Unable to check authentication status.';
+            }
+        }
+
         // Event listeners
         scanBtn.addEventListener('click', scanStocks);
         refreshBtn.addEventListener('click', scanStocks);
@@ -410,6 +492,11 @@
 
         // Initialize authentication on page load
         initAuth();
+        
+        // Check Fyers auth status
+        if (authToken) {
+            checkFyersAuth();
+        }
         
         // Redirect to login if not authenticated
         if (!authToken) {

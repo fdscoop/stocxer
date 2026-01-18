@@ -2507,23 +2507,27 @@ async def scan_stocks(
         # Check if user has Fyers token for market data access
         fyers_token = await auth_service.get_fyers_token(user.id)
         if not fyers_token:
+            logger.info(f"User {user.email} needs Fyers authentication")
             raise HTTPException(
                 status_code=401, 
                 detail={
                     "error": "fyers_auth_required",
                     "message": "Fyers API authentication required to fetch market data",
-                    "auth_url": fyers_client.generate_auth_url()
+                    "auth_url": fyers_client.generate_auth_url(),
+                    "user_authenticated": True
                 }
             )
         
-        # Check if Fyers token is expired (tokens expire in ~28 hours)
+        # Check if Fyers token is expired (tokens expire in ~24 hours)
         if fyers_token.expires_at and fyers_token.expires_at < datetime.now():
+            logger.info(f"Fyers token expired for user {user.email}")
             raise HTTPException(
                 status_code=401,
                 detail={
                     "error": "fyers_token_expired", 
                     "message": "Your Fyers token has expired. Please re-authenticate to continue.",
-                    "auth_url": fyers_client.generate_auth_url()
+                    "auth_url": fyers_client.generate_auth_url(),
+                    "user_authenticated": True
                 }
             )
         
