@@ -1,21 +1,24 @@
 {
   "version": 2,
-  "builds": [
-    {
-      "src": "main.py",
-      "use": "@vercel/python",
-      "config": {
-        "maxLambdaSize": "50mb"
-      }
-    }
+  "public": true,
+  "cleanUrls": true,
+  "trailingSlash": false,
+  "rewrites": [
+    { "source": "/", "destination": "/static/index.html" },
+    { "source": "/login", "destination": "/static/login.html" },
+    { "source": "/login.html", "destination": "/static/login.html" },
+    { "source": "/screener", "destination": "/static/screener.html" },
+    { "source": "/screener.html", "destination": "/static/screener.html" },
+    { "source": "/check_ml.html", "destination": "/static/check_ml.html" }
   ],
-  "routes": [
+  "headers": [
     {
-      "src": "/(.*)",
-      "dest": "main.py"
+      "source": "/(.*)",
+      "headers": [
+        { "key": "X-Frame-Options", "value": "DENY" },
+        { "key": "X-Content-Type-Options", "value": "nosniff" },
+        { "key": "Referrer-Policy", "value": "origin-when-cross-origin" }
+      ]
     }
-  ],
-  "env": {
-    "PYTHONPATH": "/var/task"
-  }
+  ]
 }

@@ -1,25 +1,49 @@
-# Virtual Environment - This is the main culprit!
+# ============================================
+# Vercel: Frontend Only (Static Files)
+# ============================================
+# Since Railway handles the backend, Vercel only needs /static folder
+# This dramatically reduces deployment size: 2MB vs 314MB
+
+# Exclude Python backend (deployed to Railway instead)
+main.py
+config/
+src/
+examples/
+
+# Python files
+*.py
+*.pyc
+__pycache__/
+*.pyo
+*.pyd
+.Python
+
+# Virtual Environment (not needed - Railway handles this)
 venv/
 env/
 ENV/
 .venv
+virtualenv/
 
-# Python cache
-__pycache__/
-*.py[cod]
-*$py.class
-*.so
-.Python
+# Dependencies (not needed - Railway handles this)
+requirements.txt
+requirements-vercel.txt
+runtime.txt
 
-# Build artifacts
-build/
-dist/
-*.egg-info/
-
-# Data directories
+# Data and models
 data/
 logs/
-models/saved_models/
+models/
+
+# Database
+database/
+*.db
+*.sqlite
+*.sqlite3
+
+# Deployment configs for other platforms
+railway.json
+Procfile
 
 # IDE
 .vscode/
@@ -30,32 +54,29 @@ models/saved_models/
 # Environment and secrets
 .env
 .env.local
+.env.production
 config/secrets.json
-
-# Database files
-*.db
-*.sqlite
-*.sqlite3
-
-# Log files
-*.log
-fyersApi.log
-fyersRequests.log
-server.log
 
 # Git
 .git/
 .gitignore
+.gitattributes
 
-# Documentation (optional - keep if you want docs deployed)
+# Documentation (optional - comment out if you want docs on Vercel)
 *.md
 !README.md
 
 # Test files
 test_*.py
 tests/
+pytest.ini
 .pytest_cache/
 .coverage
+
+# Build artifacts
+build/
+dist/
+*.egg-info/
 
 # Cache
 .cache/
@@ -64,14 +85,17 @@ tests/
 # OS files
 .DS_Store
 Thumbs.db
+.AppleDouble
+.LSOverride
 
-# Jupyter
-.ipynb_checkpoints/
+# Logs
+*.log
+fyersApi.log
+fyersRequests.log
+server.log
 
-# Railway/Other deployment configs
-railway.json
-Procfile
-runtime.txt
+# ============================================
+# Result: Only /static folder will be deployed
+# Deployment size: ~2MB (HTML/CSS/JS only)
+# ============================================
 
-# Example files
-examples/
