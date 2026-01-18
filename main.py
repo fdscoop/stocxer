@@ -175,6 +175,8 @@ async def fyers_callback(
 async def get_auth_url():
     """Get Fyers authentication URL"""
     try:
+        # Refresh settings to get latest ngrok URL
+        fyers_client.refresh_settings()
         auth_url = fyers_client.generate_auth_url()
         return {"auth_url": auth_url}
     except Exception as e:

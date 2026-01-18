@@ -36,6 +36,15 @@ class FyersClient:
         )
         logger.info("Fyers client initialized successfully")
     
+    def refresh_settings(self):
+        """Refresh settings from environment (useful when ngrok URL changes)"""
+        from config.settings import settings
+        self.client_id = settings.fyers_client_id
+        self.secret_key = settings.fyers_secret_key
+        self.redirect_uri = settings.fyers_redirect_uri
+        self.access_token = settings.fyers_access_token
+        logger.info(f"Settings refreshed. New redirect URI: {self.redirect_uri}")
+    
     def generate_auth_url(self) -> str:
         """Generate authentication URL for user login"""
         session = fyersModel.SessionModel(
