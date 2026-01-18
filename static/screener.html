@@ -199,10 +199,14 @@
             try {
                 showLoading(true);
                 
-                // Build URL with auth token (now required)
-                const url = `${API_BASE}/screener/scan?limit=${limit}&min_confidence=${minConfidence}&randomize=true&authorization=Bearer ${authToken}`;
+                // Build URL and send auth token in header (best practice)
+                const url = `${API_BASE}/screener/scan?limit=${limit}&min_confidence=${minConfidence}&randomize=true`;
                 
-                const response = await fetch(url);
+                const response = await fetch(url, {
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`
+                    }
+                });
                 const data = await response.json();
 
                 if (data.status === 'success') {

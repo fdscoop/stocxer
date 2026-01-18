@@ -2,7 +2,7 @@
 FastAPI Backend for TradeWise
 REST API endpoints for trading signals, analysis, and order management
 """
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import FastAPI, HTTPException, Query, Header
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
@@ -2430,7 +2430,7 @@ async def scan_stocks(
     limit: int = Query(50, description="Number of stocks to scan (faster with lower numbers)"),
     min_confidence: float = Query(60.0, description="Minimum confidence level (0-100)"),
     randomize: bool = Query(True, description="Randomly sample stocks for variety"),
-    authorization: str = Query(..., description="Bearer token (required)"),
+    authorization: str = Header(None, description="Bearer token (required)"),
 ):
     """
     Scan NSE stocks for high-confidence trading signals (Authentication Required)
@@ -2439,13 +2439,16 @@ async def scan_stocks(
         limit: Number of stocks to scan (default 50, max recommended 200)
         min_confidence: Minimum confidence threshold (default 60%)
         randomize: Random sampling for variety (recommended True)
-        authorization: Auth token (required) - results automatically saved to your account
+        authorization: Auth token in Authorization header (required) - results automatically saved to your account
         
     Returns:
         List of stocks with BUY/SELL signals meeting confidence criteria
     """
     try:
         # Authenticate user first
+        if not authorization:
+            raise HTTPException(status_code=401, detail="Authorization header required")
+        
         token = authorization.replace("Bearer ", "")
         user = await auth_service.get_current_user(token)
         
@@ -2578,9 +2581,12 @@ async def analyze_single_stock(symbol: str, debug: bool = False):
 
 
 @app.get("/screener/latest")
-async def get_latest_scan(authorization: str = Query(..., description="Bearer token")):
+async def get_latest_scan(authorization: str = Header(None, description="Bearer token")):
     """Get latest saved scan results for user"""
     try:
+        if not authorization:
+            raise HTTPException(status_code=401, detail="Authorization header required")
+        
         token = authorization.replace("Bearer ", "")
         user = await auth_service.get_current_user(token)
         
@@ -2604,11 +2610,14 @@ async def get_latest_scan(authorization: str = Query(..., description="Bearer to
 
 @app.get("/screener/history")
 async def get_scan_history(
-    authorization: str = Query(..., description="Bearer token"),
+    authorization: str = Header(None, description="Bearer token"),
     limit: int = Query(10, description="Number of scans to retrieve")
 ):
     """Get scan history for user"""
     try:
+        if not authorization:
+            raise HTTPException(status_code=401, detail="Authorization header required")
+        
         token = authorization.replace("Bearer ", "")
         user = await auth_service.get_current_user(token)
         

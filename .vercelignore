@@ -1,13 +1,13 @@
 # ============================================
-# Vercel: Frontend Only (Static Files)
+# Vercel: Full Stack Deployment
 # ============================================
-# Since Railway handles the backend, Vercel only needs /static folder
-# This dramatically reduces deployment size: 2MB vs 314MB
+# Note: Backend deployed to Vercel, use Railway for production if needed
 
-# Exclude Python backend (deployed to Railway instead)
-main.py
-config/
-src/
+# Exclude Python backend if deploying to Railway
+# Uncomment these lines to deploy only static frontend to Vercel:
+# main.py
+# config/
+# src/
 examples/
 
 # Python files
