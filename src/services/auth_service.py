@@ -115,11 +115,22 @@ class AuthService:
             
             profile = user_profile.data[0] if user_profile.data else {}
             
+            # Parse created_at safely
+            created_at = datetime.now()
+            if response.user.created_at:
+                try:
+                    if isinstance(response.user.created_at, str):
+                        created_at = datetime.fromisoformat(response.user.created_at.replace('Z', '+00:00'))
+                    elif isinstance(response.user.created_at, datetime):
+                        created_at = response.user.created_at
+                except Exception as e:
+                    logger.warning(f"Could not parse created_at: {e}")
+            
             user_response = UserResponse(
                 id=response.user.id,
                 email=response.user.email,
                 full_name=profile.get("full_name"),
-                created_at=datetime.fromisoformat(response.user.created_at)
+                created_at=created_at
             )
             
             return TokenResponse(
