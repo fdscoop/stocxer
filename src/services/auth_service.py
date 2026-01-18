@@ -128,9 +128,25 @@ class AuthService:
                 expires_at=datetime.fromtimestamp(response.session.expires_at) if response.session.expires_at else None
             )
             
+        except HTTPException:
+            raise
         except Exception as e:
+            error_msg = str(e).lower()
             logger.error(f"Login error: {str(e)}")
-            raise HTTPException(status_code=401, detail="Invalid credentials")
+            
+            # Provide helpful error messages
+            if "email not confirmed" in error_msg:
+                raise HTTPException(
+                    status_code=401, 
+                    detail="Please confirm your email before logging in. Check your inbox for the confirmation link."
+                )
+            elif "invalid login credentials" in error_msg or "invalid" in error_msg:
+                raise HTTPException(
+                    status_code=401, 
+                    detail="Invalid email or password. Please check your credentials and try again."
+                )
+            
+            raise HTTPException(status_code=401, detail="Login failed. Please check your credentials.")
     
     async def logout_user(self, access_token: str):
         """Logout user and invalidate token"""

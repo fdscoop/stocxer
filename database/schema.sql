@@ -158,3 +158,13 @@ CREATE TRIGGER update_fyers_tokens_updated_at BEFORE UPDATE ON public.fyers_toke
 
 CREATE TRIGGER update_screener_results_updated_at BEFORE UPDATE ON public.screener_results
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+
+-- ============================================
+-- AUTO-CONFIRM USERS (FOR DEVELOPMENT)
+-- ============================================
+-- This is useful for development to auto-confirm users
+-- Remove this in production if you want email confirmation
+
+-- Note: Run this SQL in Supabase SQL Editor to confirm all existing unconfirmed users:
+-- UPDATE auth.users SET email_confirmed_at = NOW() WHERE email_confirmed_at IS NULL;

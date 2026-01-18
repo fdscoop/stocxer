@@ -1,0 +1,77 @@
+# Virtual Environment - This is the main culprit!
+venv/
+env/
+ENV/
+.venv
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Build artifacts
+build/
+dist/
+*.egg-info/
+
+# Data directories
+data/
+logs/
+models/saved_models/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Environment and secrets
+.env
+.env.local
+config/secrets.json
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+
+# Log files
+*.log
+fyersApi.log
+fyersRequests.log
+server.log
+
+# Git
+.git/
+.gitignore
+
+# Documentation (optional - keep if you want docs deployed)
+*.md
+!README.md
+
+# Test files
+test_*.py
+tests/
+.pytest_cache/
+.coverage
+
+# Cache
+.cache/
+*.cache
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Railway/Other deployment configs
+railway.json
+Procfile
+runtime.txt
+
+# Example files
+examples/
