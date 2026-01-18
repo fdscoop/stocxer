@@ -106,6 +106,12 @@ async def screener_page():
     return FileResponse(os.path.join(static_dir, "screener.html"))
 
 
+@app.get("/fyers-callback.html")
+async def fyers_callback_page():
+    """Serve the Fyers OAuth callback page"""
+    return FileResponse(os.path.join(static_dir, "fyers-callback.html"))
+
+
 # Health check
 @app.get("/health")
 async def health_check():
@@ -119,6 +125,52 @@ async def health_check():
 
 
 # Authentication endpoints
+@app.get("/auth/callback")
+async def fyers_callback(
+    auth_code: str = Query(..., description="Authorization code from Fyers"),
+    state: str = Query(None, description="State parameter"),
+    authorization: str = Header(None, description="Bearer token (required)")
+):
+    """Handle Fyers OAuth callback and store token"""
+    try:
+        if not authorization:
+            # Redirect to login if not authenticated
+            return {"error": "Please login first", "redirect": "/login"}
+        
+        token = authorization.replace("Bearer ", "")
+        user = await auth_service.get_current_user(token)
+        
+        # Exchange auth code for access token
+        success = fyers_client.set_access_token(auth_code)
+        if not success:
+            raise HTTPException(status_code=400, detail="Failed to exchange authorization code")
+        
+        # Calculate expiry (Fyers tokens typically last 24 hours)
+        expires_at = datetime.now() + timedelta(hours=24)
+        
+        # Store token in database
+        fyers_token_data = FyersTokenStore(
+            access_token=fyers_client.access_token,
+            expires_at=expires_at
+        )
+        
+        await auth_service.store_fyers_token(user.id, fyers_token_data)
+        
+        # Get profile to verify token
+        profile = fyers_client.get_profile()
+        
+        return {
+            "status": "success",
+            "message": "Fyers authentication successful",
+            "profile": profile,
+            "redirect": "/screener"
+        }
+        
+    except Exception as e:
+        logger.error(f"Fyers callback error: {e}")
+        raise HTTPException(status_code=400, detail=f"Authentication failed: {str(e)}")
+
+
 @app.get("/auth/url")
 async def get_auth_url():
     """Get Fyers authentication URL"""
@@ -2451,6 +2503,33 @@ async def scan_stocks(
         
         token = authorization.replace("Bearer ", "")
         user = await auth_service.get_current_user(token)
+        
+        # Check if user has Fyers token for market data access
+        fyers_token = await auth_service.get_fyers_token(user.id)
+        if not fyers_token:
+            raise HTTPException(
+                status_code=401, 
+                detail={
+                    "error": "fyers_auth_required",
+                    "message": "Fyers API authentication required to fetch market data",
+                    "auth_url": fyers_client.generate_auth_url()
+                }
+            )
+        
+        # Check if Fyers token is expired (tokens expire in ~28 hours)
+        if fyers_token.expires_at and fyers_token.expires_at < datetime.now():
+            raise HTTPException(
+                status_code=401,
+                detail={
+                    "error": "fyers_token_expired", 
+                    "message": "Your Fyers token has expired. Please re-authenticate to continue.",
+                    "auth_url": fyers_client.generate_auth_url()
+                }
+            )
+        
+        # Set the Fyers token for this request
+        fyers_client.access_token = fyers_token.access_token
+        fyers_client._initialize_client()
         
         logger.info(f"Stock screener scan requested by {user.email}: limit={limit}, min_confidence={min_confidence}, randomize={randomize}")
         

@@ -209,7 +209,7 @@
                 });
                 const data = await response.json();
 
-                if (data.status === 'success') {
+                if (response.ok && data.status === 'success') {
                     currentSignals = data.signals;
                     updateStatusBar(data);
                     displaySignals();
@@ -220,8 +220,34 @@
                     } else {
                         console.log('⚠️ Scan completed but failed to save results');
                     }
+                } else if (response.status === 401 && data.detail?.error === 'fyers_auth_required') {
+                    // Fyers authentication required
+                    const confirmAuth = confirm(
+                        'Market data access requires Fyers API authentication.\\n\\n' +
+                        'You will be redirected to Fyers to authorize TradeWise.\\n\\n' +
+                        'Click OK to continue or Cancel to go back.'
+                    );
+                    
+                    if (confirmAuth) {
+                        // Redirect to Fyers authentication
+                        window.location.href = data.detail.auth_url;
+                    }
+                } else if (response.status === 401 && data.detail?.error === 'fyers_token_expired') {
+                    // Fyers token expired
+                    const confirmReauth = confirm(
+                        'Your Fyers authentication has expired (tokens last 24 hours).\\n\\n' +
+                        'You need to re-authenticate to continue scanning stocks.\\n\\n' +
+                        'Click OK to re-authenticate or Cancel to go back.'
+                    );
+                    
+                    if (confirmReauth) {
+                        // Redirect to Fyers authentication
+                        window.location.href = data.detail.auth_url;
+                    }
                 } else {
-                    alert('Error scanning stocks: ' + (data.detail || data.message || 'Unknown error'));
+                    // Other errors
+                    const errorMsg = data.detail?.message || data.detail || data.message || 'Unknown error';
+                    alert('Error scanning stocks: ' + errorMsg);
                 }
             } catch (error) {
                 console.error('Scan error:', error);

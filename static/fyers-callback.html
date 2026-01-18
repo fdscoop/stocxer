@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TradeWise - Fyers Authentication</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-900 text-gray-100 min-h-screen flex items-center justify-center">
+    <div class="max-w-md mx-auto p-6 bg-gray-800 rounded-lg shadow-xl">
+        <div class="text-center">
+            <div id="loading" class="mb-4">
+                <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-cyan-400 mx-auto"></div>
+                <p class="mt-4 text-gray-300">Processing Fyers authentication...</p>
+            </div>
+            
+            <div id="success" class="hidden">
+                <div class="text-green-400 text-5xl mb-4">✅</div>
+                <h2 class="text-xl font-bold text-green-400 mb-2">Authentication Successful!</h2>
+                <p class="text-gray-300 mb-4">Your Fyers account has been connected successfully.</p>
+                <button onclick="goToScreener()" class="px-6 py-2 bg-cyan-600 hover:bg-cyan-700 rounded">
+                    Go to Stock Screener
+                </button>
+            </div>
+            
+            <div id="error" class="hidden">
+                <div class="text-red-400 text-5xl mb-4">❌</div>
+                <h2 class="text-xl font-bold text-red-400 mb-2">Authentication Failed</h2>
+                <p id="errorMsg" class="text-gray-300 mb-4">Something went wrong during authentication.</p>
+                <button onclick="goToScreener()" class="px-6 py-2 bg-gray-600 hover:bg-gray-700 rounded">
+                    Back to Screener
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = window.location.origin;
+
+        async function handleCallback() {
+            try {
+                // Get auth code from URL
+                const urlParams = new URLSearchParams(window.location.search);
+                const authCode = urlParams.get('auth_code');
+                const state = urlParams.get('state');
+                
+                if (!authCode) {
+                    throw new Error('No authorization code received');
+                }
+                
+                // Get stored auth token
+                const authToken = localStorage.getItem('authToken');
+                if (!authToken) {
+                    throw new Error('Please login first');
+                }
+                
+                // Send to callback endpoint
+                const response = await fetch(`${API_BASE}/auth/callback?auth_code=${authCode}&state=${state || ''}`, {
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`
+                    }
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok && data.status === 'success') {
+                    // Success
+                    document.getElementById('loading').classList.add('hidden');
+                    document.getElementById('success').classList.remove('hidden');
+                } else {
+                    throw new Error(data.message || 'Authentication failed');
+                }
+                
+            } catch (error) {
+                console.error('Callback error:', error);
+                document.getElementById('loading').classList.add('hidden');
+                document.getElementById('error').classList.remove('hidden');
+                document.getElementById('errorMsg').textContent = error.message;
+            }
+        }
+        
+        function goToScreener() {
+            window.location.href = '/screener.html';
+        }
+        
+        // Run callback handler on page load
+        document.addEventListener('DOMContentLoaded', handleCallback);
+    </script>
+</body>
+</html>
