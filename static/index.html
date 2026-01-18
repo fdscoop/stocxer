@@ -1,0 +1,2619 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TradeWise - Index Options Dashboard</title>
+    <!-- Tailwind CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <script>
+        // Suppress Tailwind console warnings
+        const originalConsoleWarn = console.warn;
+        console.warn = function(...args) {
+            if (typeof args[0] === 'string' && (args[0].includes('tailwindcss') || args[0].includes('cdn.tailwindcss'))) {
+                return;
+            }
+            originalConsoleWarn.apply(console, args);
+        };
+    </script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        :root { --bg-primary: #0a0a0f; --bg-secondary: #12121a; --bg-card: #1a1a25; --border: #2a2a3a; }
+        body { background: var(--bg-primary); font-family: 'Inter', system-ui, sans-serif; }
+        .card { background: var(--bg-card); border: 1px solid var(--border); }
+        .up { color: #22c55e; }
+        .down { color: #ef4444; }
+        .neutral { color: #eab308; }
+        .tab-active { border-bottom: 2px solid #3b82f6; color: #fff; }
+        .tab-inactive { color: #6b7280; }
+        .pulse { animation: pulse 2s infinite; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+        .oi-bar { height: 8px; border-radius: 4px; }
+        .strike-row:hover { background: rgba(59, 130, 246, 0.1); }
+        .atm-row { background: rgba(59, 130, 246, 0.15); border-left: 3px solid #3b82f6; }
+        select, input { background: var(--bg-secondary); border: 1px solid var(--border); }
+        .regime-low { background: linear-gradient(135deg, #065f46, #047857); }
+        .regime-normal { background: linear-gradient(135deg, #1e40af, #3b82f6); }
+        .regime-high { background: linear-gradient(135deg, #b45309, #d97706); }
+        .regime-extreme { background: linear-gradient(135deg, #991b1b, #dc2626); }
+    </style>
+</head>
+<body class="text-white min-h-screen">
+    <!-- Header -->
+    <header class="border-b border-gray-800 px-4 py-3">
+        <div class="max-w-[1800px] mx-auto flex items-center justify-between">
+            <div class="flex items-center gap-4">
+                <div class="flex items-center gap-2">
+                    <div class="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
+                        <i data-lucide="trending-up" class="w-5 h-5"></i>
+                    </div>
+                    <span class="text-xl font-bold">TradeWise</span>
+                </div>
+                <div class="flex gap-1 ml-8">
+                    <button onclick="selectIndex('NIFTY')" id="tab-NIFTY" class="px-4 py-2 text-sm font-medium tab-active rounded-t">NIFTY</button>
+                    <button onclick="selectIndex('BANKNIFTY')" id="tab-BANKNIFTY" class="px-4 py-2 text-sm font-medium tab-inactive rounded-t">BANKNIFTY</button>
+                    <button onclick="selectIndex('FINNIFTY')" id="tab-FINNIFTY" class="px-4 py-2 text-sm font-medium tab-inactive rounded-t">FINNIFTY</button>
+                    <button onclick="selectIndex('MIDCPNIFTY')" id="tab-MIDCPNIFTY" class="px-4 py-2 text-sm font-medium tab-inactive rounded-t">MIDCPNIFTY</button>
+                    <button onclick="selectIndex('SENSEX')" id="tab-SENSEX" class="px-4 py-2 text-sm font-medium tab-inactive rounded-t">SENSEX</button>
+                    <button onclick="selectIndex('BANKEX')" id="tab-BANKEX" class="px-4 py-2 text-sm font-medium tab-inactive rounded-t">BANKEX</button>
+                </div>
+            </div>
+            <div class="flex items-center gap-6">
+                <a href="/static/screener.html" class="px-4 py-2 bg-green-600 hover:bg-green-700 rounded text-sm font-semibold transition">
+                    📊 Stock Screener
+                </a>
+                <!-- User Info -->
+                <div id="userInfo" class="hidden">
+                    <div class="flex items-center gap-3">
+                        <div class="text-right">
+                            <div class="text-xs text-gray-400">Logged in as</div>
+                            <div id="userEmail" class="text-sm font-semibold"></div>
+                        </div>
+                        <button id="logoutBtn" class="px-3 py-2 bg-red-600 hover:bg-red-700 rounded text-sm">
+                            Logout
+                        </button>
+                    </div>
+                </div>
+                <div class="flex items-center gap-2 text-sm">
+                    <span class="w-2 h-2 bg-green-500 rounded-full pulse"></span>
+                    <span class="text-gray-400">Live</span>
+                </div>
+                <span id="last-update" class="text-gray-500 text-sm"></span>
+            </div>
+        </div>
+    </header>
+
+        <!-- Progress Modal -->
+        <div id="loading-modal" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center hidden">
+            <div class="bg-gray-800 rounded-xl p-6 max-w-md w-full mx-4 border border-gray-600">
+                <div class="flex items-center gap-3 mb-4">
+                    <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500"></div>
+                    <h3 class="font-semibold text-white">Loading Option Chain</h3>
+                </div>
+                
+                <div class="space-y-3">
+                    <div id="progress-step-1" class="flex items-center gap-2">
+                        <div class="w-4 h-4 rounded-full bg-gray-600" id="step1-indicator"></div>
+                        <span class="text-sm text-gray-300" id="step1-text">Fetching spot price...</span>
+                    </div>
+                    <div id="progress-step-2" class="flex items-center gap-2">
+                        <div class="w-4 h-4 rounded-full bg-gray-600" id="step2-indicator"></div>
+                        <span class="text-sm text-gray-300" id="step2-text">Getting expiry dates...</span>
+                    </div>
+                    <div id="progress-step-3" class="flex items-center gap-2">
+                        <div class="w-4 h-4 rounded-full bg-gray-600" id="step3-indicator"></div>
+                        <span class="text-sm text-gray-300" id="step3-text">Generating option symbols...</span>
+                    </div>
+                    <div id="progress-step-4" class="flex items-center gap-2">
+                        <div class="w-4 h-4 rounded-full bg-gray-600" id="step4-indicator"></div>
+                        <span class="text-sm text-gray-300" id="step4-text">Fetching option chain data...</span>
+                    </div>
+                    <div id="progress-step-5" class="flex items-center gap-2">
+                        <div class="w-4 h-4 rounded-full bg-gray-600" id="step5-indicator"></div>
+                        <span class="text-sm text-gray-300" id="step5-text">Analyzing data...</span>
+                    </div>
+                    <div id="progress-step-6" class="flex items-center gap-2">
+                        <div class="w-4 h-4 rounded-full bg-gray-600" id="step6-indicator"></div>
+                        <span class="text-sm text-gray-300" id="step6-text">Generating signals...</span>
+                    </div>
+                </div>
+                
+                <div class="mt-4 bg-gray-700 rounded-full h-2">
+                    <div id="progress-bar" class="bg-blue-500 h-2 rounded-full transition-all duration-300" style="width: 0%"></div>
+                </div>
+                
+                <div id="progress-percentage" class="text-center text-sm text-gray-400 mt-2">0%</div>
+            </div>
+        </div>
+        <!-- Top Row: Index Stats + VIX + Market Regime -->
+        <div class="grid grid-cols-12 gap-4">
+            <!-- Index Price Card -->
+            <div class="col-span-3 card rounded-xl p-4">
+                <div class="flex items-center justify-between mb-2">
+                    <span id="index-name" class="text-lg font-semibold">NIFTY 50</span>
+                    <span class="text-xs text-gray-500">NSE</span>
+                </div>
+                <div class="flex items-baseline gap-3">
+                    <span id="index-price" class="text-3xl font-bold">--</span>
+                    <span id="index-change" class="text-lg">--</span>
+                </div>
+                <div class="grid grid-cols-2 gap-4 mt-4 text-sm">
+                    <div>
+                        <span class="text-gray-500">High</span>
+                        <div id="index-high" class="font-medium">--</div>
+                    </div>
+                    <div>
+                        <span class="text-gray-500">Low</span>
+                        <div id="index-low" class="font-medium">--</div>
+                    </div>
+                    <div>
+                        <span class="text-gray-500">Future</span>
+                        <div id="future-price" class="font-medium">--</div>
+                    </div>
+                    <div>
+                        <span class="text-gray-500">Basis</span>
+                        <div id="basis" class="font-medium">--</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- VIX Card -->
+            <div class="col-span-2 card rounded-xl p-4">
+                <div class="flex items-center gap-2 mb-2">
+                    <i data-lucide="activity" class="w-4 h-4 text-purple-400"></i>
+                    <span class="text-gray-400 text-sm">INDIA VIX</span>
+                </div>
+                <div id="vix-value" class="text-3xl font-bold">--</div>
+                <div id="vix-change" class="text-sm mt-1">--</div>
+                <div class="mt-3 pt-3 border-t border-gray-700">
+                    <div class="text-xs text-gray-500">Volatility Regime</div>
+                    <div id="vix-regime" class="text-sm font-medium mt-1">--</div>
+                </div>
+            </div>
+
+            <!-- Market Regime Card -->
+            <div id="regime-card" class="col-span-3 card rounded-xl p-4 regime-normal">
+                <div class="flex items-center justify-between mb-2">
+                    <span class="text-sm opacity-80">Market Regime</span>
+                    <i data-lucide="gauge" class="w-5 h-5 opacity-80"></i>
+                </div>
+                <div id="regime-name" class="text-2xl font-bold">Normal</div>
+                <div id="regime-trend" class="text-sm opacity-90 mt-1">Trend: Sideways</div>
+                <div id="regime-recommendation" class="text-xs mt-3 opacity-80">Balanced approach</div>
+            </div>
+
+            <!-- Key Metrics -->
+            <div class="col-span-4 card rounded-xl p-4">
+                <div class="text-sm text-gray-400 mb-3">Key Metrics</div>
+                <div class="grid grid-cols-4 gap-3">
+                    <div class="text-center">
+                        <div class="text-gray-500 text-xs">PCR (OI)</div>
+                        <div id="pcr-oi" class="text-xl font-bold">--</div>
+                    </div>
+                    <div class="text-center">
+                        <div class="text-gray-500 text-xs">Max Pain</div>
+                        <div id="max-pain" class="text-xl font-bold">--</div>
+                    </div>
+                    <div class="text-center">
+                        <div class="text-gray-500 text-xs">ATM IV</div>
+                        <div id="atm-iv" class="text-xl font-bold">--</div>
+                    </div>
+                    <div class="text-center">
+                        <div class="text-gray-500 text-xs">IV Skew</div>
+                        <div id="iv-skew" class="text-xl font-bold">--</div>
+                    </div>
+                </div>
+                <div class="flex justify-between mt-4 pt-3 border-t border-gray-700 text-sm">
+                    <div>
+                        <span class="text-gray-500">Support:</span>
+                        <span id="support-level" class="ml-1 text-green-400">--</span>
+                    </div>
+                    <div>
+                        <span class="text-gray-500">Resistance:</span>
+                        <span id="resistance-level" class="ml-1 text-red-400">--</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Trading Signals Row - ACTIONABLE SIGNALS -->
+        <div class="grid grid-cols-12 gap-4">
+            <!-- Live Trading Signal -->
+            <div class="col-span-6 card rounded-xl p-4 border-2 border-blue-500/30">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="font-semibold text-lg flex items-center gap-2">
+                        🎯 Live Trading Signal
+                        <span id="signal-status" class="text-xs bg-green-600 px-2 py-1 rounded">ACTIVE</span>
+                        <span id="trading-mode-badge" class="text-xs bg-orange-600 px-2 py-1 rounded" title="Day Trading Mode">📊 INTRADAY</span>
+                    </h3>
+                    <div class="flex gap-2">
+                        <button onclick="refreshSignalPrices()" class="text-yellow-400 hover:text-yellow-300 p-1 text-xs" title="Refresh option prices">
+                            💰 Refresh Prices
+                        </button>
+                        <button onclick="refreshTradingSignal()" class="text-blue-400 hover:text-blue-300 p-1" title="Reload signals">
+                            <i data-lucide="refresh-cw" class="w-4 h-4"></i>
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Day Trading Info Banner -->
+                <div class="mb-3 p-2 bg-orange-900/20 rounded border border-orange-500/30 text-xs">
+                    <div class="flex items-center gap-2">
+                        <span>⏰</span>
+                        <div>
+                            <div class="text-orange-300 font-semibold">Day Trading Mode: Exit by 3:15 PM</div>
+                            <div class="text-gray-400">Entry Window: 9:30 AM - 2:00 PM | Quick targets: 10-30%</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Main Signal -->
+                <div class="bg-gray-800/50 rounded-lg p-4 mb-4">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <div id="trade-action" class="text-2xl font-bold text-green-400">Loading...</div>
+                            <div id="trade-strike" class="text-lg text-gray-300">--</div>
+                            <!-- Expiry Date Display -->
+                            <div id="expiry-date-display" class="text-xs text-blue-400 mt-1 font-mono">Expiry: --</div>
+                        </div>
+                        <div class="text-right">
+                            <div class="text-gray-500 text-xs">💚 Best Price (Try for this)</div>
+                            <div id="current-ltp" class="text-xl font-bold text-green-400">--</div>
+                            <div class="text-gray-500 text-xs mt-2">⚠️ Max Acceptable Price</div>
+                            <div id="trade-entry-price" class="text-lg font-semibold text-yellow-400">--</div>
+                            <div id="price-source-badge" class="text-xs mt-1 px-2 py-0.5 bg-green-600 rounded hidden">LIVE</div>
+                        </div>
+                    </div>
+                    
+                    <!-- Trading Symbol Display -->
+                    <div class="mt-2 p-2 bg-blue-900/20 rounded border border-blue-500/30">
+                        <div class="text-xs text-gray-500">Trading Symbol (Fyers)</div>
+                        <div id="trading-symbol-main" class="text-sm font-mono text-blue-400">--</div>
+                    </div>
+                    
+                    <!-- Reversal Probability & Confidence -->
+                    <div class="mt-2 p-2 bg-purple-900/20 rounded border border-purple-500/30">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <div class="text-xs text-gray-500">Reversal Probability</div>
+                                <div id="reversal-probability" class="text-lg font-bold text-purple-400">--</div>
+                            </div>
+                            <div class="text-right">
+                                <div class="text-xs text-gray-500">Confidence</div>
+                                <div id="confidence-level" class="text-sm font-semibold text-yellow-400 px-2 py-1 bg-yellow-900/20 rounded">--</div>
+                            </div>
+                        </div>
+                        <!-- Probability Factors Breakdown -->
+                        <div id="probability-factors" class="mt-2 text-xs text-gray-400 hidden">
+                            <div class="grid grid-cols-2 gap-1">
+                                <div>FVG Status: <span id="factor-fvg-status" class="text-purple-300">--</span></div>
+                                <div>Position: <span id="factor-price-position" class="text-purple-300">--</span></div>
+                                <div>FVG Size: <span id="factor-fvg-size" class="text-purple-300">--</span></div>
+                                <div>Timeframe: <span id="factor-timeframe" class="text-purple-300">--</span></div>
+                                <div>ML Confirm: <span id="factor-ml" class="text-purple-300">--</span></div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- ML Analysis Section (NEW) -->
+                    <div class="mt-2 p-2 bg-cyan-900/20 rounded border border-cyan-500/30">
+                        <div class="flex items-center justify-between mb-2">
+                            <div class="text-xs text-gray-400">🤖 ML Analysis (ARIMA + LSTM)</div>
+                            <div id="ml-status" class="text-xs px-2 py-0.5 bg-cyan-600 rounded">ACTIVE</div>
+                        </div>
+                        <div class="grid grid-cols-3 gap-2 text-center">
+                            <div>
+                                <div class="text-xs text-gray-500">ARIMA</div>
+                                <div id="ml-arima" class="text-sm font-semibold text-cyan-400">--</div>
+                            </div>
+                            <div>
+                                <div class="text-xs text-gray-500">LSTM</div>
+                                <div id="ml-lstm" class="text-sm font-semibold text-cyan-400">--</div>
+                            </div>
+                            <div>
+                                <div class="text-xs text-gray-500">Momentum</div>
+                                <div id="ml-momentum" class="text-sm font-semibold text-cyan-400">--</div>
+                            </div>
+                        </div>
+                        <div class="mt-2 text-center">
+                            <div class="text-xs text-gray-500">ML Prediction</div>
+                            <div id="ml-direction" class="text-sm font-bold text-cyan-400">--</div>
+                            <div id="ml-confidence" class="text-xs text-gray-400">Confidence: --%</div>
+                        </div>
+                        <div id="ml-warning" class="mt-2 text-xs text-yellow-400 hidden"></div>
+                        <div id="ml-recommendation" class="mt-2 text-xs text-cyan-300 p-1 bg-cyan-900/30 rounded hidden"></div>
+                    </div>
+                    
+                    <!-- TRADE RECOMMENDATION (NEW) -->
+                    <div id="trade-recommendation-box" class="mt-2 p-3 rounded border-2 hidden">
+                        <div class="flex items-center justify-between mb-2">
+                            <div class="text-sm font-bold" id="trade-verdict">--</div>
+                            <div class="text-xs px-2 py-1 rounded" id="trade-risk-badge">--</div>
+                        </div>
+                        <div id="trade-reasons" class="text-xs space-y-1"></div>
+                        <div class="mt-2 pt-2 border-t border-gray-600">
+                            <span class="text-xs text-gray-500">Position Size:</span>
+                            <span id="position-size-advice" class="text-xs font-semibold ml-1">--</span>
+                        </div>
+                    </div>
+                    
+                    <!-- Entry Timing -->
+                    <div class="mt-3 pt-3 border-t border-gray-600">
+                        <div class="mb-2 p-2 bg-blue-900/20 rounded text-xs text-blue-300">
+                            💡 <strong>Entry Price Guide:</strong> Try to buy at the <span class="text-green-400 font-semibold">Best Price (LTP)</span>. 
+                            The Max Acceptable Price is the highest you should pay based on reversal probability.
+                        </div>
+                        <div class="flex justify-between text-sm">
+                            <span class="text-gray-500">Entry Strategy</span>
+                            <span id="entry-reasoning" class="text-blue-400 font-medium text-xs">--</span>
+                        </div>
+                        <div class="flex justify-between text-sm mt-2">
+                            <span class="text-gray-500">Best Entry Time</span>
+                            <span id="best-entry-time" class="text-blue-400 font-medium">After 10:00 AM</span>
+                        </div>
+                        <div class="flex justify-between text-sm mt-1">
+                            <span class="text-gray-500">Entry Trigger</span>
+                            <span id="entry-trigger" class="text-green-400">Above ₹25750</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Price Targets -->
+                <div class="grid grid-cols-3 gap-3">
+                    <div class="text-center p-2 bg-green-900/30 rounded-lg">
+                        <div class="text-green-400 text-xs">TARGET 1</div>
+                        <div id="target-1" class="text-lg font-bold text-green-400">₹200</div>
+                        <div class="text-xs text-gray-500">+33%</div>
+                    </div>
+                    <div class="text-center p-2 bg-green-900/50 rounded-lg">
+                        <div class="text-green-400 text-xs">TARGET 2</div>
+                        <div id="target-2" class="text-lg font-bold text-green-400">₹280</div>
+                        <div class="text-xs text-gray-500">+87%</div>
+                    </div>
+                    <div class="text-center p-2 bg-red-900/30 rounded-lg">
+                        <div class="text-red-400 text-xs">STOP LOSS</div>
+                        <div id="stop-loss" class="text-lg font-bold text-red-400">₹120</div>
+                        <div class="text-xs text-gray-500">-20%</div>
+                    </div>
+                </div>
+
+                <!-- Risk Info -->
+                <div class="mt-4 p-3 bg-yellow-900/20 rounded-lg border border-yellow-500/30">
+                    <div class="text-yellow-400 text-xs font-medium mb-1">⚠️ Risk Management</div>
+                    <div id="risk-info" class="text-xs text-gray-300">
+                        Risk: ₹30 per lot | Reward: ₹50-130 per lot | R:R = 1:1.7 to 1:4.3
+                    </div>
+                </div>
+                
+                <!-- Important Notice -->
+                <div class="mt-4 p-3 bg-blue-900/20 rounded-lg border border-blue-500/30">
+                    <div class="text-blue-400 text-xs font-medium mb-2">📌 IMPORTANT: Which Option to Buy?</div>
+                    <div id="option-clarification" class="text-xs text-gray-300 space-y-1">
+                        <div>✓ Use the <strong class="text-blue-400">Trading Symbol</strong> above to find the EXACT option</div>
+                        <div>✓ Price shown is from <strong class="text-green-400">Fyers API</strong> for the expiry date shown</div>
+                        <div>⚠️ Different brokers may have slightly different prices</div>
+                        <div>⚠️ Price updates every few seconds - verify before placing order</div>
+                    </div>
+                </div>
+                        Risk: ₹30 per lot | Reward: ₹50-130 per lot | R:R = 1:1.7 to 1:4.3
+                    </div>
+                </div>
+                
+                <!-- Option Chain Details -->
+                <div id="option-chain-details" class="mt-4 p-3 bg-blue-900/10 rounded-lg border border-blue-500/20 hidden">
+                    <div class="text-blue-400 text-xs font-medium mb-2 flex items-center gap-2">
+                        <i data-lucide="link" class="w-3 h-3"></i>
+                        Option Chain Info
+                    </div>
+                    <div class="grid grid-cols-2 gap-3 text-xs">
+                        <div>
+                            <div class="text-gray-500">Trading Symbol</div>
+                            <div id="trading-symbol" class="text-white font-mono text-xs">--</div>
+                        </div>
+                        <div>
+                            <div class="text-gray-500">Position</div>
+                            <div id="strike-position" class="text-white">--</div>
+                        </div>
+                        <div>
+                            <div class="text-gray-500">IV</div>
+                            <div id="option-iv" class="text-white">--</div>
+                        </div>
+                        <div>
+                            <div class="text-gray-500">Open Interest</div>
+                            <div id="option-oi" class="text-white">--</div>
+                        </div>
+                        <div>
+                            <div class="text-gray-500">Volume</div>
+                            <div id="option-volume" class="text-white">--</div>
+                        </div>
+                        <div>
+                            <div class="text-gray-500">OI Change</div>
+                            <div id="option-oi-change" class="text-white">--</div>
+                        </div>
+                        <div class="col-span-2">
+                            <div class="text-gray-500">Analysis</div>
+                            <div id="option-analysis" class="text-green-400 font-medium">--</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Alternative Signal -->
+            <div class="col-span-3 card rounded-xl p-4">
+                <h3 class="font-semibold mb-3 flex items-center gap-2">
+                    <i data-lucide="trending-down" class="w-4 h-4 text-red-400"></i>
+                    Alternative Signal
+                </h3>
+                <div id="alt-signal" class="space-y-3">
+                    <div class="p-3 bg-red-900/20 rounded-lg border border-red-500/30">
+                        <div class="text-red-400 font-medium">SELL PUT</div>
+                        <div id="alt-signal-strike" class="text-lg">--</div>
+                        <div id="alt-signal-price" class="text-sm text-gray-400">Premium: --</div>
+                        <div class="text-xs text-gray-500 mt-2">Loading alternative signal...</div>
+                    </div>
+                    
+                    <div class="p-3 bg-blue-900/20 rounded-lg border border-blue-500/30">
+                        <div class="text-blue-400 font-medium">IRON CONDOR</div>
+                        <div class="text-sm text-gray-400">25700-25800 CE</div>
+                        <div class="text-sm text-gray-400">25600-25500 PE</div>
+                        <div class="text-xs text-gray-500 mt-2">Range-bound strategy</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Time Analysis -->
+            <div class="col-span-3 card rounded-xl p-4">
+                <h3 class="font-semibold mb-3 flex items-center gap-2">
+                    <i data-lucide="clock" class="w-4 h-4 text-purple-400"></i>
+                    Timing Guide
+                </h3>
+                <div id="timing-guide" class="space-y-3">
+                    <div class="p-2 bg-gray-800/50 rounded">
+                        <div class="text-sm font-medium text-purple-400">Best Entry Window</div>
+                        <div class="text-xs text-gray-400">9:45 - 10:30 AM</div>
+                        <div class="text-xs text-gray-500">After opening volatility</div>
+                    </div>
+                    
+                    <div class="p-2 bg-gray-800/50 rounded">
+                        <div class="text-sm font-medium text-orange-400">Avoid Trading</div>
+                        <div class="text-xs text-gray-400">12:30 - 1:30 PM</div>
+                        <div class="text-xs text-gray-500">Lunch hour low volume</div>
+                    </div>
+                    
+                    <div class="p-2 bg-gray-800/50 rounded">
+                        <div class="text-sm font-medium text-cyan-400">Exit Window</div>
+                        <div class="text-xs text-gray-400">2:30 - 3:15 PM</div>
+                        <div class="text-xs text-gray-500">Before closing volatility</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quick Action Buttons -->
+        <div class="grid grid-cols-4 gap-4">
+            <button onclick="executeSignal('buy')" class="card rounded-xl p-4 bg-green-600 hover:bg-green-500 transition-colors">
+                <div class="text-center">
+                    <i data-lucide="arrow-up" class="w-6 h-6 mx-auto mb-2"></i>
+                    <div class="font-semibold">Execute BUY Signal</div>
+                    <div id="buy-signal-display" class="text-xs opacity-80">Loading signal...</div>
+                </div>
+            </button>
+            
+            <button onclick="executeSignal('sell')" class="card rounded-xl p-4 bg-red-600 hover:bg-red-500 transition-colors">
+                <div class="text-center">
+                    <i data-lucide="arrow-down" class="w-6 h-6 mx-auto mb-2"></i>
+                    <div class="font-semibold">Execute SELL Signal</div>
+                    <div id="sell-signal-display" class="text-xs opacity-80">Loading signal...</div>
+                </div>
+            </button>
+            
+            <button onclick="setAlerts()" class="card rounded-xl p-4 bg-blue-600 hover:bg-blue-500 transition-colors">
+                <div class="text-center">
+                    <i data-lucide="bell" class="w-6 h-6 mx-auto mb-2"></i>
+                    <div class="font-semibold">Set Price Alerts</div>
+                    <div class="text-xs opacity-80">Entry & Exit levels</div>
+                </div>
+            </button>
+            
+            <button onclick="showDetailedAnalysis()" class="card rounded-xl p-4 bg-purple-600 hover:bg-purple-500 transition-colors">
+                <div class="text-center">
+                    <i data-lucide="bar-chart" class="w-6 h-6 mx-auto mb-2"></i>
+                    <div class="font-semibold">Detailed Analysis</div>
+                    <div class="text-xs opacity-80">Why this signal?</div>
+                </div>
+            </button>
+        </div>
+
+            <!-- Expiry Selection -->
+            <div class="col-span-4 card rounded-xl p-4">
+                <h3 class="font-semibold mb-4">Expiry Selection</h3>
+                <div class="grid grid-cols-2 gap-3">
+                    <button onclick="selectExpiry('weekly')" id="btn-weekly" class="p-3 rounded-lg bg-blue-600 text-center">
+                        <div class="text-sm font-medium">Weekly</div>
+                        <div id="weekly-date" class="text-xs opacity-80 mt-1">--</div>
+                        <div id="weekly-days" class="text-lg font-bold mt-1">-- days</div>
+                    </button>
+                    <button onclick="selectExpiry('monthly')" id="btn-monthly" class="p-3 rounded-lg bg-gray-700 text-center">
+                        <div class="text-sm font-medium">Monthly</div>
+                        <div id="monthly-date" class="text-xs opacity-80 mt-1">--</div>
+                        <div id="monthly-days" class="text-lg font-bold mt-1">-- days</div>
+                    </button>
+                </div>
+                <div class="mt-4 pt-3 border-t border-gray-700">
+                    <div class="flex justify-between text-sm">
+                        <span class="text-gray-500">Days to Expiry</span>
+                        <span id="dte" class="font-medium">--</span>
+                    </div>
+                    <div class="flex justify-between text-sm mt-2">
+                        <span class="text-gray-500">Lot Size</span>
+                        <span id="lot-size" class="font-medium">--</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Option Chain -->
+        <div class="card rounded-xl p-4">
+            <div class="flex items-center justify-between mb-4">
+                <div class="flex items-center gap-4">
+                    <h3 class="font-semibold">Option Chain</h3>
+                    <div class="flex items-center gap-2 text-sm">
+                        <span class="text-gray-500">Total Call OI:</span>
+                        <span id="total-call-oi" class="text-green-400">--</span>
+                        <span class="text-gray-600 mx-2">|</span>
+                        <span class="text-gray-500">Total Put OI:</span>
+                        <span id="total-put-oi" class="text-red-400">--</span>
+                    </div>
+                </div>
+                <button onclick="refreshChain()" class="flex items-center gap-2 text-blue-400 hover:text-blue-300 text-sm">
+                    <i data-lucide="refresh-cw" class="w-4 h-4"></i>
+                    Refresh
+                </button>
+            </div>
+
+            <!-- Chain Header -->
+            <div class="grid grid-cols-13 gap-1 text-xs text-gray-500 uppercase tracking-wide py-2 border-b border-gray-700">
+                <div class="text-center">Analysis</div>
+                <div class="text-center">IV</div>
+                <div class="text-right">OI</div>
+                <div class="text-center">OI Chg</div>
+                <div class="text-right">Volume</div>
+                <div class="text-right">LTP</div>
+                <div class="text-center font-bold text-white">STRIKE</div>
+                <div class="text-left">LTP</div>
+                <div class="text-left">Volume</div>
+                <div class="text-center">OI Chg</div>
+                <div class="text-left">OI</div>
+                <div class="text-center">IV</div>
+                <div class="text-center">Analysis</div>
+            </div>
+
+            <!-- Calls Header -->
+            <div class="grid grid-cols-13 gap-1 text-xs py-1 bg-gray-800/50">
+                <div class="col-span-6 text-center text-green-400 font-semibold">CALLS</div>
+                <div></div>
+                <div class="col-span-6 text-center text-red-400 font-semibold">PUTS</div>
+            </div>
+
+            <!-- Chain Body -->
+            <div id="chain-body" class="max-h-[500px] overflow-y-auto">
+                <div class="text-center py-8 text-gray-500">Loading option chain...</div>
+            </div>
+        </div>
+
+        <!-- OI Analysis -->
+        <div class="grid grid-cols-12 gap-4">
+            <div class="col-span-6 card rounded-xl p-4">
+                <h3 class="font-semibold mb-4">Call OI Distribution</h3>
+                <div id="call-oi-chart" class="space-y-2"></div>
+            </div>
+            <div class="col-span-6 card rounded-xl p-4">
+                <h3 class="font-semibold mb-4">Put OI Distribution</h3>
+                <div id="put-oi-chart" class="space-y-2"></div>
+            </div>
+        </div>
+
+        <!-- MTF ICT Analysis Section -->
+        <div class="card rounded-xl p-4 mt-4">
+            <div class="flex items-center justify-between mb-4">
+                <div class="flex items-center gap-3">
+                    <h3 class="font-semibold text-lg">Multi-Timeframe ICT Analysis</h3>
+                    <span class="text-xs bg-blue-600 px-2 py-1 rounded">Monthly → 15min</span>
+                </div>
+                <button onclick="loadMTFAnalysis()" class="flex items-center gap-2 text-blue-400 hover:text-blue-300 text-sm">
+                    <i data-lucide="refresh-cw" class="w-4 h-4"></i>
+                    Refresh
+                </button>
+            </div>
+            
+            <!-- Overall Bias -->
+            <div id="mtf-bias" class="bg-gray-800/50 rounded-lg p-3 mb-4">
+                <div class="flex items-center justify-between">
+                    <span class="text-gray-400">Overall Market Bias</span>
+                    <span id="overall-bias" class="text-xl font-bold">--</span>
+                </div>
+            </div>
+
+            <!-- Timeframe Tabs -->
+            <div class="flex gap-2 mb-4 flex-wrap">
+                <button onclick="showTimeframe('M')" id="tf-M" class="px-3 py-1.5 rounded-lg bg-gray-700 text-sm">Monthly</button>
+                <button onclick="showTimeframe('W')" id="tf-W" class="px-3 py-1.5 rounded-lg bg-gray-700 text-sm">Weekly</button>
+                <button onclick="showTimeframe('D')" id="tf-D" class="px-3 py-1.5 rounded-lg bg-blue-600 text-sm">Daily</button>
+                <button onclick="showTimeframe('240')" id="tf-240" class="px-3 py-1.5 rounded-lg bg-gray-700 text-sm">4H</button>
+                <button onclick="showTimeframe('60')" id="tf-60" class="px-3 py-1.5 rounded-lg bg-gray-700 text-sm">1H</button>
+                <button onclick="showTimeframe('15')" id="tf-15" class="px-3 py-1.5 rounded-lg bg-gray-700 text-sm">15min</button>
+            </div>
+
+            <!-- MTF Content Grid -->
+            <div class="grid grid-cols-3 gap-4" id="mtf-content">
+                <!-- FVG Section -->
+                <div class="bg-gray-800/30 rounded-lg p-4">
+                    <h4 class="text-sm font-medium text-gray-400 mb-3 flex items-center gap-2">
+                        <i data-lucide="layers" class="w-4 h-4 text-purple-400"></i>
+                        Fair Value Gaps
+                    </h4>
+                    <div id="fvg-list" class="space-y-2 max-h-[250px] overflow-y-auto">
+                        <div class="text-gray-500 text-sm">Loading FVGs...</div>
+                    </div>
+                </div>
+
+                <!-- Order Blocks Section -->
+                <div class="bg-gray-800/30 rounded-lg p-4">
+                    <h4 class="text-sm font-medium text-gray-400 mb-3 flex items-center gap-2">
+                        <i data-lucide="box" class="w-4 h-4 text-yellow-400"></i>
+                        Order Blocks
+                    </h4>
+                    <div id="ob-list" class="space-y-2 max-h-[250px] overflow-y-auto">
+                        <div class="text-gray-500 text-sm">Loading Order Blocks...</div>
+                    </div>
+                </div>
+
+                <!-- Liquidity Zones Section -->
+                <div class="bg-gray-800/30 rounded-lg p-4">
+                    <h4 class="text-sm font-medium text-gray-400 mb-3 flex items-center gap-2">
+                        <i data-lucide="droplets" class="w-4 h-4 text-cyan-400"></i>
+                        Liquidity Zones
+                    </h4>
+                    <div id="liq-list" class="space-y-2 max-h-[250px] overflow-y-auto">
+                        <div class="text-gray-500 text-sm">Loading Liquidity...</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Confluence Zones -->
+            <div class="mt-4 pt-4 border-t border-gray-700">
+                <h4 class="text-sm font-medium text-gray-400 mb-3">Confluence Zones (Multi-TF Alignment)</h4>
+                <div id="confluence-zones" class="flex gap-3 flex-wrap">
+                    <div class="text-gray-500 text-sm">Loading confluence zones...</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Session & Time Analysis Row -->
+        <div class="grid grid-cols-12 gap-4 mt-4">
+            <!-- Current Session -->
+            <div class="col-span-4 card rounded-xl p-4">
+                <div class="flex items-center justify-between mb-3">
+                    <h3 class="font-semibold flex items-center gap-2">
+                        <i data-lucide="clock" class="w-4 h-4 text-blue-400"></i>
+                        Market Session
+                    </h3>
+                    <span id="session-badge" class="text-xs bg-green-600 px-2 py-1 rounded">OPEN</span>
+                </div>
+                <div id="session-name" class="text-2xl font-bold text-blue-400">--</div>
+                <div class="grid grid-cols-2 gap-3 mt-3 text-sm">
+                    <div>
+                        <span class="text-gray-500">Time Elapsed</span>
+                        <div id="session-elapsed" class="font-medium">-- min</div>
+                    </div>
+                    <div>
+                        <span class="text-gray-500">Time Remaining</span>
+                        <div id="session-remaining" class="font-medium">-- min</div>
+                    </div>
+                </div>
+                <div class="mt-3 pt-3 border-t border-gray-700">
+                    <div class="flex justify-between text-sm">
+                        <span class="text-gray-500">Volatility</span>
+                        <span id="session-volatility" class="font-medium">--</span>
+                    </div>
+                    <div class="flex justify-between text-sm mt-1">
+                        <span class="text-gray-500">Theta Impact</span>
+                        <span id="session-theta" class="font-medium">--</span>
+                    </div>
+                </div>
+                <div id="session-recommendation" class="text-xs text-yellow-400 mt-3 p-2 bg-yellow-500/10 rounded">
+                    --
+                </div>
+            </div>
+
+            <!-- Theta Decay Analysis -->
+            <div class="col-span-4 card rounded-xl p-4">
+                <div class="flex items-center justify-between mb-3">
+                    <h3 class="font-semibold flex items-center gap-2">
+                        <i data-lucide="timer" class="w-4 h-4 text-orange-400"></i>
+                        Theta Decay Profile
+                    </h3>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="text-center p-2 bg-gray-800/50 rounded-lg">
+                        <div class="text-gray-500 text-xs">DTE</div>
+                        <div id="theta-dte" class="text-2xl font-bold">--</div>
+                        <div id="theta-hours" class="text-xs text-gray-400">-- hours</div>
+                    </div>
+                    <div class="text-center p-2 bg-gray-800/50 rounded-lg">
+                        <div class="text-gray-500 text-xs">Decay Speed</div>
+                        <div id="theta-speed" class="text-lg font-bold text-orange-400">--</div>
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-3 mt-3 text-sm">
+                    <div>
+                        <span class="text-gray-500">Daily Decay</span>
+                        <div id="theta-daily" class="font-medium down">--%</div>
+                    </div>
+                    <div>
+                        <span class="text-gray-500">Hourly Decay</span>
+                        <div id="theta-hourly" class="font-medium down">--%</div>
+                    </div>
+                </div>
+                <div id="theta-strategy" class="text-xs text-blue-400 mt-3 p-2 bg-blue-500/10 rounded">
+                    --
+                </div>
+            </div>
+
+            <!-- Option Price Calculator -->
+            <div class="col-span-4 card rounded-xl p-4">
+                <h3 class="font-semibold flex items-center gap-2 mb-3">
+                    <i data-lucide="calculator" class="w-4 h-4 text-green-400"></i>
+                    Price Projector
+                </h3>
+                <div class="grid grid-cols-2 gap-2 text-sm">
+                    <div>
+                        <label class="text-gray-500 text-xs">Target Move (pts)</label>
+                        <input id="proj-move" type="number" value="50" class="w-full rounded px-2 py-1 text-white">
+                    </div>
+                    <div>
+                        <label class="text-gray-500 text-xs">Current Premium</label>
+                        <input id="proj-premium" type="number" value="100" class="w-full rounded px-2 py-1 text-white">
+                    </div>
+                </div>
+                <button onclick="calculateProjection()" class="w-full mt-2 py-1.5 bg-green-600 hover:bg-green-500 rounded text-sm font-medium">
+                    Calculate
+                </button>
+                <div id="projection-result" class="mt-3 text-sm">
+                    <div class="flex justify-between">
+                        <span class="text-gray-500">Projected Price</span>
+                        <span id="proj-new-price" class="font-bold up">--</span>
+                    </div>
+                    <div class="flex justify-between mt-1">
+                        <span class="text-gray-500">Expected Profit</span>
+                        <span id="proj-profit" class="font-bold up">--</span>
+                    </div>
+                    <div class="flex justify-between mt-1">
+                        <span class="text-gray-500">Profit %</span>
+                        <span id="proj-profit-pct" class="font-bold up">--</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- News & Sentiment Section -->
+        <div class="grid grid-cols-12 gap-4 mt-4">
+            <!-- Market Sentiment -->
+            <div class="col-span-4 card rounded-xl p-4">
+                <div class="flex items-center justify-between mb-3">
+                    <h3 class="font-semibold flex items-center gap-2">
+                        <i data-lucide="heart-pulse" class="w-4 h-4 text-pink-400"></i>
+                        Market Sentiment
+                    </h3>
+                    <button onclick="loadNewsSentiment()" class="text-blue-400 hover:text-blue-300">
+                        <i data-lucide="refresh-cw" class="w-4 h-4"></i>
+                    </button>
+                </div>
+                <div class="text-center py-4">
+                    <div id="sentiment-score" class="text-5xl font-bold">--</div>
+                    <div id="sentiment-label" class="text-lg mt-1">--</div>
+                </div>
+                <div class="grid grid-cols-3 gap-2 text-center text-sm">
+                    <div class="p-2 bg-green-900/30 rounded">
+                        <div class="text-green-400 font-bold" id="bullish-count">0</div>
+                        <div class="text-xs text-gray-500">Bullish</div>
+                    </div>
+                    <div class="p-2 bg-gray-800/50 rounded">
+                        <div class="text-gray-400 font-bold" id="neutral-count">0</div>
+                        <div class="text-xs text-gray-500">Neutral</div>
+                    </div>
+                    <div class="p-2 bg-red-900/30 rounded">
+                        <div class="text-red-400 font-bold" id="bearish-count">0</div>
+                        <div class="text-xs text-gray-500">Bearish</div>
+                    </div>
+                </div>
+                <div id="sentiment-mood" class="text-xs mt-3 p-2 bg-gray-800/50 rounded text-center">--</div>
+            </div>
+
+            <!-- Latest News -->
+            <div class="col-span-8 card rounded-xl p-4">
+                <h3 class="font-semibold mb-3 flex items-center gap-2">
+                    <i data-lucide="newspaper" class="w-4 h-4 text-blue-400"></i>
+                    Market News & Events
+                </h3>
+                <div id="news-list" class="space-y-2 max-h-[300px] overflow-y-auto">
+                    <div class="text-gray-500 text-sm">Loading news...</div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        const API = '';
+        let currentIndex = 'NIFTY';
+        let currentExpiry = 'weekly';
+        let chainData = null;
+        let authToken = null;
+        let currentUser = null;
+
+        // Check authentication on page load
+        function checkAuth() {
+            authToken = localStorage.getItem('auth_token');
+            const userStr = localStorage.getItem('user');
+            
+            if (!authToken || !userStr) {
+                // Not logged in, redirect to login
+                window.location.href = '/login.html';
+                return false;
+            }
+            
+            currentUser = JSON.parse(userStr);
+            document.getElementById('userEmail').textContent = currentUser.email;
+            document.getElementById('userInfo').classList.remove('hidden');
+            return true;
+        }
+
+        // Logout handler
+        document.addEventListener('DOMContentLoaded', () => {
+            const logoutBtn = document.getElementById('logoutBtn');
+            if (logoutBtn) {
+                logoutBtn.addEventListener('click', async () => {
+                    if (authToken) {
+                        try {
+                            await fetch(`${API}/api/auth/logout?authorization=Bearer ${authToken}`, {
+                                method: 'POST'
+                            });
+                        } catch (error) {
+                            console.log('Logout error:', error);
+                        }
+                    }
+                    
+                    localStorage.removeItem('auth_token');
+                    localStorage.removeItem('user');
+                    window.location.href = '/login.html';
+                });
+            }
+        });
+
+        // Check auth before loading anything
+        if (!checkAuth()) {
+            // Stop script execution if not authenticated
+            throw new Error('Not authenticated');
+        }
+
+        lucide.createIcons();
+
+        // Index Selection
+        function selectIndex(index) {
+            document.querySelectorAll('[id^="tab-"]').forEach(t => t.className = 'px-4 py-2 text-sm font-medium tab-inactive rounded-t');
+            document.getElementById(`tab-${index}`).className = 'px-4 py-2 text-sm font-medium tab-active rounded-t';
+            currentIndex = index;
+            loadAllData();
+        }
+
+        // Expiry Selection
+        function selectExpiry(type) {
+            document.getElementById('btn-weekly').className = `p-3 rounded-lg ${type === 'weekly' ? 'bg-blue-600' : 'bg-gray-700'} text-center`;
+            document.getElementById('btn-monthly').className = `p-3 rounded-lg ${type === 'monthly' ? 'bg-blue-600' : 'bg-gray-700'} text-center`;
+            currentExpiry = type;
+            refreshChain();
+        }
+
+        // Load all data
+        async function loadAllData() {
+            await Promise.all([
+                loadIndexData(),
+                loadMarketRegime(),
+                loadExpiries(),
+                refreshChain(),
+                refreshSignal()
+            ]);
+            document.getElementById('last-update').textContent = `Updated: ${new Date().toLocaleTimeString()}`;
+        }
+
+        // Load index price data
+        async function loadIndexData() {
+            try {
+                const res = await fetch(`${API}/index/overview`);
+                const data = await res.json();
+                
+                const idx = data.indices.find(i => i.index === currentIndex);
+                if (idx) {
+                    document.getElementById('index-name').textContent = currentIndex;
+                    document.getElementById('index-price').textContent = idx.ltp.toFixed(2);
+                    const changeEl = document.getElementById('index-change');
+                    changeEl.textContent = `${idx.change >= 0 ? '+' : ''}${idx.change.toFixed(2)} (${idx.change_pct.toFixed(2)}%)`;
+                    changeEl.className = `text-lg ${idx.change >= 0 ? 'up' : 'down'}`;
+                    document.getElementById('index-high').textContent = idx.high.toFixed(2);
+                    document.getElementById('index-low').textContent = idx.low.toFixed(2);
+                    document.getElementById('lot-size').textContent = idx.lot_size;
+                }
+                
+                if (data.vix) {
+                    document.getElementById('vix-value').textContent = data.vix.value.toFixed(2);
+                    const vixChg = document.getElementById('vix-change');
+                    vixChg.textContent = `${data.vix.change >= 0 ? '+' : ''}${data.vix.change.toFixed(2)} (${data.vix.change_pct.toFixed(2)}%)`;
+                    vixChg.className = `text-sm mt-1 ${data.vix.change >= 0 ? 'up' : 'down'}`;
+                }
+            } catch (e) {
+                console.error('Error loading index data:', e);
+            }
+        }
+
+        // Load market regime
+        async function loadMarketRegime() {
+            try {
+                const res = await fetch(`${API}/index/market-regime`);
+                const data = await res.json();
+                
+                const card = document.getElementById('regime-card');
+                card.className = `col-span-3 card rounded-xl p-4 regime-${data.regime}`;
+                
+                document.getElementById('regime-name').textContent = data.regime.replace('_', ' ').toUpperCase();
+                document.getElementById('regime-trend').textContent = `Trend: ${data.market_trend} (${data.trend_strength.toFixed(0)}%)`;
+                document.getElementById('regime-recommendation').textContent = data.recommendation;
+                document.getElementById('vix-regime').textContent = data.regime.replace('_', ' ');
+            } catch (e) {
+                console.error('Error loading regime:', e);
+            }
+        }
+
+        // Load expiry dates
+        async function loadExpiries() {
+            try {
+                const res = await fetch(`${API}/index/${currentIndex}/expiries`);
+                const data = await res.json();
+                const exp = data.expiries;
+                
+                document.getElementById('weekly-date').textContent = exp.weekly;
+                document.getElementById('weekly-days').textContent = `${exp.weekly_days} days`;
+                document.getElementById('monthly-date').textContent = exp.monthly;
+                document.getElementById('monthly-days').textContent = `${exp.monthly_days} days`;
+                document.getElementById('dte').textContent = currentExpiry === 'weekly' ? exp.weekly_days : exp.monthly_days;
+            } catch (e) {
+                console.error('Error loading expiries:', e);
+            }
+        }
+
+        // Progress tracking
+        function showLoadingModal() {
+            document.getElementById('loading-modal').classList.remove('hidden');
+            resetProgress();
+        }
+
+        function hideLoadingModal() {
+            document.getElementById('loading-modal').classList.add('hidden');
+        }
+
+        function resetProgress() {
+            for (let i = 1; i <= 6; i++) {
+                document.getElementById(`step${i}-indicator`).className = 'w-4 h-4 rounded-full bg-gray-600';
+                document.getElementById(`step${i}-text`).className = 'text-sm text-gray-300';
+            }
+            document.getElementById('progress-bar').style.width = '0%';
+            document.getElementById('progress-percentage').textContent = '0%';
+        }
+
+        function updateProgress(step, status = 'active', message = '') {
+            const indicator = document.getElementById(`step${step}-indicator`);
+            const text = document.getElementById(`step${step}-text`);
+            
+            if (status === 'active') {
+                indicator.className = 'w-4 h-4 rounded-full bg-blue-500 animate-pulse';
+                text.className = 'text-sm text-blue-300';
+            } else if (status === 'completed') {
+                indicator.className = 'w-4 h-4 rounded-full bg-green-500';
+                text.className = 'text-sm text-green-300';
+            } else if (status === 'error') {
+                indicator.className = 'w-4 h-4 rounded-full bg-red-500';
+                text.className = 'text-sm text-red-300';
+            }
+            
+            if (message) {
+                text.textContent = message;
+            }
+            
+            // Update progress bar
+            const percentage = Math.round((step / 6) * 100);
+            document.getElementById('progress-bar').style.width = `${percentage}%`;
+            document.getElementById('progress-percentage').textContent = `${percentage}%`;
+        }
+
+        // Enhanced refresh chain with progress tracking
+        async function refreshChain() {
+            try {
+                showLoadingModal();
+                updateProgress(1, 'active', 'Fetching spot price...');
+                
+                // Small delay to show progress
+                await new Promise(resolve => setTimeout(resolve, 300));
+                
+                updateProgress(2, 'active', `Getting ${currentIndex} expiry dates...`);
+                await new Promise(resolve => setTimeout(resolve, 300));
+                
+                updateProgress(3, 'active', 'Generating option symbols...');
+                await new Promise(resolve => setTimeout(resolve, 300));
+                
+                updateProgress(4, 'active', `Fetching ${currentIndex} option chain...`);
+                
+                const res = await fetch(`${API}/index/${currentIndex}/chain?expiry=${currentExpiry}`);
+                
+                if (!res.ok) {
+                    throw new Error(`Failed to fetch option chain: ${res.status}`);
+                }
+                
+                updateProgress(4, 'completed', 'Option chain data fetched');
+                updateProgress(5, 'active', 'Analyzing option data...');
+                
+                chainData = await res.json();
+                
+                await new Promise(resolve => setTimeout(resolve, 500));
+                
+                updateProgress(5, 'completed', 'Analysis complete');
+                updateProgress(6, 'active', 'Updating display...');
+                
+                // Update metrics
+                const futureEl = document.getElementById('future-price');
+                if (futureEl && chainData.future_price) {
+                    futureEl.textContent = chainData.future_price.toFixed(2);
+                }
+                
+                const basisEl = document.getElementById('basis');
+                if (basisEl && chainData.basis) {
+                    basisEl.textContent = `${chainData.basis.toFixed(2)} (${chainData.basis_pct?.toFixed(3) || '0.000'}%)`;
+                }
+                
+                const pcrOiEl = document.getElementById('pcr-oi');
+                if (pcrOiEl && chainData.pcr_oi) {
+                    pcrOiEl.textContent = chainData.pcr_oi.toFixed(2);
+                    pcrOiEl.className = `text-xl font-bold ${chainData.pcr_oi > 1 ? 'up' : chainData.pcr_oi < 0.8 ? 'down' : 'neutral'}`;
+                }
+                
+                const maxPainEl = document.getElementById('max-pain');
+                if (maxPainEl && chainData.max_pain) {
+                    maxPainEl.textContent = chainData.max_pain.toFixed(0);
+                }
+                
+                const atmIvEl = document.getElementById('atm-iv');
+                if (atmIvEl && chainData.atm_iv) {
+                    atmIvEl.textContent = `${chainData.atm_iv.toFixed(1)}%`;
+                }
+                
+                const ivSkewEl = document.getElementById('iv-skew');
+                if (ivSkewEl && chainData.iv_skew !== undefined) {
+                    ivSkewEl.textContent = chainData.iv_skew.toFixed(2);
+                }
+                
+                const supportEl = document.getElementById('support-level');
+                if (supportEl && chainData.levels?.support?.[0]) {
+                    supportEl.textContent = chainData.levels.support[0].toFixed(0);
+                }
+                
+                const resistanceEl = document.getElementById('resistance-level');
+                if (resistanceEl && chainData.levels?.resistance?.[0]) {
+                    resistanceEl.textContent = chainData.levels.resistance[0].toFixed(0);
+                }
+                
+                const totalCallOiEl = document.getElementById('total-call-oi');
+                if (totalCallOiEl && chainData.totals?.call_oi) {
+                    totalCallOiEl.textContent = formatNumber(chainData.totals.call_oi);
+                }
+                
+                const totalPutOiEl = document.getElementById('total-put-oi');
+                if (totalPutOiEl && chainData.totals?.put_oi) {
+                    totalPutOiEl.textContent = formatNumber(chainData.totals.put_oi);
+                }
+                
+                const dteEl = document.getElementById('dte');
+                if (dteEl && chainData.days_to_expiry) {
+                    dteEl.textContent = chainData.days_to_expiry;
+                }
+                
+                // Render chain and charts
+                if (chainData.strikes) {
+                    renderChain(chainData);
+                    renderOICharts(chainData);
+                }
+                
+                updateProgress(6, 'completed', 'Display updated');
+                
+                await new Promise(resolve => setTimeout(resolve, 500));
+                hideLoadingModal();
+                
+            } catch (e) {
+                console.error('Error loading chain:', e);
+                updateProgress(6, 'error', 'Error loading data');
+                
+                // Show error for 2 seconds then hide
+                setTimeout(() => {
+                    hideLoadingModal();
+                }, 2000);
+            }
+        }
+
+        // Render option chain table
+        function renderChain(data) {
+            const body = document.getElementById('chain-body');
+            const maxOI = Math.max(...data.strikes.flatMap(s => [s.call.oi, s.put.oi]));
+            
+            body.innerHTML = data.strikes.map(s => {
+                const isATM = s.strike === data.atm_strike;
+                const callOIPct = (s.call.oi / maxOI) * 100;
+                const putOIPct = (s.put.oi / maxOI) * 100;
+                
+                return `
+                    <div class="grid grid-cols-13 gap-1 py-2 text-sm strike-row ${isATM ? 'atm-row' : ''} border-b border-gray-800">
+                        <div class="text-center">
+                            <span class="px-2 py-0.5 rounded text-xs ${getAnalysisColor(s.call.analysis)}">${s.call.analysis.split(' ')[0]}</span>
+                        </div>
+                        <div class="text-center text-gray-400">${s.call.iv.toFixed(1)}</div>
+                        <div class="text-right">
+                            <div class="relative">
+                                <div class="oi-bar bg-green-900" style="width: ${callOIPct}%"></div>
+                                <span class="relative z-10">${formatNumber(s.call.oi)}</span>
+                            </div>
+                        </div>
+                        <div class="text-center ${s.call.oi_change >= 0 ? 'up' : 'down'}">${s.call.oi_change >= 0 ? '+' : ''}${formatNumber(s.call.oi_change)}</div>
+                        <div class="text-right text-gray-400">${formatNumber(s.call.volume)}</div>
+                        <div class="text-right font-medium ${s.strike < data.spot_price ? 'text-green-400' : ''}">${s.call.ltp.toFixed(2)}</div>
+                        <div class="text-center font-bold ${isATM ? 'text-blue-400' : ''}">${s.strike}</div>
+                        <div class="text-left font-medium ${s.strike > data.spot_price ? 'text-red-400' : ''}">${s.put.ltp.toFixed(2)}</div>
+                        <div class="text-left text-gray-400">${formatNumber(s.put.volume)}</div>
+                        <div class="text-center ${s.put.oi_change >= 0 ? 'up' : 'down'}">${s.put.oi_change >= 0 ? '+' : ''}${formatNumber(s.put.oi_change)}</div>
+                        <div class="text-left">
+                            <div class="relative">
+                                <div class="oi-bar bg-red-900" style="width: ${putOIPct}%"></div>
+                                <span class="relative z-10">${formatNumber(s.put.oi)}</span>
+                            </div>
+                        </div>
+                        <div class="text-center text-gray-400">${s.put.iv.toFixed(1)}</div>
+                        <div class="text-center">
+                            <span class="px-2 py-0.5 rounded text-xs ${getAnalysisColor(s.put.analysis)}">${s.put.analysis.split(' ')[0]}</span>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // Render OI distribution charts
+        function renderOICharts(data) {
+            const topStrikes = [...data.strikes].sort((a, b) => b.call.oi - a.call.oi).slice(0, 8);
+            const maxCallOI = Math.max(...topStrikes.map(s => s.call.oi));
+            
+            document.getElementById('call-oi-chart').innerHTML = topStrikes.map(s => `
+                <div class="flex items-center gap-2 text-sm">
+                    <span class="w-16 text-right">${s.strike}</span>
+                    <div class="flex-1 bg-gray-700 rounded h-4">
+                        <div class="bg-green-600 h-4 rounded" style="width: ${(s.call.oi/maxCallOI)*100}%"></div>
+                    </div>
+                    <span class="w-16 text-gray-400">${formatNumber(s.call.oi)}</span>
+                </div>
+            `).join('');
+
+            const topPutStrikes = [...data.strikes].sort((a, b) => b.put.oi - a.put.oi).slice(0, 8);
+            const maxPutOI = Math.max(...topPutStrikes.map(s => s.put.oi));
+            
+            document.getElementById('put-oi-chart').innerHTML = topPutStrikes.map(s => `
+                <div class="flex items-center gap-2 text-sm">
+                    <span class="w-16 text-right">${s.strike}</span>
+                    <div class="flex-1 bg-gray-700 rounded h-4">
+                        <div class="bg-red-600 h-4 rounded" style="width: ${(s.put.oi/maxPutOI)*100}%"></div>
+                    </div>
+                    <span class="w-16 text-gray-400">${formatNumber(s.put.oi)}</span>
+                </div>
+            `).join('');
+        }
+
+        // Refresh signal
+        async function refreshSignal() {
+            try {
+                const res = await fetch(`${API}/index/${currentIndex}/signal`);
+                const data = await res.json();
+                
+                const sig = data.signal;
+                const dirEl = document.getElementById('signal-direction');
+                if (dirEl) {
+                    dirEl.textContent = sig.direction;
+                    dirEl.className = `text-4xl font-bold ${sig.direction === 'BULLISH' ? 'up' : sig.direction === 'BEARISH' ? 'down' : 'neutral'}`;
+                }
+                
+                const confEl = document.getElementById('signal-confidence');
+                if (confEl) confEl.textContent = `Confidence: ${sig.confidence}%`;
+                
+                const reasonEl = document.getElementById('signal-reasoning');
+                if (reasonEl) reasonEl.textContent = sig.reasoning;
+                
+                const strat = data.strategy.primary;
+                if (strat) {
+                    const nameEl = document.getElementById('strategy-name');
+                    if (nameEl) nameEl.textContent = strat.name;
+                    
+                    const typeEl = document.getElementById('strategy-type');
+                    if (typeEl) typeEl.textContent = strat.type;
+                    
+                    const entryEl = document.getElementById('strategy-entry');
+                    if (entryEl) entryEl.textContent = strat.entry?.toFixed(0) || '--';
+                    
+                    const targetEl = document.getElementById('strategy-target');
+                    if (targetEl) targetEl.textContent = strat.target?.toFixed(0) || '--';
+                    
+                    const slEl = document.getElementById('strategy-sl');
+                    if (slEl) slEl.textContent = strat.stop_loss?.toFixed(0) || '--';
+                }
+                
+                const noteEl = document.getElementById('strategy-note');
+                if (noteEl) noteEl.textContent = data.strategy.risk_note;
+            } catch (e) {
+                console.error('Error loading signal:', e);
+                // Set fallback values
+                const dirEl = document.getElementById('signal-direction');
+                if (dirEl) dirEl.textContent = '--';
+            }
+        }
+
+        // Helpers
+        function formatNumber(n) {
+            if (n >= 10000000) return (n/10000000).toFixed(2) + 'Cr';
+            if (n >= 100000) return (n/100000).toFixed(2) + 'L';
+            if (n >= 1000) return (n/1000).toFixed(1) + 'K';
+            return n.toString();
+        }
+
+        function getAnalysisColor(analysis) {
+            if (analysis.includes('Long Build')) return 'bg-green-600';
+            if (analysis.includes('Short Build')) return 'bg-red-600';
+            if (analysis.includes('Long Unwind')) return 'bg-yellow-600';
+            if (analysis.includes('Short Cover')) return 'bg-blue-600';
+            return 'bg-gray-600';
+        }
+
+        // Initial load
+        loadAllData();
+        setInterval(loadAllData, 60000); // Refresh every minute
+
+        // MTF Analysis State
+        let mtfData = null;
+        let currentTimeframe = 'D';
+
+        // Load all data including new features
+        async function loadAllData() {
+            await Promise.all([
+                loadIndexData(),
+                loadMarketRegime(),
+                loadExpiries(),
+                refreshChain(),
+                refreshSignal(),
+                loadMTFAnalysis(),
+                loadSessionInfo(),
+                loadThetaDecay(),
+                loadNewsSentiment(),
+                refreshTradingSignal()
+            ]);
+            document.getElementById('last-update').textContent = `Updated: ${new Date().toLocaleTimeString()}`;
+        }
+
+        // Generate Trading Signal
+        async function refreshTradingSignal() {
+            try {
+                // Get actionable trading signal from new endpoint
+                const symbol = getIndexSymbol(currentIndex);
+                const res = await fetch(`${API}/signals/${symbol}/actionable`);
+                
+                if (!res.ok) {
+                    console.warn(`Signal API returned ${res.status}, using fallback`);
+                    await refreshTradingSignalFallback();
+                    return;
+                }
+                
+                const signal = await res.json();
+                updateTradingSignalUI(signal);
+                updateAlternativeSignals(signal);
+            } catch (e) {
+                console.error('Error refreshing trading signal:', e);
+                // Fallback to basic signal generation
+                await refreshTradingSignalFallback();
+            }
+        }
+
+        // Update trading signal UI with real data
+        function updateTradingSignalUI(signal) {
+            if (signal.signal === 'NO_CLEAR_SETUP' || signal.signal === 'ERROR') {
+                const actionEl = document.getElementById('trade-action');
+                if (actionEl) {
+                    actionEl.textContent = signal.action;
+                    actionEl.className = 'text-2xl font-bold text-gray-400';
+                }
+                
+                const strikeEl = document.getElementById('trade-strike');
+                if (strikeEl) strikeEl.textContent = '--';
+                
+                const priceEl = document.getElementById('trade-entry-price');
+                if (priceEl) priceEl.textContent = '--';
+                
+                return;
+            }
+            
+            // Update main signal
+            const actionEl = document.getElementById('trade-action');
+            if (actionEl) {
+                actionEl.textContent = signal.action;
+                actionEl.className = `text-2xl font-bold ${
+                    signal.action.includes('BUY CALL') ? 'text-green-400' :
+                    signal.action.includes('BUY PUT') ? 'text-red-400' : 'text-gray-400'
+                }`;
+            }
+            
+            const strikeEl = document.getElementById('trade-strike');
+            if (strikeEl && signal.option) {
+                strikeEl.textContent = `${signal.option.strike} ${signal.option.type}`;
+            }
+            
+            // Update expiry date prominently
+            const expiryEl = document.getElementById('expiry-date-display');
+            if (expiryEl && signal.option && signal.option.expiry_date) {
+                const expDate = new Date(signal.option.expiry_date);
+                const daysToExp = signal.option.expiry_info?.days_to_expiry || 0;
+                expiryEl.innerHTML = `📅 Expiry: <strong>${expDate.toLocaleDateString('en-IN', {day: 'numeric', month: 'short', year: 'numeric'})}</strong> (${daysToExp} days)`;
+                expiryEl.className = daysToExp <= 2 ? 'text-xs text-red-400 mt-1 font-mono' : 'text-xs text-blue-400 mt-1 font-mono';
+            }
+            
+            // Update trading symbol prominently
+            const tradingSymbolMain = document.getElementById('trading-symbol-main');
+            if (tradingSymbolMain && signal.option && signal.option.trading_symbol) {
+                tradingSymbolMain.textContent = signal.option.trading_symbol;
+            }
+            
+            // Show price source badge
+            const priceSrcBadge = document.getElementById('price-source-badge');
+            if (priceSrcBadge && signal.pricing) {
+                if (signal.pricing.price_source === 'LIVE_CHAIN') {
+                    priceSrcBadge.textContent = '✓ LIVE';
+                    priceSrcBadge.className = 'text-xs mt-1 px-2 py-0.5 bg-green-600 rounded';
+                    priceSrcBadge.classList.remove('hidden');
+                } else {
+                    priceSrcBadge.textContent = '⚠ ESTIMATED';
+                    priceSrcBadge.className = 'text-xs mt-1 px-2 py-0.5 bg-orange-600 rounded';
+                    priceSrcBadge.classList.remove('hidden');
+                }
+            }
+            
+            // Update LTP and Entry Price
+            const ltpEl = document.getElementById('current-ltp');
+            if (ltpEl && signal.pricing) {
+                ltpEl.textContent = `₹${signal.pricing.ltp}`;
+            }
+            
+            const priceEl = document.getElementById('trade-entry-price');
+            if (priceEl && signal.entry) {
+                priceEl.textContent = `₹${signal.entry.price}`;
+            }
+            
+            // Update entry reasoning
+            const reasoningEl = document.getElementById('entry-reasoning');
+            if (reasoningEl && signal.entry && signal.entry.reasoning) {
+                reasoningEl.textContent = signal.entry.reasoning;
+            }
+            
+            // Update reversal probability and confidence
+            const probEl = document.getElementById('reversal-probability');
+            const confEl = document.getElementById('confidence-level');
+            const factorsContainer = document.getElementById('probability-factors');
+            
+            if (signal.setup_details && signal.setup_details.reversal_probability !== null) {
+                if (probEl) {
+                    probEl.textContent = `${signal.setup_details.reversal_probability}%`;
+                }
+                
+                if (confEl) {
+                    const confidence = signal.confidence || 'MEDIUM';
+                    confEl.textContent = confidence;
+                    
+                    // Color code confidence
+                    confEl.className = 'text-sm font-semibold px-2 py-1 rounded';
+                    if (confidence === 'VERY HIGH') {
+                        confEl.classList.add('text-green-400', 'bg-green-900/20');
+                    } else if (confidence === 'HIGH') {
+                        confEl.classList.add('text-yellow-400', 'bg-yellow-900/20');
+                    } else if (confidence === 'MODERATE') {
+                        confEl.classList.add('text-orange-400', 'bg-orange-900/20');
+                    } else {
+                        confEl.classList.add('text-red-400', 'bg-red-900/20');
+                    }
+                }
+                
+                // Show probability factors
+                if (factorsContainer && signal.setup_details.probability_factors) {
+                    const factors = signal.setup_details.probability_factors;
+                    document.getElementById('factor-fvg-status').textContent = factors.fvg_status;
+                    document.getElementById('factor-price-position').textContent = factors.price_position;
+                    document.getElementById('factor-fvg-size').textContent = factors.fvg_size;
+                    document.getElementById('factor-timeframe').textContent = factors.timeframe_weight;
+                    document.getElementById('factor-ml').textContent = factors.ml_confirmation || '0%';
+                    factorsContainer.classList.remove('hidden');
+                }
+            } else {
+                // Hide probability section if not available
+                if (probEl) probEl.textContent = '--';
+                if (confEl) confEl.textContent = '--';
+                if (factorsContainer) factorsContainer.classList.add('hidden');
+            }
+            
+            // Update ML Analysis section
+            if (signal.ml_analysis) {
+                console.log('📊 ML Analysis Data:', signal.ml_analysis);
+                const ml = signal.ml_analysis;
+                const mlStatus = document.getElementById('ml-status');
+                const mlArima = document.getElementById('ml-arima');
+                const mlLstm = document.getElementById('ml-lstm');
+                const mlMomentum = document.getElementById('ml-momentum');
+                const mlDirection = document.getElementById('ml-direction');
+                const mlConfidence = document.getElementById('ml-confidence');
+                const mlWarning = document.getElementById('ml-warning');
+                const mlRecommendation = document.getElementById('ml-recommendation');
+                
+                console.log('📊 ML Elements found:', {
+                    mlStatus: !!mlStatus,
+                    mlArima: !!mlArima,
+                    mlLstm: !!mlLstm,
+                    mlMomentum: !!mlMomentum,
+                    mlDirection: !!mlDirection,
+                    mlConfidence: !!mlConfidence
+                });
+                
+                if (ml.enabled) {
+                    console.log('✅ ML is ENABLED, updating UI...');
+                    if (mlStatus) {
+                        mlStatus.textContent = 'ACTIVE';
+                        mlStatus.className = 'text-xs px-2 py-0.5 bg-green-600 rounded';
+                    }
+                    
+                    // Individual model directions
+                    if (mlArima && ml.models) {
+                        mlArima.textContent = ml.models.arima?.toUpperCase() || 'N/A';
+                        mlArima.className = `text-sm font-semibold ${ml.models.arima === 'bullish' ? 'text-green-400' : ml.models.arima === 'bearish' ? 'text-red-400' : 'text-gray-400'}`;
+                    }
+                    if (mlLstm && ml.models) {
+                        mlLstm.textContent = ml.models.lstm?.toUpperCase() || 'N/A';
+                        mlLstm.className = `text-sm font-semibold ${ml.models.lstm === 'bullish' ? 'text-green-400' : ml.models.lstm === 'bearish' ? 'text-red-400' : 'text-gray-400'}`;
+                    }
+                    if (mlMomentum && ml.models) {
+                        mlMomentum.textContent = ml.models.momentum?.toUpperCase() || 'N/A';
+                        mlMomentum.className = `text-sm font-semibold ${ml.models.momentum === 'bullish' ? 'text-green-400' : ml.models.momentum === 'bearish' ? 'text-red-400' : 'text-gray-400'}`;
+                    }
+                    
+                    // Combined prediction
+                    if (mlDirection) {
+                        mlDirection.textContent = ml.direction?.toUpperCase() || 'N/A';
+                        mlDirection.className = `text-sm font-bold ${ml.direction === 'bullish' ? 'text-green-400' : ml.direction === 'bearish' ? 'text-red-400' : 'text-gray-400'}`;
+                        if (ml.predicted_price) {
+                            mlDirection.textContent += ` → ₹${ml.predicted_price}`;
+                        }
+                    }
+                    if (mlConfidence) {
+                        mlConfidence.textContent = `Confidence: ${ml.confidence}%`;
+                    }
+                    
+                    // Warning
+                    if (mlWarning && ml.warning) {
+                        mlWarning.textContent = ml.warning;
+                        mlWarning.classList.remove('hidden');
+                    } else if (mlWarning) {
+                        mlWarning.classList.add('hidden');
+                    }
+                    
+                    // Recommendation
+                    if (mlRecommendation && ml.recommendation) {
+                        mlRecommendation.textContent = ml.recommendation;
+                        mlRecommendation.classList.remove('hidden');
+                    }
+                } else {
+                    if (mlStatus) {
+                        mlStatus.textContent = 'INACTIVE';
+                        mlStatus.className = 'text-xs px-2 py-0.5 bg-gray-600 rounded';
+                    }
+                    if (mlArima) mlArima.textContent = '--';
+                    if (mlLstm) mlLstm.textContent = '--';
+                    if (mlMomentum) mlMomentum.textContent = '--';
+                    if (mlDirection) mlDirection.textContent = 'Insufficient Data';
+                    if (mlConfidence) mlConfidence.textContent = 'Need 50+ candles';
+                }
+            }
+            
+            // Update Trade Recommendation
+            if (signal.trade_recommendation) {
+                const rec = signal.trade_recommendation;
+                const recBox = document.getElementById('trade-recommendation-box');
+                const verdictEl = document.getElementById('trade-verdict');
+                const riskBadge = document.getElementById('trade-risk-badge');
+                const reasonsEl = document.getElementById('trade-reasons');
+                const positionAdvice = document.getElementById('position-size-advice');
+                
+                if (recBox) {
+                    recBox.classList.remove('hidden');
+                    
+                    // Set box color based on verdict
+                    if (rec.verdict === 'TAKE_TRADE') {
+                        recBox.className = 'mt-2 p-3 rounded border-2 bg-green-900/30 border-green-500';
+                        verdictEl.textContent = '✅ TAKE TRADE';
+                        verdictEl.className = 'text-sm font-bold text-green-400';
+                    } else if (rec.verdict === 'WAIT') {
+                        recBox.className = 'mt-2 p-3 rounded border-2 bg-yellow-900/30 border-yellow-500';
+                        verdictEl.textContent = '⏸️ WAIT / REDUCE SIZE';
+                        verdictEl.className = 'text-sm font-bold text-yellow-400';
+                    } else {
+                        recBox.className = 'mt-2 p-3 rounded border-2 bg-red-900/30 border-red-500';
+                        verdictEl.textContent = '❌ AVOID TRADE';
+                        verdictEl.className = 'text-sm font-bold text-red-400';
+                    }
+                    
+                    // Risk badge
+                    if (riskBadge) {
+                        riskBadge.textContent = `Risk: ${rec.risk_level}`;
+                        riskBadge.className = rec.risk_level === 'LOW' ? 
+                            'text-xs px-2 py-1 rounded bg-green-600' :
+                            rec.risk_level === 'MEDIUM' ?
+                            'text-xs px-2 py-1 rounded bg-yellow-600' :
+                            'text-xs px-2 py-1 rounded bg-red-600';
+                    }
+                    
+                    // Reasons
+                    if (reasonsEl && rec.reasons) {
+                        reasonsEl.innerHTML = rec.reasons.map(r => `<div class="text-gray-300">${r}</div>`).join('');
+                    }
+                    
+                    // Position advice
+                    if (positionAdvice) {
+                        positionAdvice.textContent = rec.position_size_advice;
+                        positionAdvice.className = rec.verdict === 'TAKE_TRADE' ? 
+                            'text-xs font-semibold ml-1 text-green-400' :
+                            rec.verdict === 'WAIT' ?
+                            'text-xs font-semibold ml-1 text-yellow-400' :
+                            'text-xs font-semibold ml-1 text-red-400';
+                    }
+                }
+            }
+            
+            // Update targets
+            const target1El = document.getElementById('target-1');
+            if (target1El && signal.targets) {
+                target1El.textContent = `₹${Math.round(signal.targets.target_1)}`;
+            }
+            
+            const target2El = document.getElementById('target-2');
+            if (target2El && signal.targets) {
+                target2El.textContent = `₹${Math.round(signal.targets.target_2)}`;
+            }
+            
+            const stopLossEl = document.getElementById('stop-loss');
+            if (stopLossEl && signal.targets) {
+                stopLossEl.textContent = `₹${Math.round(signal.targets.stop_loss)}`;
+            }
+            
+            // Update entry timing
+            const timingEl = document.getElementById('best-entry-time');
+            if (timingEl && signal.entry) {
+                timingEl.textContent = signal.entry.timing;
+            }
+            
+            const triggerEl = document.getElementById('entry-trigger');
+            if (triggerEl && signal.entry) {
+                triggerEl.textContent = `Trigger: ${signal.entry.trigger_level}`;
+            }
+            
+            // Update button labels with real data
+            const buyButtonDisplay = document.getElementById('buy-signal-display');
+            if (buyButtonDisplay && signal.option && signal.entry) {
+                buyButtonDisplay.textContent = `${signal.option.strike} ${signal.option.type} @ ₹${signal.entry.price}`;
+            }
+            
+            // Update option chain details
+            if (signal.option && signal.option.chain_data) {
+                const chainDetails = document.getElementById('option-chain-details');
+                if (chainDetails) {
+                    chainDetails.classList.remove('hidden');
+                    
+                    const chainData = signal.option.chain_data;
+                    const selectedOption = chainData.selected_option;
+                    
+                    // Update trading symbol
+                    const symbolEl = document.getElementById('trading-symbol');
+                    if (symbolEl) symbolEl.textContent = signal.option.trading_symbol || '--';
+                    
+                    // Update strike position
+                    const positionEl = document.getElementById('strike-position');
+                    if (positionEl) {
+                        positionEl.textContent = chainData.strike_position || '--';
+                        positionEl.className = `text-white font-medium ${
+                            chainData.strike_position === 'ATM' ? 'text-blue-400' :
+                            chainData.strike_position === 'ITM' ? 'text-green-400' : 'text-gray-400'
+                        }`;
+                    }
+                    
+                    // Update IV
+                    const ivEl = document.getElementById('option-iv');
+                    if (ivEl) ivEl.textContent = selectedOption?.iv ? `${selectedOption.iv.toFixed(2)}%` : '--';
+                    
+                    // Update OI
+                    const oiEl = document.getElementById('option-oi');
+                    if (oiEl) oiEl.textContent = selectedOption?.oi ? selectedOption.oi.toLocaleString() : '--';
+                    
+                    // Update Volume
+                    const volumeEl = document.getElementById('option-volume');
+                    if (volumeEl) volumeEl.textContent = selectedOption?.volume ? selectedOption.volume.toLocaleString() : '--';
+                    
+                    // Update OI Change
+                    const oiChangeEl = document.getElementById('option-oi-change');
+                    if (oiChangeEl && selectedOption?.oi_change) {
+                        const oidelta = selectedOption.oi_change;
+                        oiChangeEl.textContent = oidelta > 0 ? `+${oidelta.toLocaleString()}` : oidelta.toLocaleString();
+                        oiChangeEl.className = `text-white ${oidelta > 0 ? 'text-green-400' : 'text-red-400'}`;
+                    }
+                    
+                    // Update Analysis
+                    const analysisEl = document.getElementById('option-analysis');
+                    if (analysisEl) {
+                        analysisEl.textContent = selectedOption?.analysis || '--';
+                        analysisEl.className = selectedOption?.analysis?.includes('Long') ? 'text-green-400 font-medium' : 
+                                             selectedOption?.analysis?.includes('Short') ? 'text-red-400 font-medium' : 
+                                             'text-gray-400';
+                    }
+                }
+            } else {
+                // Hide if no chain data
+                const chainDetails = document.getElementById('option-chain-details');
+                if (chainDetails) chainDetails.classList.add('hidden');
+            }
+            
+            // Update alternative signal if available
+            updateAlternativeSignals(signal);
+        }
+
+        function updateAlternativeSignals(signal) {
+            const altContainer = document.getElementById('alt-signal');
+            
+            if (signal.action === 'WAIT') {
+                altContainer.innerHTML = `
+                    <div class="p-3 bg-gray-800/50 rounded-lg">
+                        <div class="text-gray-400 text-sm">No clear directional signal</div>
+                        <div class="text-xs text-gray-500 mt-2">Consider range-bound strategies</div>
+                    </div>
+                `;
+                return;
+            }
+
+            // Generate opposite signal as alternative
+            const isMainCall = signal.action.includes('CALL');
+            const altAction = isMainCall ? 'SELL PUT' : 'SELL CALL';
+            const altColor = isMainCall ? 'red' : 'green';
+            
+            altContainer.innerHTML = `
+                <div class="p-3 bg-${altColor}-900/20 rounded-lg border border-${altColor}-500/30">
+                    <div class="text-${altColor}-400 font-medium">${altAction}</div>
+                    <div class="text-sm">${signal.option.strike} ${isMainCall ? 'PE' : 'CE'}</div>
+                    <div class="text-sm text-gray-400">Collect premium strategy</div>
+                    <div class="text-xs text-gray-500 mt-2">${isMainCall ? 'Bullish' : 'Bearish'} bias alternative</div>
+                </div>
+                
+                <div class="p-3 bg-blue-900/20 rounded-lg border border-blue-500/30">
+                    <div class="text-blue-400 font-medium">IRON CONDOR</div>
+                    <div class="text-sm text-gray-400">Range strategy</div>
+                    <div class="text-xs text-gray-500 mt-2">If unsure about direction</div>
+                </div>
+            `;
+        }
+
+        // Update timing guide based on signal
+        function updateTimingGuide(signal) {
+            const container = document.getElementById('timing-guide');
+            
+            // Extract session advice
+            const sessionAdvice = signal.entry.session_advice.toLowerCase();
+            let entryWindow = "9:45 - 10:30 AM";
+            let entryStatus = "Good time to enter";
+            
+            if (sessionAdvice.includes('avoid') || sessionAdvice.includes('wait')) {
+                entryStatus = "Wait for better timing";
+                entryWindow = "After 10:00 AM";
+            } else if (sessionAdvice.includes('good')) {
+                entryStatus = "Good time to enter";
+            } else if (sessionAdvice.includes('caution')) {
+                entryStatus = "High risk period";
+                entryWindow = "Avoid new entries";
+            }
+
+            container.innerHTML = `
+                <div class="p-2 bg-gray-800/50 rounded">
+                    <div class="text-sm font-medium text-purple-400">Entry Window</div>
+                    <div class="text-xs text-gray-400">${entryWindow}</div>
+                    <div class="text-xs text-gray-500">${entryStatus}</div>
+                </div>
+                
+                <div class="p-2 bg-gray-800/50 rounded">
+                    <div class="text-sm font-medium text-orange-400">Setup Type</div>
+                    <div class="text-xs text-gray-400">${signal.setup_details.reasoning}</div>
+                    <div class="text-xs text-gray-500">${signal.setup_details.timeframe} TF</div>
+                </div>
+                
+                <div class="p-2 bg-gray-800/50 rounded">
+                    <div class="text-sm font-medium text-cyan-400">Exit Strategy</div>
+                    <div class="text-xs text-gray-400">Target 1: Quick profit</div>
+                    <div class="text-xs text-gray-500">Target 2: Full move</div>
+                </div>
+            `;
+        }
+
+        // Fallback signal generation (original method)
+        async function refreshTradingSignalFallback() {
+            // Original signal generation code as fallback
+            const fallbackSignal = {
+                action: "WAIT",
+                strike: "--",
+                entryPrice: 0,
+                trigger: "--",
+                targets: [0, 0],
+                stopLoss: 0,
+                timing: "Loading...",
+                reasoning: "Generating signal..."
+            };
+            updateTradingSignalUIFallback(fallbackSignal);
+        }
+
+        function updateAlternativeSignals(signal) {
+            // Update alternative signal (for SELL button)
+            const altStrikeEl = document.getElementById('alt-signal-strike');
+            const altPriceEl = document.getElementById('alt-signal-price');
+            const sellButtonDisplay = document.getElementById('sell-signal-display');
+            
+            try {
+                // Generate alternative signal based on main signal
+                if (signal.option && signal.entry) {
+                    const spotPrice = signal.entry.trigger_level || 25000;
+                    
+                    // If main is CALL, alternative is PUT (and vice versa)
+                    if (signal.option.type === 'CE') {
+                        // Main is CALL, alternative is PUT
+                        const altStrike = Math.round(spotPrice / 100) * 100 - 200; // 200 points OTM PUT
+                        const altPrice = Math.round(signal.entry.price * 0.6); // Estimate PUT price
+                        
+                        if (altStrikeEl) altStrikeEl.textContent = `${altStrike} PE`;
+                        if (altPriceEl) altPriceEl.textContent = `Premium: ₹${altPrice}`;
+                        if (sellButtonDisplay) sellButtonDisplay.textContent = `${altStrike} PE @ ₹${altPrice}`;
+                    } else {
+                        // Main is PUT, alternative is CALL
+                        const altStrike = Math.round(spotPrice / 100) * 100 + 200; // 200 points OTM CALL
+                        const altPrice = Math.round(signal.entry.price * 0.6);
+                        
+                        if (altStrikeEl) altStrikeEl.textContent = `${altStrike} CE`;
+                        if (altPriceEl) altPriceEl.textContent = `Premium: ₹${altPrice}`;
+                        if (sellButtonDisplay) sellButtonDisplay.textContent = `${altStrike} CE @ ₹${altPrice}`;
+                    }
+                } else {
+                    // Fallback to default alternative
+                    if (altStrikeEl) altStrikeEl.textContent = '--';
+                    if (altPriceEl) altPriceEl.textContent = 'Premium: --';
+                    if (sellButtonDisplay) sellButtonDisplay.textContent = 'Loading signal...';
+                }
+            } catch (e) {
+                console.warn('Error updating alternative signals:', e);
+                if (altStrikeEl) altStrikeEl.textContent = '--';
+                if (altPriceEl) altPriceEl.textContent = 'Premium: --';
+                if (sellButtonDisplay) sellButtonDisplay.textContent = 'Signal error';
+            }
+        }
+
+        // Execute signal functions
+        async function executeSignal(type) {
+            try {
+                // Get current signal data
+                const actionEl = document.getElementById('trade-action');
+                const strikeEl = document.getElementById('trade-strike');
+                const priceEl = document.getElementById('trade-entry-price');
+                
+                if (!actionEl || !strikeEl || !priceEl) {
+                    throw new Error('Signal data not available');
+                }
+                
+                const action = actionEl.textContent;
+                const strike = strikeEl.textContent;
+                const priceText = priceEl.textContent;
+                
+                // Extract price from text (remove ₹ and any extra content)
+                const price = parseFloat(priceText.replace(/[₹,]/g, '').split(' ')[0]);
+                
+                if (!price || price <= 0) {
+                    throw new Error('Invalid option price');
+                }
+                
+                // Determine side based on action and type
+                let side, symbol, orderPrice;
+                
+                if (type === 'buy') {
+                    side = 'BUY';
+                    symbol = strike;
+                    orderPrice = price;
+                } else {
+                    // For sell signal, get alternative signal data
+                    const altSignal = document.querySelector('#alt-signal .text-red-400');
+                    const altStrike = document.querySelector('#alt-signal .text-lg');
+                    const altPrice = document.querySelector('#alt-signal .text-sm');
+                    
+                    if (altSignal && altStrike && altPrice) {
+                        side = 'SELL';
+                        symbol = altStrike.textContent;
+                        const altPriceText = altPrice.textContent;
+                        orderPrice = parseFloat(altPriceText.replace(/[₹,]/g, '').match(/\d+/)?.[0] || '0');
+                    } else {
+                        throw new Error('Alternative signal not available');
+                    }
+                }
+                
+                // Show loading state
+                const executeButton = event.target;
+                const originalText = executeButton.innerHTML;
+                executeButton.innerHTML = '<div class="animate-spin">⏳</div> Executing...';
+                executeButton.disabled = true;
+                
+                // Execute order
+                const orderData = {
+                    symbol: symbol,
+                    side: side,
+                    quantity: 1, // Default to 1 lot
+                    price: orderPrice,
+                    type: 'MARKET' // Market order for immediate execution
+                };
+                
+                const response = await fetch(`${API}/orders/execute`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(orderData)
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    // Show success modal
+                    showOrderSuccessModal(result);
+                } else {
+                    throw new Error(result.message || 'Order execution failed');
+                }
+                
+            } catch (e) {
+                console.error('Error executing signal:', e);
+                alert(`❌ Order Execution Failed\n\n${e.message}\n\nPlease check your connection and try again.`);
+            } finally {
+                // Restore button state
+                if (typeof event !== 'undefined' && event.target) {
+                    event.target.innerHTML = event.target.innerHTML.includes('BUY') ? '🚀 Execute BUY' : '📉 Execute SELL';
+                    event.target.disabled = false;
+                }
+            }
+        }
+        
+        function showOrderSuccessModal(result) {
+            const execution = result.execution_summary;
+            const modal = document.createElement('div');
+            modal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
+            modal.innerHTML = `
+                <div class="bg-slate-800 rounded-lg p-6 max-w-md mx-4 border border-green-500">
+                    <div class="text-center mb-4">
+                        <div class="text-4xl mb-2">✅</div>
+                        <h3 class="text-xl font-bold text-green-400">Order Executed Successfully</h3>
+                    </div>
+                    
+                    <div class="space-y-3">
+                        <div class="flex justify-between">
+                            <span class="text-gray-400">Order ID:</span>
+                            <span class="font-mono">${result.order.order_id}</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-gray-400">Action:</span>
+                            <span class="font-semibold">${execution.action}</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-gray-400">Symbol:</span>
+                            <span class="font-semibold">${execution.symbol}</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-gray-400">Price:</span>
+                            <span class="font-semibold text-yellow-400">${execution.price}</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-gray-400">Total Value:</span>
+                            <span class="font-semibold text-green-400">${execution.total_value}</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-gray-400">Status:</span>
+                            <span class="font-semibold text-green-400">${execution.status}</span>
+                        </div>
+                    </div>
+                    
+                    <button onclick="this.parentElement.parentElement.remove()" 
+                            class="w-full mt-4 bg-green-600 hover:bg-green-500 text-white font-bold py-2 px-4 rounded">
+                        Close
+                    </button>
+                </div>
+            `;
+            document.body.appendChild(modal);
+            
+            // Auto-close after 10 seconds
+            setTimeout(() => {
+                if (modal.parentElement) {
+                    modal.remove();
+                }
+            }, 10000);
+        }
+
+        async function setAlerts() {
+            try {
+                // Get current signal data
+                const strikeEl = document.getElementById('trade-strike');
+                const priceEl = document.getElementById('trade-entry-price');
+                const target1El = document.getElementById('target-1');
+                const target2El = document.getElementById('target-2');
+                const stopLossEl = document.getElementById('stop-loss');
+                
+                if (!strikeEl || !priceEl) {
+                    throw new Error('Signal data not available');
+                }
+                
+                const symbol = strikeEl.textContent;
+                const entryPrice = parseFloat(priceEl.textContent.replace(/[₹,]/g, ''));
+                const target1 = parseFloat(target1El?.textContent.replace(/[₹,]/g, '') || '0');
+                const target2 = parseFloat(target2El?.textContent.replace(/[₹,]/g, '') || '0');
+                const stopLoss = parseFloat(stopLossEl?.textContent.replace(/[₹,]/g, '') || '0');
+                
+                // Create alerts for all levels
+                const alerts = [
+                    {
+                        symbol: symbol,
+                        type: 'ENTRY',
+                        target_price: entryPrice,
+                        condition: 'BELOW',
+                        message: `Entry opportunity: ${symbol} reached ₹${entryPrice}`
+                    },
+                    {
+                        symbol: symbol,
+                        type: 'EXIT',
+                        target_price: target1,
+                        condition: 'ABOVE',
+                        message: `Target 1 hit: ${symbol} reached ₹${target1} - Consider partial booking`
+                    },
+                    {
+                        symbol: symbol,
+                        type: 'EXIT',
+                        target_price: target2,
+                        condition: 'ABOVE',
+                        message: `Target 2 hit: ${symbol} reached ₹${target2} - Consider full exit`
+                    },
+                    {
+                        symbol: symbol,
+                        type: 'STOP',
+                        target_price: stopLoss,
+                        condition: 'BELOW',
+                        message: `Stop Loss triggered: ${symbol} fell to ₹${stopLoss} - Exit position`
+                    }
+                ];
+                
+                // Show loading state
+                const alertButton = event.target;
+                const originalText = alertButton.innerHTML;
+                alertButton.innerHTML = '⏳ Setting Alerts...';
+                alertButton.disabled = true;
+                
+                // Create all alerts
+                const alertResults = [];
+                for (const alertData of alerts) {
+                    try {
+                        const response = await fetch(`${API}/alerts/create`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify(alertData)
+                        });
+                        
+                        const result = await response.json();
+                        alertResults.push(result);
+                    } catch (e) {
+                        console.warn(`Failed to create alert for ${alertData.type}:`, e);
+                    }
+                }
+                
+                // Show success message
+                const successCount = alertResults.filter(r => r.success).length;
+                const modal = document.createElement('div');
+                modal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
+                modal.innerHTML = `
+                    <div class="bg-slate-800 rounded-lg p-6 max-w-md mx-4 border border-blue-500">
+                        <div class="text-center mb-4">
+                            <div class="text-4xl mb-2">🔔</div>
+                            <h3 class="text-xl font-bold text-blue-400">Price Alerts Created</h3>
+                        </div>
+                        
+                        <div class="space-y-2 text-sm">
+                            <p class="text-center text-gray-300">Successfully created ${successCount}/4 alerts for ${symbol}</p>
+                            <div class="bg-slate-700 rounded p-3 space-y-1">
+                                <div class="flex justify-between">
+                                    <span>Entry Alert:</span>
+                                    <span class="text-yellow-400">₹${entryPrice}</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span>Target 1:</span>
+                                    <span class="text-green-400">₹${target1}</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span>Target 2:</span>
+                                    <span class="text-green-400">₹${target2}</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span>Stop Loss:</span>
+                                    <span class="text-red-400">₹${stopLoss}</span>
+                                </div>
+                            </div>
+                            <p class="text-xs text-gray-400 text-center mt-3">
+                                You'll be notified when these price levels are hit.
+                            </p>
+                        </div>
+                        
+                        <button onclick="this.parentElement.parentElement.remove()" 
+                                class="w-full mt-4 bg-blue-600 hover:bg-blue-500 text-white font-bold py-2 px-4 rounded">
+                            Close
+                        </button>
+                    </div>
+                `;
+                document.body.appendChild(modal);
+                
+            } catch (e) {
+                console.error('Error setting alerts:', e);
+                alert(`❌ Failed to set price alerts\n\n${e.message}`);
+            } finally {
+                // Restore button state
+                if (typeof event !== 'undefined' && event.target) {
+                    event.target.innerHTML = '🔔 Set Alerts';
+                    event.target.disabled = false;
+                }
+            }
+        }
+
+        async function showDetailedAnalysis() {
+            try {
+                // Show loading modal first
+                const loadingModal = document.createElement('div');
+                loadingModal.id = 'analysis-loading';
+                loadingModal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
+                loadingModal.innerHTML = `
+                    <div class="bg-slate-800 rounded-lg p-6 text-center">
+                        <div class="animate-spin text-4xl mb-4">📊</div>
+                        <p class="text-white">Analyzing signal reasoning...</p>
+                    </div>
+                `;
+                document.body.appendChild(loadingModal);
+                
+                // Fetch detailed analysis
+                const response = await fetch(`${API}/analysis/signal-reasoning/${currentIndex}`);
+                const analysis = await response.json();
+                
+                // Remove loading modal
+                loadingModal.remove();
+                
+                if (analysis.error) {
+                    throw new Error(analysis.error);
+                }
+                
+                const reasoning = analysis.reasoning;
+                const recommendation = analysis.recommendation;
+                
+                // Create detailed analysis modal
+                const modal = document.createElement('div');
+                modal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4';
+                modal.innerHTML = `
+                    <div class="bg-slate-800 rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto border border-purple-500">
+                        <!-- Header -->
+                        <div class="bg-purple-900/30 p-4 border-b border-purple-500/30">
+                            <div class="flex justify-between items-center">
+                                <h2 class="text-2xl font-bold text-purple-400">📊 Detailed Signal Analysis</h2>
+                                <button onclick="this.closest('.fixed').remove()" 
+                                        class="text-gray-400 hover:text-white text-2xl">&times;</button>
+                            </div>
+                            <p class="text-sm text-gray-300 mt-1">${currentIndex} • ${new Date().toLocaleString()}</p>
+                        </div>
+                        
+                        <div class="p-6 space-y-6">
+                            <!-- Signal Strength -->
+                            <div class="bg-slate-700 rounded-lg p-4">
+                                <h3 class="text-lg font-semibold mb-3 flex items-center gap-2">
+                                    <span class="w-4 h-4 rounded-full ${
+                                        reasoning.signal_strength === 'HIGH' ? 'bg-green-500' :
+                                        reasoning.signal_strength === 'MEDIUM' ? 'bg-yellow-500' : 'bg-red-500'
+                                    }"></span>
+                                    Signal Strength: ${reasoning.signal_strength}
+                                </h3>
+                                <div class="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <p class="text-sm text-gray-400">Primary Driver</p>
+                                        <p class="font-semibold text-${reasoning.primary_driver === 'BULLISH' ? 'green' : reasoning.primary_driver === 'BEARISH' ? 'red' : 'gray'}-400">
+                                            ${reasoning.primary_driver}
+                                        </p>
+                                    </div>
+                                    <div>
+                                        <p class="text-sm text-gray-400">Market Structure</p>
+                                        <p class="font-semibold text-blue-400">${reasoning.market_structure}</p>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Timeframe Analysis -->
+                            <div class="bg-slate-700 rounded-lg p-4">
+                                <h3 class="text-lg font-semibold mb-3">Multi-Timeframe Analysis</h3>
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                    ${Object.entries(reasoning.timeframe_analysis || {}).map(([tf, data]) => `
+                                        <div class="bg-slate-600 rounded p-3">
+                                            <div class="flex justify-between items-center mb-2">
+                                                <span class="font-medium">${tf}</span>
+                                                <span class="text-xs px-2 py-1 rounded ${
+                                                    data.bias === 'bullish' ? 'bg-green-900 text-green-400' :
+                                                    data.bias === 'bearish' ? 'bg-red-900 text-red-400' : 'bg-gray-900 text-gray-400'
+                                                }">
+                                                    ${data.bias.toUpperCase()}
+                                                </span>
+                                            </div>
+                                            <p class="text-sm text-gray-300">${data.structure}</p>
+                                            ${data.key_points.length > 0 ? `
+                                                <ul class="text-xs text-gray-400 mt-2 space-y-1">
+                                                    ${data.key_points.map(point => `<li>• ${point}</li>`).join('')}
+                                                </ul>
+                                            ` : ''}
+                                        </div>
+                                    `).join('')}
+                                </div>
+                            </div>
+                            
+                            <!-- Confluence Factors -->
+                            ${reasoning.confluence_factors.length > 0 ? `
+                                <div class="bg-slate-700 rounded-lg p-4">
+                                    <h3 class="text-lg font-semibold mb-3">Confluence Factors</h3>
+                                    <div class="space-y-2">
+                                        ${reasoning.confluence_factors.map(factor => `
+                                            <div class="flex justify-between items-center bg-slate-600 rounded p-2">
+                                                <span>Level: ${factor.level}</span>
+                                                <span class="text-yellow-400 font-semibold">Strength: ${factor.strength}/5</span>
+                                            </div>
+                                        `).join('')}
+                                    </div>
+                                </div>
+                            ` : ''}
+                            
+                            <!-- Risk Factors -->
+                            ${reasoning.risk_factors.length > 0 ? `
+                                <div class="bg-red-900/20 border border-red-500/30 rounded-lg p-4">
+                                    <h3 class="text-lg font-semibold mb-3 text-red-400">⚠️ Risk Factors</h3>
+                                    <ul class="space-y-1">
+                                        ${reasoning.risk_factors.map(risk => `
+                                            <li class="text-sm text-red-300">• ${risk}</li>
+                                        `).join('')}
+                                    </ul>
+                                </div>
+                            ` : ''}
+                            
+                            <!-- Recommendation -->
+                            <div class="bg-blue-900/20 border border-blue-500/30 rounded-lg p-4">
+                                <h3 class="text-lg font-semibold mb-3 text-blue-400">💡 Recommendation</h3>
+                                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                    <div>
+                                        <p class="text-sm text-gray-400">Strategy</p>
+                                        <p class="font-semibold">${recommendation.strategy}</p>
+                                    </div>
+                                    <div>
+                                        <p class="text-sm text-gray-400">Timeframe</p>
+                                        <p class="font-semibold">${recommendation.timeframe}</p>
+                                    </div>
+                                    <div>
+                                        <p class="text-sm text-gray-400">Position Size</p>
+                                        <p class="font-semibold">${recommendation.position_size}</p>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Session Context -->
+                            <div class="bg-yellow-900/20 border border-yellow-500/30 rounded-lg p-4">
+                                <h3 class="text-lg font-semibold mb-2 text-yellow-400">📅 Session Context</h3>
+                                <p class="text-sm text-yellow-300">${reasoning.session_context}</p>
+                                <p class="text-xs text-gray-400 mt-2">Current market session affects signal timing and execution risk</p>
+                            </div>
+                        </div>
+                        
+                        <!-- Footer -->
+                        <div class="bg-slate-700 p-4 border-t border-slate-600">
+                            <button onclick="this.closest('.fixed').remove()" 
+                                    class="w-full bg-purple-600 hover:bg-purple-500 text-white font-bold py-2 px-4 rounded">
+                                Close Analysis
+                            </button>
+                        </div>
+                    </div>
+                `;
+                document.body.appendChild(modal);
+                
+            } catch (e) {
+                // Remove loading modal if it exists
+                const loadingModal = document.getElementById('analysis-loading');
+                if (loadingModal) loadingModal.remove();
+                
+                console.error('Error loading detailed analysis:', e);
+                alert(`❌ Failed to load signal analysis\n\n${e.message}\n\nThis feature requires active market data and MTF analysis.`);
+            }
+        }
+
+        // Refresh option prices in real-time
+        async function refreshSignalPrices() {
+            try {
+                const priceEl = document.getElementById('trade-entry-price');
+                const strikeEl = document.getElementById('trade-strike');
+                
+                if (!strikeEl || !priceEl) {
+                    console.warn('Signal elements not found');
+                    return;
+                }
+                
+                // Extract strike and type from the signal
+                const strikeText = strikeEl.textContent;
+                const match = strikeText.match(/(\d+)\s*(CE|PE)/);
+                
+                if (!match) {
+                    console.warn('Could not parse strike and type from:', strikeText);
+                    return;
+                }
+                
+                const strike = parseFloat(match[1]);
+                const optionType = match[2] === 'CE' ? 'call' : 'put';
+                
+                // Show loading state
+                priceEl.innerHTML = '<span class="animate-pulse">...</span>';
+                
+                // Get real-time quote
+                const res = await fetch(`${API}/options/quote/${currentIndex}/${strike}/${optionType}`);
+                const quote = await res.json();
+                
+                if (quote.error || !quote.ltp) {
+                    throw new Error(quote.error || 'No price available');
+                }
+                
+                // Update price with real data
+                priceEl.innerHTML = `
+                    <span class="text-2xl font-bold text-yellow-400">₹${quote.ltp}</span>
+                    <div class="text-xs text-gray-400 mt-1">
+                        Bid: ₹${quote.bid} | Ask: ₹${quote.ask}
+                        <br>Spread: ₹${quote.spread?.toFixed(1) || 'N/A'}
+                    </div>
+                `;
+                
+                // Update targets based on fresh price
+                const target1El = document.getElementById('profit-target-1');
+                const target2El = document.getElementById('profit-target-2');
+                const stopEl = document.getElementById('stop-loss');
+                
+                if (target1El) target1El.textContent = `₹${(quote.ltp * 1.3).toFixed(0)}`;
+                if (target2El) target2El.textContent = `₹${(quote.ltp * 1.8).toFixed(0)}`;
+                if (stopEl) stopEl.textContent = `₹${(quote.ltp * 0.75).toFixed(0)}`;
+                
+                // Show last updated time
+                const updateEl = document.getElementById('price-last-update') || 
+                    document.createElement('div');
+                updateEl.id = 'price-last-update';
+                updateEl.className = 'text-xs text-blue-400 mt-2';
+                updateEl.textContent = `Price updated: ${new Date().toLocaleTimeString()}`;
+                
+                if (!document.getElementById('price-last-update')) {
+                    priceEl.appendChild(updateEl);
+                }
+                
+                console.log('✅ Signal prices refreshed with live data');
+                
+            } catch (e) {
+                console.error('Error refreshing signal prices:', e);
+                
+                // Restore original state on error
+                const priceEl = document.getElementById('trade-entry-price');
+                if (priceEl && priceEl.textContent.includes('...')) {
+                    priceEl.innerHTML = '<span class="text-2xl font-bold text-red-400">Price Error</span>';
+                }
+            }
+        }
+
+        // Load MTF ICT Analysis
+        async function loadMTFAnalysis() {
+            try {
+                const symbol = getIndexSymbol(currentIndex);
+                const res = await fetch(`${API}/mtf/${symbol}/analysis?timeframes=M,W,D,240,60,15`);
+                mtfData = await res.json();
+                
+                // Update overall bias
+                const biasEl = document.getElementById('overall-bias');
+                biasEl.textContent = mtfData.overall_bias.toUpperCase();
+                biasEl.className = `text-xl font-bold ${mtfData.overall_bias === 'bullish' ? 'up' : mtfData.overall_bias === 'bearish' ? 'down' : 'neutral'}`;
+                
+                // Update confluence zones
+                renderConfluenceZones(mtfData.confluence_zones);
+                
+                // Show current timeframe
+                showTimeframe(currentTimeframe);
+            } catch (e) {
+                console.error('Error loading MTF analysis:', e);
+            }
+        }
+
+        // Show specific timeframe analysis
+        function showTimeframe(tf) {
+            currentTimeframe = tf;
+            
+            // Update tab styles
+            ['M', 'W', 'D', '240', '60', '15'].forEach(t => {
+                document.getElementById(`tf-${t}`).className = `px-3 py-1.5 rounded-lg ${t === tf ? 'bg-blue-600' : 'bg-gray-700'} text-sm`;
+            });
+            
+            if (!mtfData || !mtfData.analyses[tf]) {
+                document.getElementById('fvg-list').innerHTML = '<div class="text-gray-500 text-sm">No data for this timeframe</div>';
+                return;
+            }
+            
+            const analysis = mtfData.analyses[tf];
+            
+            // Render FVGs
+            renderFVGs(analysis.fair_value_gaps);
+            
+            // Render Order Blocks
+            renderOrderBlocks(analysis.order_blocks);
+            
+            // Render Liquidity Zones
+            renderLiquidityZones(analysis.liquidity_zones);
+        }
+
+        // Render FVGs with test status
+        function renderFVGs(fvgs) {
+            const container = document.getElementById('fvg-list');
+            if (!fvgs || fvgs.length === 0) {
+                container.innerHTML = '<div class="text-gray-500 text-sm">No FVGs found</div>';
+                return;
+            }
+            
+            container.innerHTML = fvgs.map(fvg => {
+                const statusColor = fvg.status === 'active' ? 'bg-green-600' : 
+                                   fvg.status === 'tested_once' ? 'bg-yellow-600' : 'bg-red-600';
+                const statusText = fvg.status === 'active' ? 'ACTIVE' :
+                                  fvg.status === 'tested_once' ? '1st TEST' : '2nd TEST';
+                const typeColor = fvg.type === 'bullish' ? 'text-green-400' : 'text-red-400';
+                
+                return `
+                    <div class="p-2 bg-gray-800/50 rounded-lg border-l-2 ${fvg.type === 'bullish' ? 'border-green-500' : 'border-red-500'}">
+                        <div class="flex items-center justify-between">
+                            <span class="${typeColor} text-xs font-medium">${fvg.type.toUpperCase()} FVG</span>
+                            <span class="${statusColor} text-xs px-1.5 py-0.5 rounded">${statusText}</span>
+                        </div>
+                        <div class="text-sm font-medium mt-1">${fvg.low.toFixed(0)} - ${fvg.high.toFixed(0)}</div>
+                        <div class="text-xs text-gray-500">Mid: ${fvg.midpoint.toFixed(0)} | Tests: ${fvg.test_count}</div>
+                        ${fvg.first_test ? `<div class="text-xs text-yellow-400">1st test: ${new Date(fvg.first_test).toLocaleDateString()}</div>` : ''}
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // Render Order Blocks
+        function renderOrderBlocks(obs) {
+            const container = document.getElementById('ob-list');
+            if (!obs || obs.length === 0) {
+                container.innerHTML = '<div class="text-gray-500 text-sm">No Order Blocks found</div>';
+                return;
+            }
+            
+            container.innerHTML = obs.map(ob => {
+                const typeColor = ob.type === 'bullish' ? 'text-green-400' : 'text-red-400';
+                const borderColor = ob.type === 'bullish' ? 'border-green-500' : 'border-red-500';
+                
+                return `
+                    <div class="p-2 bg-gray-800/50 rounded-lg border-l-2 ${borderColor}">
+                        <div class="flex items-center justify-between">
+                            <span class="${typeColor} text-xs font-medium">${ob.type.toUpperCase()} OB</span>
+                            <span class="text-xs ${ob.tested ? 'text-yellow-400' : 'text-gray-400'}">${ob.tested ? 'TESTED' : 'UNTESTED'}</span>
+                        </div>
+                        <div class="text-sm font-medium mt-1">${ob.low.toFixed(0)} - ${ob.high.toFixed(0)}</div>
+                        <div class="text-xs text-gray-500">Test count: ${ob.test_count}</div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // Render Liquidity Zones
+        function renderLiquidityZones(zones) {
+            const container = document.getElementById('liq-list');
+            if (!zones || zones.length === 0) {
+                container.innerHTML = '<div class="text-gray-500 text-sm">No Liquidity Zones found</div>';
+                return;
+            }
+            
+            container.innerHTML = zones.map(zone => {
+                const typeIcon = zone.type === 'buy_side' ? '🔼' : '🔽';
+                const typeColor = zone.type === 'buy_side' ? 'text-green-400' : 'text-red-400';
+                
+                return `
+                    <div class="p-2 bg-gray-800/50 rounded-lg flex items-center justify-between">
+                        <div>
+                            <span class="text-sm">${typeIcon}</span>
+                            <span class="${typeColor} text-xs">${zone.type.replace('_', ' ').toUpperCase()}</span>
+                        </div>
+                        <div class="text-right">
+                            <div class="text-sm font-medium">${zone.level.toFixed(0)}</div>
+                            <div class="text-xs text-gray-500">Strength: ${zone.strength}</div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // Render Confluence Zones
+        function renderConfluenceZones(zones) {
+            const container = document.getElementById('confluence-zones');
+            if (!zones || zones.length === 0) {
+                container.innerHTML = '<div class="text-gray-500 text-sm">No confluence zones</div>';
+                return;
+            }
+            
+            container.innerHTML = zones.slice(0, 5).map(zone => {
+                const distColor = zone.distance_pct > 0 ? 'text-green-400' : 'text-red-400';
+                return `
+                    <div class="p-2 bg-gray-800/50 rounded-lg text-center">
+                        <div class="text-lg font-bold">${zone.center.toFixed(0)}</div>
+                        <div class="text-xs text-gray-400">${zone.timeframes.join(' + ')}</div>
+                        <div class="${distColor} text-xs">${zone.distance_pct.toFixed(1)}% away</div>
+                        <div class="text-xs text-gray-500">Weight: ${zone.weight.toFixed(0)}</div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // Get index symbol for API
+        function getIndexSymbol(index) {
+            const symbols = {
+                'NIFTY': 'NSE:NIFTY50-INDEX',
+                'BANKNIFTY': 'NSE:NIFTYBANK-INDEX',
+                'FINNIFTY': 'NSE:FINNIFTY-INDEX',
+                'MIDCPNIFTY': 'NSE:MIDCPNIFTY-INDEX',
+                'SENSEX': 'BSE:SENSEX-INDEX',
+                'BANKEX': 'BSE:BANKEX-INDEX'
+            };
+            return symbols[index] || 'NSE:NIFTY50-INDEX';
+        }
+
+        // Load session info
+        async function loadSessionInfo() {
+            try {
+                const res = await fetch(`${API}/options/session`);
+                const data = await res.json();
+                
+                const badge = document.getElementById('session-badge');
+                badge.textContent = data.session === 'CLOSED' ? 'CLOSED' : 'OPEN';
+                badge.className = `text-xs px-2 py-1 rounded ${data.session === 'CLOSED' ? 'bg-red-600' : 'bg-green-600'}`;
+                
+                document.getElementById('session-name').textContent = data.session.replace('_', ' ');
+                document.getElementById('session-elapsed').textContent = `${data.minutes_elapsed} min`;
+                document.getElementById('session-remaining').textContent = `${data.minutes_remaining} min`;
+                document.getElementById('session-volatility').textContent = data.volatility;
+                document.getElementById('session-theta').textContent = data.theta_impact;
+                document.getElementById('session-recommendation').textContent = data.recommendation;
+            } catch (e) {
+                console.error('Error loading session:', e);
+            }
+        }
+
+        // Load theta decay profile
+        async function loadThetaDecay() {
+            try {
+                const dte = chainData?.days_to_expiry || 3;
+                const iv = chainData?.atm_iv || 15;
+                const res = await fetch(`${API}/options/theta-decay?days_to_expiry=${dte}&iv=${iv}`);
+                const data = await res.json();
+                
+                document.getElementById('theta-dte').textContent = data.days_to_expiry;
+                document.getElementById('theta-hours').textContent = `${data.hours_to_expiry.toFixed(0)} hours`;
+                document.getElementById('theta-speed').textContent = data.decay_speed.toUpperCase();
+                document.getElementById('theta-daily').textContent = `${data.daily_decay_pct.toFixed(1)}%`;
+                document.getElementById('theta-hourly').textContent = `${data.hourly_decay_pct.toFixed(1)}%`;
+                document.getElementById('theta-strategy').textContent = data.strategy;
+            } catch (e) {
+                console.error('Error loading theta decay:', e);
+            }
+        }
+
+        // Calculate price projection
+        async function calculateProjection() {
+            try {
+                if (!chainData) return;
+                
+                const move = document.getElementById('proj-move').value;
+                const premium = document.getElementById('proj-premium').value;
+                const spot = chainData.spot_price;
+                const strike = chainData.atm_strike;
+                const dte = chainData.days_to_expiry;
+                const iv = chainData.atm_iv;
+                
+                const res = await fetch(`${API}/options/project-price?spot=${spot}&strike=${strike}&current_premium=${premium}&target_move=${move}&days_to_expiry=${dte}&iv=${iv}&option_type=call`, {
+                    method: 'POST'
+                });
+                const data = await res.json();
+                
+                const profit = data.projected.profit;
+                const profitPct = data.projected.profit_pct;
+                const isProfit = profit >= 0;
+                
+                document.getElementById('proj-new-price').textContent = data.projected.option_price.toFixed(2);
+                document.getElementById('proj-new-price').className = `font-bold ${isProfit ? 'up' : 'down'}`;
+                
+                document.getElementById('proj-profit').textContent = `${isProfit ? '+' : ''}${profit.toFixed(2)}`;
+                document.getElementById('proj-profit').className = `font-bold ${isProfit ? 'up' : 'down'}`;
+                
+                document.getElementById('proj-profit-pct').textContent = `${isProfit ? '+' : ''}${profitPct.toFixed(1)}%`;
+                document.getElementById('proj-profit-pct').className = `font-bold ${isProfit ? 'up' : 'down'}`;
+            } catch (e) {
+                console.error('Error calculating projection:', e);
+            }
+        }
+
+        // Load news and sentiment
+        async function loadNewsSentiment() {
+            try {
+                const res = await fetch(`${API}/news/sentiment`);
+                const data = await res.json();
+                
+                // Sentiment score
+                const scoreEl = document.getElementById('sentiment-score');
+                scoreEl.textContent = data.score.toFixed(2);
+                scoreEl.className = `text-5xl font-bold ${data.score > 0.3 ? 'up' : data.score < -0.3 ? 'down' : 'neutral'}`;
+                
+                document.getElementById('sentiment-label').textContent = data.overall.toUpperCase();
+                document.getElementById('sentiment-label').className = `text-lg mt-1 ${data.score > 0.3 ? 'up' : data.score < -0.3 ? 'down' : 'neutral'}`;
+                
+                document.getElementById('bullish-count').textContent = data.counts.bullish;
+                document.getElementById('neutral-count').textContent = data.counts.neutral;
+                document.getElementById('bearish-count').textContent = data.counts.bearish;
+                document.getElementById('sentiment-mood').textContent = data.mood;
+                
+                // News list
+                const newsContainer = document.getElementById('news-list');
+                newsContainer.innerHTML = data.news.map(n => {
+                    const sentColor = n.sentiment === 'positive' ? 'border-green-500' : 
+                                     n.sentiment === 'negative' ? 'border-red-500' : 'border-gray-500';
+                    return `
+                        <div class="p-2 bg-gray-800/50 rounded-lg border-l-2 ${sentColor}">
+                            <div class="flex items-center justify-between">
+                                <span class="font-medium text-sm">${n.title}</span>
+                                <span class="text-xs text-gray-500">${n.source}</span>
+                            </div>
+                            <div class="text-xs text-gray-400 mt-1">${n.summary}</div>
+                            <div class="flex gap-2 mt-2">
+                                ${n.keywords.slice(0, 3).map(k => `<span class="text-xs bg-gray-700 px-1.5 py-0.5 rounded">${k}</span>`).join('')}
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            } catch (e) {
+                console.error('Error loading news:', e);
+            }
+        }
+    </script>
+</body>
+</html>

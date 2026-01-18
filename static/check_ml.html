@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ML Analysis Debug</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-900 text-white p-8">
+    <div class="max-w-4xl mx-auto">
+        <h1 class="text-3xl font-bold mb-6 text-cyan-400">🤖 ML Analysis Debug Tool</h1>
+        
+        <div class="mb-6 p-4 bg-gray-800 rounded-lg">
+            <h2 class="text-xl mb-3">1. API Response Check</h2>
+            <button onclick="checkAPI()" class="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded">
+                Test API Response
+            </button>
+            <pre id="api-result" class="mt-3 p-3 bg-gray-900 rounded text-xs overflow-auto max-h-96"></pre>
+        </div>
+        
+        <div class="mb-6 p-4 bg-gray-800 rounded-lg">
+            <h2 class="text-xl mb-3">2. ML Section HTML Check</h2>
+            <button onclick="checkHTMLElements()" class="bg-green-600 hover:bg-green-700 px-4 py-2 rounded">
+                Check HTML Elements
+            </button>
+            <pre id="html-result" class="mt-3 p-3 bg-gray-900 rounded text-xs"></pre>
+        </div>
+        
+        <div class="mb-6 p-4 bg-gray-800 rounded-lg">
+            <h2 class="text-xl mb-3">3. ML Section Live Preview</h2>
+            <div class="mt-2 p-2 bg-cyan-900/20 rounded border border-cyan-500/30">
+                <div class="flex items-center justify-between mb-2">
+                    <div class="text-xs text-gray-400">🤖 ML Analysis (ARIMA + LSTM)</div>
+                    <div id="ml-status" class="text-xs px-2 py-0.5 bg-cyan-600 rounded">LOADING...</div>
+                </div>
+                <div class="grid grid-cols-3 gap-2 text-center">
+                    <div>
+                        <div class="text-xs text-gray-500">ARIMA</div>
+                        <div id="ml-arima" class="text-sm font-semibold text-cyan-400">--</div>
+                    </div>
+                    <div>
+                        <div class="text-xs text-gray-500">LSTM</div>
+                        <div id="ml-lstm" class="text-sm font-semibold text-cyan-400">--</div>
+                    </div>
+                    <div>
+                        <div class="text-xs text-gray-500">Momentum</div>
+                        <div id="ml-momentum" class="text-sm font-semibold text-cyan-400">--</div>
+                    </div>
+                </div>
+                <div class="mt-2 text-center">
+                    <div class="text-xs text-gray-500">ML Prediction</div>
+                    <div id="ml-direction" class="text-sm font-bold text-cyan-400">--</div>
+                    <div id="ml-confidence" class="text-xs text-gray-400">Confidence: --%</div>
+                </div>
+                <div id="ml-warning" class="mt-2 text-xs text-yellow-400 hidden"></div>
+                <div id="ml-recommendation" class="mt-2 text-xs text-cyan-300 p-1 bg-cyan-900/30 rounded hidden"></div>
+            </div>
+            <button onclick="updateMLDisplay()" class="mt-3 bg-purple-600 hover:bg-purple-700 px-4 py-2 rounded">
+                Load ML Data
+            </button>
+        </div>
+        
+        <div class="p-4 bg-blue-900/30 rounded-lg border border-blue-500">
+            <h3 class="font-bold mb-2">📍 Where to find ML section in main dashboard:</h3>
+            <ol class="list-decimal ml-6 space-y-2 text-sm">
+                <li>Open: <a href="http://localhost:8000" class="text-blue-400 underline">http://localhost:8000</a></li>
+                <li>Look for the "🎯 Live Trading Signal" card (left side)</li>
+                <li>Below "Reversal Probability" section</li>
+                <li>Look for cyan/blue colored box with title "🤖 ML Analysis (ARIMA + LSTM)"</li>
+                <li>Should show: ARIMA, LSTM, Momentum predictions with colors</li>
+            </ol>
+        </div>
+    </div>
+    
+    <script>
+        async function checkAPI() {
+            const resultDiv = document.getElementById('api-result');
+            resultDiv.textContent = 'Loading...';
+            
+            try {
+                const res = await fetch('http://localhost:8000/signals/NSE:NIFTY50-INDEX/actionable');
+                const data = await res.json();
+                
+                const mlData = data.ml_analysis;
+                
+                resultDiv.textContent = JSON.stringify({
+                    'ML Enabled': mlData?.enabled,
+                    'ML Direction': mlData?.direction,
+                    'ML Confidence': mlData?.confidence,
+                    'Models': mlData?.models,
+                    'Predicted Price': mlData?.predicted_price,
+                    'Warning': mlData?.warning,
+                    'Recommendation': mlData?.recommendation,
+                    'Full Response': mlData
+                }, null, 2);
+                
+            } catch (e) {
+                resultDiv.textContent = 'Error: ' + e.message;
+            }
+        }
+        
+        function checkHTMLElements() {
+            const resultDiv = document.getElementById('html-result');
+            const elements = {
+                'ml-status': document.getElementById('ml-status'),
+                'ml-arima': document.getElementById('ml-arima'),
+                'ml-lstm': document.getElementById('ml-lstm'),
+                'ml-momentum': document.getElementById('ml-momentum'),
+                'ml-direction': document.getElementById('ml-direction'),
+                'ml-confidence': document.getElementById('ml-confidence'),
+                'ml-warning': document.getElementById('ml-warning'),
+                'ml-recommendation': document.getElementById('ml-recommendation')
+            };
+            
+            let result = 'Element Status:\n\n';
+            for (const [id, elem] of Object.entries(elements)) {
+                result += `${id}: ${elem ? '✅ FOUND' : '❌ NOT FOUND'}\n`;
+                if (elem) {
+                    result += `  Current text: "${elem.textContent}"\n`;
+                }
+            }
+            
+            resultDiv.textContent = result;
+        }
+        
+        async function updateMLDisplay() {
+            try {
+                const res = await fetch('http://localhost:8000/signals/NSE:NIFTY50-INDEX/actionable');
+                const signal = await res.json();
+                const ml = signal.ml_analysis;
+                
+                if (!ml) {
+                    alert('No ML data in response!');
+                    return;
+                }
+                
+                // Update status
+                document.getElementById('ml-status').textContent = ml.enabled ? 'ACTIVE' : 'INACTIVE';
+                document.getElementById('ml-status').className = ml.enabled ?
+                    'text-xs px-2 py-0.5 bg-green-600 rounded' :
+                    'text-xs px-2 py-0.5 bg-gray-600 rounded';
+                
+                if (ml.enabled && ml.models) {
+                    // Update individual models
+                    const arimaEl = document.getElementById('ml-arima');
+                    arimaEl.textContent = ml.models.arima?.toUpperCase() || 'N/A';
+                    arimaEl.className = `text-sm font-semibold ${
+                        ml.models.arima === 'bullish' ? 'text-green-400' :
+                        ml.models.arima === 'bearish' ? 'text-red-400' : 'text-gray-400'
+                    }`;
+                    
+                    const lstmEl = document.getElementById('ml-lstm');
+                    lstmEl.textContent = ml.models.lstm?.toUpperCase() || 'N/A';
+                    lstmEl.className = `text-sm font-semibold ${
+                        ml.models.lstm === 'bullish' ? 'text-green-400' :
+                        ml.models.lstm === 'bearish' ? 'text-red-400' : 'text-gray-400'
+                    }`;
+                    
+                    const momentumEl = document.getElementById('ml-momentum');
+                    momentumEl.textContent = ml.models.momentum?.toUpperCase() || 'N/A';
+                    momentumEl.className = `text-sm font-semibold ${
+                        ml.models.momentum === 'bullish' ? 'text-green-400' :
+                        ml.models.momentum === 'bearish' ? 'text-red-400' : 'text-gray-400'
+                    }`;
+                    
+                    // Update combined prediction
+                    const directionEl = document.getElementById('ml-direction');
+                    directionEl.textContent = ml.direction?.toUpperCase() || 'N/A';
+                    if (ml.predicted_price) {
+                        directionEl.textContent += ` → ₹${ml.predicted_price}`;
+                    }
+                    directionEl.className = `text-sm font-bold ${
+                        ml.direction === 'bullish' ? 'text-green-400' :
+                        ml.direction === 'bearish' ? 'text-red-400' : 'text-gray-400'
+                    }`;
+                    
+                    document.getElementById('ml-confidence').textContent = `Confidence: ${ml.confidence}%`;
+                    
+                    // Show warning if exists
+                    if (ml.warning) {
+                        const warningEl = document.getElementById('ml-warning');
+                        warningEl.textContent = ml.warning;
+                        warningEl.classList.remove('hidden');
+                    }
+                    
+                    // Show recommendation if exists
+                    if (ml.recommendation) {
+                        const recEl = document.getElementById('ml-recommendation');
+                        recEl.textContent = ml.recommendation;
+                        recEl.classList.remove('hidden');
+                    }
+                    
+                    alert('✅ ML data loaded successfully!');
+                } else {
+                    alert('⚠️ ML is disabled or no models data available');
+                }
+            } catch (e) {
+                alert('Error loading ML data: ' + e.message);
+            }
+        }
+        
+        // Auto-load on page load
+        window.addEventListener('load', () => {
+            setTimeout(() => {
+                checkAPI();
+                checkHTMLElements();
+                updateMLDisplay();
+            }, 500);
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TradeWise - Login</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+    </style>
+</head>
+<body class="min-h-screen flex items-center justify-center p-4">
+    <div class="max-w-md w-full">
+        <!-- Logo/Header -->
+        <div class="text-center mb-8">
+            <h1 class="text-4xl font-bold text-white mb-2">📈 TradeWise</h1>
+            <p class="text-purple-200">Stock Screener & Trading Signals</p>
+        </div>
+
+        <!-- Login/Register Card -->
+        <div class="bg-white rounded-2xl shadow-2xl p-8">
+            <!-- Tab Buttons -->
+            <div class="flex gap-2 mb-6">
+                <button id="loginTab" class="flex-1 py-2 px-4 rounded-lg font-semibold transition bg-gradient-to-r from-purple-600 to-indigo-600 text-white">
+                    Login
+                </button>
+                <button id="registerTab" class="flex-1 py-2 px-4 rounded-lg font-semibold transition bg-gray-100 text-gray-600 hover:bg-gray-200">
+                    Register
+                </button>
+            </div>
+
+            <!-- Login Form -->
+            <form id="loginForm" class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                    <input type="email" id="loginEmail" required
+                        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Password</label>
+                    <input type="password" id="loginPassword" required
+                        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent">
+                </div>
+                <button type="submit" id="loginBtn"
+                    class="w-full py-3 px-4 bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-semibold rounded-lg hover:shadow-lg transition">
+                    Login
+                </button>
+            </form>
+
+            <!-- Register Form (hidden by default) -->
+            <form id="registerForm" class="space-y-4 hidden">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Full Name</label>
+                    <input type="text" id="registerName"
+                        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                    <input type="email" id="registerEmail" required
+                        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Password</label>
+                    <input type="password" id="registerPassword" required
+                        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Confirm Password</label>
+                    <input type="password" id="confirmPassword" required
+                        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent">
+                </div>
+                <button type="submit" id="registerBtn"
+                    class="w-full py-3 px-4 bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-semibold rounded-lg hover:shadow-lg transition">
+                    Create Account
+                </button>
+            </form>
+
+            <!-- Message Display -->
+            <div id="message" class="mt-4 p-3 rounded-lg hidden"></div>
+
+            <!-- Continue without login -->
+            <div class="mt-6 text-center">
+                <p class="text-sm text-gray-600 mb-2">
+                    Login required to access TradeWise dashboard
+                </p>
+                <a href="/screener.html" class="text-sm text-purple-600 hover:text-purple-800 hover:underline">
+                    Or use Stock Screener without login (results won't be saved)
+                </a>
+            </div>
+        </div>
+
+        <!-- Features -->
+        <div class="mt-8 text-center text-white space-y-2">
+            <p class="text-sm opacity-90">✨ AI-Powered Stock Screening</p>
+            <p class="text-sm opacity-90">📊 Technical Analysis Signals</p>
+            <p class="text-sm opacity-90">💾 Save & Track Your Scans</p>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = window.location.origin; // Use current origin (works with localhost and ngrok)
+        
+        const loginTab = document.getElementById('loginTab');
+        const registerTab = document.getElementById('registerTab');
+        const loginForm = document.getElementById('loginForm');
+        const registerForm = document.getElementById('registerForm');
+        const message = document.getElementById('message');
+
+        // Tab switching
+        loginTab.addEventListener('click', () => {
+            loginTab.className = 'flex-1 py-2 px-4 rounded-lg font-semibold transition bg-gradient-to-r from-purple-600 to-indigo-600 text-white';
+            registerTab.className = 'flex-1 py-2 px-4 rounded-lg font-semibold transition bg-gray-100 text-gray-600 hover:bg-gray-200';
+            loginForm.classList.remove('hidden');
+            registerForm.classList.add('hidden');
+            message.classList.add('hidden');
+        });
+
+        registerTab.addEventListener('click', () => {
+            registerTab.className = 'flex-1 py-2 px-4 rounded-lg font-semibold transition bg-gradient-to-r from-purple-600 to-indigo-600 text-white';
+            loginTab.className = 'flex-1 py-2 px-4 rounded-lg font-semibold transition bg-gray-100 text-gray-600 hover:bg-gray-200';
+            registerForm.classList.remove('hidden');
+            loginForm.classList.add('hidden');
+            message.classList.add('hidden');
+        });
+
+        // Show message
+        function showMessage(text, isError = false) {
+            message.textContent = text;
+            message.className = `mt-4 p-3 rounded-lg ${isError ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}`;
+            message.classList.remove('hidden');
+        }
+
+        // Login
+        loginForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btn = document.getElementById('loginBtn');
+            btn.textContent = 'Logging in...';
+            btn.disabled = true;
+
+            try {
+                const response = await fetch(`${API_BASE}/api/auth/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        email: document.getElementById('loginEmail').value,
+                        password: document.getElementById('loginPassword').value
+                    })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    // Store token
+                    localStorage.setItem('auth_token', data.access_token);
+                    localStorage.setItem('user', JSON.stringify(data.user));
+                    
+                    showMessage('✅ Login successful! Redirecting...');
+                    setTimeout(() => window.location.href = '/', 1500);
+                } else {
+                    showMessage(data.detail || 'Login failed', true);
+                    btn.textContent = 'Login';
+                    btn.disabled = false;
+                }
+            } catch (error) {
+                showMessage('Connection error. Please try again.', true);
+                btn.textContent = 'Login';
+                btn.disabled = false;
+            }
+        });
+
+        // Register
+        registerForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const password = document.getElementById('registerPassword').value;
+            const confirmPassword = document.getElementById('confirmPassword').value;
+
+            if (password !== confirmPassword) {
+                showMessage('Passwords do not match', true);
+                return;
+            }
+
+            if (password.length < 6) {
+                showMessage('Password must be at least 6 characters', true);
+                return;
+            }
+
+            const btn = document.getElementById('registerBtn');
+            btn.textContent = 'Creating account...';
+            btn.disabled = true;
+
+            try {
+                const response = await fetch(`${API_BASE}/api/auth/register`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        email: document.getElementById('registerEmail').value,
+                        password: password,
+                        full_name: document.getElementById('registerName').value
+                    })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    // Check if email confirmation is needed
+                    if (data.message && !data.access_token) {
+                        showMessage(data.message || '📧 Please check your email to confirm your account.');
+                        btn.textContent = 'Create Account';
+                        btn.disabled = false;
+                    } else if (data.access_token) {
+                        // Store token
+                        localStorage.setItem('auth_token', data.access_token);
+                        localStorage.setItem('user', JSON.stringify(data.user));
+                        
+                        showMessage('✅ Account created! Redirecting...');
+                        setTimeout(() => window.location.href = '/', 1500);
+                    } else {
+                        showMessage('📧 Account created! Please check your email to confirm.');
+                        btn.textContent = 'Create Account';
+                        btn.disabled = false;
+                    }
+                } else {
+                    showMessage(data.detail || 'Registration failed', true);
+                    btn.textContent = 'Create Account';
+                    btn.disabled = false;
+                }
+            } catch (error) {
+                showMessage('Connection error. Please try again.', true);
+                btn.textContent = 'Create Account';
+                btn.disabled = false;
+            }
+        });
+
+        // Check if already logged in
+        if (localStorage.getItem('auth_token')) {
+            window.location.href = '/screener';
+        }
+    </script>
+</body>
+</html>

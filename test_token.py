@@ -1,0 +1,19 @@
+from fyers_apiv3 import fyersModel
+from config.settings import settings
+import json
+
+session = fyersModel.SessionModel(
+    client_id=settings.fyers_client_id,
+    secret_key=settings.fyers_secret_key,
+    redirect_uri=settings.fyers_redirect_uri,
+    response_type='code',
+    grant_type='authorization_code'
+)
+
+auth_code = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhcHBfaWQiOiI1MjNQMkIzTUQ1IiwidXVpZCI6IjFjZWIyZDU4MTQyZDQ5MTRiNjFlNTZhOGMwMjM0YzY5IiwiaXBBZGRyIjoiIiwibm9uY2UiOiIiLCJzY29wZSI6IiIsImRpc3BsYXlfbmFtZSI6IlhCMDYzODQiLCJvbXMiOiJLMSIsImhzbV9rZXkiOiI3ZDM2NTllYmI4ZTM4YmQzZWM2NjZmNThjZWRhMThlNjYwMDVkYTEwOGMwZWIwNWFiYTcyYzk2MSIsImlzRGRwaUVuYWJsZWQiOiJZIiwiaXNNdGZFbmFibGVkIjoiTiIsImF1ZCI6IltcImQ6MVwiLFwiZDoyXCIsXCJ4OjBcIixcIng6MVwiLFwieDoyXCJdIiwiZXhwIjoxNzY4NzI1MTI2LCJpYXQiOjE3Njg2OTUxMjYsImlzcyI6ImFwaS5sb2dpbi5meWVycy5pbiIsIm5iZiI6MTc2ODY5NTEyNiwic3ViIjoiYXV0aF9jb2RlIn0.s3bdX1v5UsxFWexK5Tjbr-yx-PdEOUTvv5qjEIMRumM'
+
+session.set_token(auth_code)
+response = session.generate_token()
+
+print("Token Response:")
+print(json.dumps(response, indent=2))
