@@ -11,12 +11,5 @@
       "src": "/(.*)",
       "dest": "main.py"
     }
-  ],
-  "env": {
-    "FYERS_APP_ID": "@fyers_app_id",
-    "FYERS_SECRET_KEY": "@fyers_secret_key",
-    "FYERS_REDIRECT_URL": "@fyers_redirect_url",
-    "SUPABASE_URL": "@supabase_url",
-    "SUPABASE_KEY": "@supabase_key"
-  }
+  ]
 }
