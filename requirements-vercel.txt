@@ -1,0 +1,33 @@
+# Minimal requirements for Vercel deployment
+# This excludes heavy ML training libraries (200MB+)
+# Models should be pre-trained and API should only serve predictions
+
+# Core Framework
+fastapi>=0.100.0
+uvicorn[standard]>=0.25.0
+pydantic>=2.5.0
+pydantic-settings>=2.1.0
+
+# Data Processing (lightweight)
+pandas>=2.0.0
+numpy>=1.24.0
+
+# Options Pricing (lightweight)
+mibian>=0.1.3
+py_vollib>=1.0.1
+
+# API & Integration
+requests>=2.31.0
+python-dotenv>=1.0.0
+python-multipart>=0.0.6
+
+# Database
+sqlalchemy>=2.0.0
+psycopg2-binary>=2.9.0
+redis>=5.0.0
+supabase>=2.0.0
+email-validator>=2.1.0
+
+# Note: ML libraries (scikit-learn, xgboost, lightgbm, scipy, matplotlib, plotly)
+# are excluded from production to reduce deployment size from 314MB to ~50MB
+# If you need ML predictions, pre-train models and load them, or use a separate ML service

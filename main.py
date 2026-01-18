@@ -18,12 +18,22 @@ from src.api.fyers_client import fyers_client
 from src.analytics.options_pricing import options_pricer
 from src.analytics.ict_analysis import ict_analyzer
 from src.analytics.stock_screener import get_stock_screener
-from src.ml.price_prediction import price_predictor
-from src.ml.time_series_models import ensemble_predictor, get_ml_signal
 from src.trading.signal_generator import signal_generator, risk_manager
 from src.services.auth_service import auth_service
 from src.services.screener_service import screener_service
 from src.models.auth_models import UserRegister, UserLogin, FyersTokenStore
+
+# Optional ML imports (not required for production API)
+try:
+    from src.ml.price_prediction import price_predictor
+    from src.ml.time_series_models import ensemble_predictor, get_ml_signal
+    ML_AVAILABLE = True
+except ImportError as e:
+    logger.warning(f"ML libraries not available: {e}. ML prediction endpoints will be disabled.")
+    price_predictor = None
+    ensemble_predictor = None
+    get_ml_signal = None
+    ML_AVAILABLE = False
 
 # Configure logging
 logging.basicConfig(
@@ -462,6 +472,12 @@ async def get_funds():
 @app.post("/ml/train")
 async def train_model(symbol: str, days: int = 365):
     """Train ML model on historical data"""
+    if not ML_AVAILABLE:
+        raise HTTPException(
+            status_code=503, 
+            detail="ML features not available. Install ML dependencies: pip install scikit-learn xgboost statsmodels"
+        )
+    
     try:
         # Get historical data
         df = fyers_client.get_historical_data(
@@ -491,6 +507,12 @@ async def train_model(symbol: str, days: int = 365):
 @app.post("/ml/predict")
 async def predict_price(symbol: str, periods: int = 1):
     """Predict future price"""
+    if not ML_AVAILABLE:
+        raise HTTPException(
+            status_code=503, 
+            detail="ML features not available. Install ML dependencies: pip install scikit-learn xgboost statsmodels"
+        )
+    
     try:
         # Get historical data
         df = fyers_client.get_historical_data(
