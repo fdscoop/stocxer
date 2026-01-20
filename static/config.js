@@ -21,19 +21,23 @@ window.API_BASE = window.APP_CONFIG.API_URL;
 
 // Override fetch to add ngrok header automatically for all API calls
 const originalFetch = window.fetch;
-window.fetch = function(url, options) {
-    // Ensure options is an object
-    options = options || {};
-
+window.fetch = function(url, options = {}) {
     const urlStr = url.toString();
     const isApiCall = urlStr.includes('ngrok') ||
                       urlStr.includes(window.APP_CONFIG.API_URL);
 
     if (isApiCall) {
-        // Create new headers object with ngrok header first
-        const existingHeaders = options.headers || {};
-        options.headers = new Headers(existingHeaders);
-        options.headers.set('ngrok-skip-browser-warning', 'true');
+        // Ensure headers object exists and add ngrok header
+        if (!options.headers) {
+            options.headers = {};
+        }
+
+        // Handle both Headers object and plain object
+        if (options.headers instanceof Headers) {
+            options.headers.set('ngrok-skip-browser-warning', 'true');
+        } else {
+            options.headers['ngrok-skip-browser-warning'] = 'true';
+        }
 
         console.log('Adding ngrok header to:', urlStr.substring(0, 60) + '...');
     }
