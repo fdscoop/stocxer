@@ -3,25 +3,17 @@
   "public": true,
   "cleanUrls": true,
   "trailingSlash": false,
-  "builds": [
-    {
-      "src": "api/index.py",
-      "use": "@vercel/python"
-    }
-  ],
-  "routes": [
-    {
-      "src": "/(.*)",
-      "dest": "api/index.py"
-    }
-  ],
+  "buildCommand": "echo 'Static frontend only'",
+  "outputDirectory": "static",
   "rewrites": [
-    { "source": "/", "destination": "/static/index.html" },
-    { "source": "/login", "destination": "/static/login.html" },
-    { "source": "/login.html", "destination": "/static/login.html" },
-    { "source": "/screener", "destination": "/static/screener.html" },
-    { "source": "/screener.html", "destination": "/static/screener.html" },
-    { "source": "/check_ml.html", "destination": "/static/check_ml.html" }
+    { "source": "/", "destination": "/index.html" },
+    { "source": "/login", "destination": "/login.html" },
+    { "source": "/login.html", "destination": "/login.html" },
+    { "source": "/screener", "destination": "/screener.html" },
+    { "source": "/screener.html", "destination": "/screener.html" },
+    { "source": "/check_ml.html", "destination": "/check_ml.html" },
+    { "source": "/index-analyzer.html", "destination": "/index-analyzer.html" },
+    { "source": "/(.*)", "destination": "/$1" }
   ],
   "headers": [
     {
@@ -29,8 +21,13 @@
       "headers": [
         { "key": "X-Frame-Options", "value": "DENY" },
         { "key": "X-Content-Type-Options", "value": "nosniff" },
-        { "key": "Referrer-Policy", "value": "origin-when-cross-origin" }
+        { "key": "Referrer-Policy", "value": "origin-when-cross-origin" },
+        { "key": "Cache-Control", "value": "public, max-age=3600, must-revalidate" }
       ]
     }
-  ]
+  ],
+  "env": {
+    "API_URL": "@api_url",
+    "FYERS_REDIRECT_URI": "@fyers_redirect_uri"
+  }
 }

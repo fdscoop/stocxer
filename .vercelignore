@@ -1,26 +1,21 @@
 # ============================================
-# Vercel: Full Stack Deployment (FastAPI Backend + Static Frontend)
+# Vercel: Frontend Only (Static Files)
 # ============================================
-# 
-# Configuration for deploying TradeWise backend to Vercel
-# - FastAPI app in main.py will be deployed
-# - Static files will be served from /static
-# - Python dependencies installed from requirements.txt
-# ============================================
+# Backend is deployed to Railway separately
+# Vercel only serves static frontend files
 
-# DO NOT EXCLUDE PYTHON BACKEND - Vercel will handle it
-# These are needed for FastAPI deployment
-
-examples/
-
-# Python cache files (safe to ignore)
+# Exclude Python backend (deployed to Railway)
+main.py
+config/
+src/
+*.py
 *.pyc
 __pycache__/
 *.pyo
 *.pyd
 .Python
 
-# Virtual Environment (Vercel builds fresh)
+# Virtual Environment
 venv/
 env/
 ENV/
@@ -28,26 +23,25 @@ ENV/
 virtualenv/
 .venv/
 
-# Dependencies (Vercel installs from requirements.txt)
-# DO NOT ignore requirements.txt - Vercel needs it!
-# requirements.txt  # KEEP THIS - Vercel needs it
-# requirements-vercel.txt  # KEEP THIS - Vercel needs it
-# runtime.txt  # KEEP THIS - Vercel needs it
+# Python dependencies (not needed for static frontend)
+requirements.txt
+requirements-vercel.txt
+runtime.txt
 
-# Data and models (safe to ignore - not needed in deployment)
-# data/
-# logs/
-# models/
+# Data and models (safe to ignore - not served to frontend)
+data/
+logs/
+models/
 
 # Database (safe to ignore)
-# database/
-# *.db
-# *.sqlite
-# *.sqlite3
+database/
+*.db
+*.sqlite
+*.sqlite3
 
 # Deployment configs for other platforms
-railway.json
-Procfile
+# railway.json  # Commented out - you may need this for Railway config
+# Procfile  # Commented out - used by Railway for backend
 
 # IDE and editor configs
 .vscode/
@@ -102,7 +96,8 @@ fyersRequests.log
 server.log
 
 # ============================================
-# Result: /main.py, /src, /config, and /static will be deployed
-# Deployment size: ~5-10MB (backend + frontend)
+# Result: Only /static folder will be deployed to Vercel
+# Deployment size: ~2-3MB (HTML/CSS/JS only)
+# Backend deployed separately to Railway
 # ============================================
 
