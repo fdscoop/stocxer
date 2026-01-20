@@ -1,11 +1,13 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>TradeWise - Stock Screener</title>
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
+
 <body class="bg-gray-900 text-gray-100">
     <div class="container mx-auto px-4 py-6">
         <!-- Header -->
@@ -119,28 +121,29 @@
                 </div>
             </div>
         </div>
-                </div>
-            </div>
-        </div>
+    </div>
+    </div>
+    </div>
 
-        <!-- Loading -->
-        <div id="loadingDiv" class="text-center py-12 hidden">
-            <div class="animate-spin inline-block w-12 h-12 border-4 border-cyan-400 border-t-transparent rounded-full"></div>
-            <p class="mt-4 text-gray-400" id="loadingText">Scanning stocks... This may take 20-60 seconds</p>
-            <p class="mt-2 text-sm text-gray-500" id="scanProgress">Analyzing: 0 / 0 stocks</p>
+    <!-- Loading -->
+    <div id="loadingDiv" class="text-center py-12 hidden">
+        <div class="animate-spin inline-block w-12 h-12 border-4 border-cyan-400 border-t-transparent rounded-full">
         </div>
+        <p class="mt-4 text-gray-400" id="loadingText">Scanning stocks... This may take 20-60 seconds</p>
+        <p class="mt-2 text-sm text-gray-500" id="scanProgress">Analyzing: 0 / 0 stocks</p>
+    </div>
 
-        <!-- Signals Grid -->
-        <div id="signalsGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            <!-- Stock cards will be inserted here -->
-        </div>
+    <!-- Signals Grid -->
+    <div id="signalsGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <!-- Stock cards will be inserted here -->
+    </div>
 
-        <!-- No Signals Message -->
-        <div id="noSignals" class="text-center py-12 hidden">
-            <div class="text-6xl mb-4">📭</div>
-            <h3 class="text-xl text-gray-400">No signals found</h3>
-            <p class="text-gray-500 mt-2">Try adjusting filters or scan again later</p>
-        </div>
+    <!-- No Signals Message -->
+    <div id="noSignals" class="text-center py-12 hidden">
+        <div class="text-6xl mb-4">📭</div>
+        <h3 class="text-xl text-gray-400">No signals found</h3>
+        <p class="text-gray-500 mt-2">Try adjusting filters or scan again later</p>
+    </div>
     </div>
 
     <script src="config.js"></script>
@@ -169,7 +172,7 @@
         function initAuth() {
             authToken = localStorage.getItem('auth_token');
             const userStr = localStorage.getItem('user');
-            
+
             if (authToken && userStr) {
                 currentUser = JSON.parse(userStr);
                 userEmail.textContent = currentUser.email;
@@ -192,7 +195,7 @@
                     console.log('Logout error:', error);
                 }
             }
-            
+
             localStorage.removeItem('auth_token');
             localStorage.removeItem('user');
             window.location.reload();
@@ -212,10 +215,10 @@
 
             try {
                 showLoading(true);
-                
+
                 // Build URL and send auth token in header (best practice)
                 const url = `${API_BASE}/screener/scan?limit=${limit}&min_confidence=${minConfidence}&randomize=true`;
-                
+
                 const response = await fetch(url, {
                     headers: {
                         'Authorization': `Bearer ${authToken}`
@@ -227,7 +230,7 @@
                     currentSignals = data.signals;
                     updateStatusBar(data);
                     displaySignals();
-                    
+
                     // Show save status
                     if (data.saved) {
                         console.log('✅ Scan results saved to your account!');
@@ -322,12 +325,16 @@
             const action = actionFilter.value;
             let signals = [];
 
+            // Safely get buy and sell arrays with fallback to empty arrays
+            const buySignals = Array.isArray(currentSignals?.buy) ? currentSignals.buy : [];
+            const sellSignals = Array.isArray(currentSignals?.sell) ? currentSignals.sell : [];
+
             if (action === 'all') {
-                signals = [...currentSignals.buy, ...currentSignals.sell];
+                signals = [...buySignals, ...sellSignals];
             } else if (action === 'BUY') {
-                signals = currentSignals.buy || [];
+                signals = buySignals;
             } else {
-                signals = currentSignals.sell || [];
+                signals = sellSignals;
             }
 
             // Sort by confidence
@@ -386,17 +393,17 @@
                             <div class="bg-green-900/30 rounded p-2">
                                 <div class="text-gray-400">Target 1</div>
                                 <div class="font-semibold">₹${signal.targets.target_1.toFixed(2)}</div>
-                                <div class="text-green-400">+${((signal.targets.target_1/signal.current_price - 1) * 100).toFixed(1)}%</div>
+                                <div class="text-green-400">+${((signal.targets.target_1 / signal.current_price - 1) * 100).toFixed(1)}%</div>
                             </div>
                             <div class="bg-green-900/30 rounded p-2">
                                 <div class="text-gray-400">Target 2</div>
                                 <div class="font-semibold">₹${signal.targets.target_2.toFixed(2)}</div>
-                                <div class="text-green-400">+${((signal.targets.target_2/signal.current_price - 1) * 100).toFixed(1)}%</div>
+                                <div class="text-green-400">+${((signal.targets.target_2 / signal.current_price - 1) * 100).toFixed(1)}%</div>
                             </div>
                             <div class="bg-red-900/30 rounded p-2">
                                 <div class="text-gray-400">Stop Loss</div>
                                 <div class="font-semibold">₹${signal.targets.stop_loss.toFixed(2)}</div>
-                                <div class="text-red-400">${((signal.targets.stop_loss/signal.current_price - 1) * 100).toFixed(1)}%</div>
+                                <div class="text-red-400">${((signal.targets.stop_loss / signal.current_price - 1) * 100).toFixed(1)}%</div>
                             </div>
                         </div>
                     </div>
@@ -453,31 +460,31 @@
             // Get fresh auth token from localStorage
             const currentAuthToken = localStorage.getItem('auth_token');
             console.log('🚀 Opening Fyers auth popup with authToken:', currentAuthToken ? 'Present' : 'Missing');
-            
+
             if (!currentAuthToken) {
                 alert('Please login to TradeWise first!');
                 window.location.href = '/login.html';
                 return;
             }
-            
+
             // Check if we're running on the same domain (ngrok)
             const isNgrokDomain = window.location.hostname.includes('ngrok-free.app');
-            
+
             if (isNgrokDomain) {
                 console.log('🌐 Using ngrok domain - same-origin popup communication enabled');
                 // For same-domain, we can pass the auth token via URL fragment for easier access
                 const authUrlWithToken = `${authUrl}#token=${currentAuthToken}`;
                 const popup = window.open(authUrlWithToken, 'fyersAuth', 'width=600,height=700,scrollbars=yes,resizable=yes');
-                
+
                 // Listen for messages from popup (same-origin, should work perfectly)
                 const messageHandler = (event) => {
                     console.log('📨 Received message in parent:', event.data);
-                    
+
                     if (event.data.type === 'get_auth_token') {
                         console.log('🔑 Popup requesting auth token');
-                        popup.postMessage({ 
-                            type: 'auth_token_response', 
-                            token: currentAuthToken 
+                        popup.postMessage({
+                            type: 'auth_token_response',
+                            token: currentAuthToken
                         }, '*');
                         console.log('📤 Sent auth token response to popup');
                     } else if (event.data.type === 'fyers_auth_success') {
@@ -489,10 +496,10 @@
                         window.removeEventListener('message', messageHandler);
                     }
                 };
-                
+
                 window.addEventListener('message', messageHandler);
                 console.log('👂 Added message listener for same-origin popup communication');
-                
+
                 // Clean up if popup is closed manually
                 const checkClosed = setInterval(() => {
                     if (popup.closed) {
@@ -504,16 +511,16 @@
             } else {
                 console.log('🏠 Using localhost domain - opening popup with cross-origin fallback');
                 const popup = window.open(authUrl, 'fyersAuth', 'width=600,height=700,scrollbars=yes,resizable=yes');
-                
+
                 // For localhost, use the existing cross-origin handling
                 const messageHandler = (event) => {
                     console.log('📨 Received message in parent:', event.data);
-                    
+
                     if (event.data.type === 'get_auth_token') {
                         console.log('🔑 Popup requesting auth token');
-                        popup.postMessage({ 
-                            type: 'auth_token_response', 
-                            token: currentAuthToken 
+                        popup.postMessage({
+                            type: 'auth_token_response',
+                            token: currentAuthToken
                         }, '*');
                         console.log('📤 Sent auth token response to popup');
                     } else if (event.data.type === 'fyers_auth_success') {
@@ -525,10 +532,10 @@
                         window.removeEventListener('message', messageHandler);
                     }
                 };
-                
+
                 window.addEventListener('message', messageHandler);
                 console.log('👂 Added message listener for cross-origin popup communication');
-                
+
                 // Clean up if popup is closed manually
                 const checkClosed = setInterval(() => {
                     if (popup.closed) {
@@ -543,18 +550,18 @@
         // Check Fyers authentication status
         async function checkFyersAuth() {
             if (!authToken) return;
-            
+
             try {
                 const response = await fetch(`${API_BASE}/api/fyers/token`, {
                     headers: {
                         'Authorization': `Bearer ${authToken}`
                     }
                 });
-                
+
                 const authStatusDiv = document.getElementById('authStatus');
                 const authStatusText = document.getElementById('authStatusText');
                 const fyersAuthBtn = document.getElementById('fyersAuthBtn');
-                
+
                 if (response.ok) {
                     // Fyers token exists
                     authStatusDiv.className = 'bg-gray-800 rounded-lg p-4 mb-6 border-l-4 border-green-400';
@@ -569,14 +576,14 @@
                         try {
                             const response = await fetch(`${API_BASE}/auth/url`);
                             const data = await response.json();
-                            
+
                             // Open in popup for better UX
                             const popup = window.open(
-                                data.auth_url, 
-                                'fyersAuth', 
+                                data.auth_url,
+                                'fyersAuth',
                                 'width=600,height=700,scrollbars=yes,resizable=yes'
                             );
-                            
+
                             // Check for popup completion
                             const checkClosed = setInterval(() => {
                                 if (popup.closed) {
@@ -585,7 +592,7 @@
                                     setTimeout(() => checkFyersAuth(), 1000);
                                 }
                             }, 1000);
-                            
+
                         } catch (error) {
                             console.error('Auth error:', error);
                             alert('Failed to start authentication. Please try again.');
@@ -606,12 +613,12 @@
 
         // Initialize authentication on page load
         initAuth();
-        
+
         // Check Fyers auth status
         if (authToken) {
             checkFyersAuth();
         }
-        
+
         // Redirect to login if not authenticated
         if (!authToken) {
             console.log('⚠️ Authentication required to use Stock Screener');
@@ -636,16 +643,16 @@
         async function loadScanFromURL() {
             const urlParams = new URLSearchParams(window.location.search);
             const scanId = urlParams.get('scan') || localStorage.getItem('view_scan_id');
-            
+
             if (scanId) {
                 console.log('Loading scan:', scanId);
                 localStorage.removeItem('view_scan_id'); // Clear after reading
-                
+
                 if (!authToken) {
                     alert('Please login to view saved scans');
                     return;
                 }
-                
+
                 try {
                     // Note: We would need a new endpoint to fetch a specific scan
                     // For now, we'll fetch latest and check if it matches
@@ -654,11 +661,11 @@
                             'Authorization': `Bearer ${authToken}`
                         }
                     });
-                    
+
                     if (response.ok) {
                         const data = await response.json();
                         const scan = data.scans.find(s => s.scan_id === scanId);
-                        
+
                         if (scan) {
                             // Show notification that this is a saved scan
                             const statusBar = document.querySelector('.bg-gray-800.rounded-lg');
@@ -671,7 +678,7 @@
                                 `;
                                 statusBar.parentElement.insertBefore(notice, statusBar);
                             }
-                            
+
                             console.log('✅ Loaded saved scan:', scan);
                             // You can add more logic here to display the scan results
                         }
@@ -681,7 +688,7 @@
                 }
             }
         }
-        
+
         // Load scan if URL parameter is present
         if (authToken) {
             loadScanFromURL();
@@ -694,4 +701,5 @@
         }
     </script>
 </body>
+
 </html>
