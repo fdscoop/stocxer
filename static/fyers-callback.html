@@ -9,27 +9,9 @@
 <body class="bg-gray-900 text-gray-100 min-h-screen flex items-center justify-center">
     <div class="max-w-md mx-auto p-6 bg-gray-800 rounded-lg shadow-xl">
         <div class="text-center">
-            <div id="loading" class="mb-4">
+            <div id="message">
                 <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-cyan-400 mx-auto"></div>
                 <p class="mt-4 text-gray-300">Processing Fyers authentication...</p>
-            </div>
-            
-            <div id="success" class="hidden">
-                <div class="text-green-400 text-5xl mb-4">✅</div>
-                <h2 class="text-xl font-bold text-green-400 mb-2">Authentication Successful!</h2>
-                <p class="text-gray-300 mb-4">Your Fyers account has been connected successfully.</p>
-                <button onclick="goToScreener()" class="px-6 py-2 bg-cyan-600 hover:bg-cyan-700 rounded">
-                    Go to Stock Screener
-                </button>
-            </div>
-            
-            <div id="error" class="hidden">
-                <div class="text-red-400 text-5xl mb-4">❌</div>
-                <h2 class="text-xl font-bold text-red-400 mb-2">Authentication Failed</h2>
-                <p id="errorMsg" class="text-gray-300 mb-4">Something went wrong during authentication.</p>
-                <button onclick="goToScreener()" class="px-6 py-2 bg-gray-600 hover:bg-gray-700 rounded">
-                    Back to Screener
-                </button>
             </div>
         </div>
     </div>
@@ -38,6 +20,8 @@
         const API_BASE = window.location.origin;
 
         async function handleCallback() {
+            const message = document.getElementById('message');
+            
             try {
                 // Get auth code from URL
                 const urlParams = new URLSearchParams(window.location.search);
@@ -45,37 +29,245 @@
                 const state = urlParams.get('state');
                 
                 if (!authCode) {
-                    throw new Error('No authorization code received');
+                    throw new Error('No authorization code received from Fyers');
                 }
                 
-                // Get stored auth token
-                const authToken = localStorage.getItem('authToken');
-                if (!authToken) {
-                    throw new Error('Please login first');
+                console.log('🔄 Processing Fyers callback with auth_code:', authCode.substring(0, 20) + '...');
+                
+                // Check if this is a popup window
+                const isPopup = window.opener && window.opener !== window;
+                const isNgrokDomain = window.location.hostname.includes('ngrok-free.app');
+                let authToken = null;
+                
+                // First, try to get auth token from URL fragment (for same-domain ngrok)
+                const tokenFromFragment = window.location.hash.match(/token=([^&]+)/)?.[1];
+                if (tokenFromFragment) {
+                    authToken = tokenFromFragment;
+                    console.log('📨 Found auth token in URL fragment (same-domain)');
                 }
+                
+                // Fallback: try current window's localStorage
+                if (!authToken) {
+                    authToken = localStorage.getItem('auth_token');
+                    console.log('📨 Trying localStorage for auth token');
+                }
+                
+                if (!authToken && isPopup) {
+                    if (isNgrokDomain) {
+                        console.log('🪟 Running in popup on ngrok domain, requesting from parent (same-origin)...');
+                        
+                        // For same-domain (ngrok), this should work reliably
+                        try {
+                            window.opener.postMessage({ type: 'get_auth_token' }, '*');
+                            
+                            // Wait for response from parent window
+                            authToken = await new Promise((resolve, reject) => {
+                                const timeout = setTimeout(() => {
+                                    reject(new Error('Timeout waiting for auth token (same-domain)'));
+                                }, 3000); // Shorter timeout for same-domain
+                                
+                                const messageHandler = (event) => {
+                                    if (event.data.type === 'auth_token_response') {
+                                        clearTimeout(timeout);
+                                        window.removeEventListener('message', messageHandler);
+                                        console.log('📨 Received auth token from parent window (same-domain)');
+                                        resolve(event.data.token);
+                                    }
+                                };
+                                
+                                window.addEventListener('message', messageHandler);
+                            });
+                        } catch (e) {
+                            console.log('❌ Failed to get token from parent (same-domain):', e.message);
+                            authToken = null;
+                        }
+                    } else {
+                        console.log('🪟 Running in popup on localhost, trying cross-origin methods...');
+                        
+                        // Try to get from URL fragment or query params if passed
+                        const tokenFromUrl = urlParams.get('token');
+                        if (tokenFromUrl) {
+                            authToken = tokenFromUrl;
+                            console.log('📨 Found auth token in URL params');
+                        }
+                        
+                        // If still no token, try sessionStorage
+                        if (!authToken) {
+                            authToken = sessionStorage.getItem('auth_token');
+                            console.log('📨 Trying sessionStorage for auth token');
+                        }
+                        
+                        // Last resort: try to communicate with parent (may fail due to CORS)
+                        if (!authToken) {
+                            try {
+                                console.log('📨 Trying to get token from parent window (cross-origin)...');
+                                window.opener.postMessage({ type: 'get_auth_token' }, '*');
+                                
+                                // Wait for response from parent window with shorter timeout
+                                authToken = await new Promise((resolve, reject) => {
+                                    const timeout = setTimeout(() => {
+                                        reject(new Error('CROSS_ORIGIN_BLOCKED'));
+                                    }, 2000); // Reduced timeout
+                                    
+                                    const messageHandler = (event) => {
+                                        if (event.data.type === 'auth_token_response') {
+                                            clearTimeout(timeout);
+                                            window.removeEventListener('message', messageHandler);
+                                            console.log('📨 Received auth token from parent window (cross-origin)');
+                                            resolve(event.data.token);
+                                        }
+                                    };
+                                    
+                                    window.addEventListener('message', messageHandler);
+                                });
+                            } catch (e) {
+                                console.log('❌ Cross-origin communication blocked:', e.message);
+                                authToken = null;
+                            }
+                        }
+                    }
+                }
+                
+                if (!authToken) {
+                    console.log('❌ No auth token found, redirecting to get token...');
+                    
+                    // Redirect to a special endpoint that will handle the callback with a fresh auth token
+                    const callbackUrl = `${window.location.origin}/auth/callback-redirect?auth_code=${authCode}&state=${state || ''}`;
+                    console.log('🔄 Redirecting to callback endpoint:', callbackUrl);
+                    window.location.href = callbackUrl;
+                    return;
+                }
+                
+                console.log('✅ Auth token found, proceeding with callback...');
+                message.innerHTML = '<div class="text-blue-600">Connecting your Fyers account...</div>';
                 
                 // Send to callback endpoint
-                const response = await fetch(`${API_BASE}/auth/callback?auth_code=${authCode}&state=${state || ''}`, {
+                const response = await fetch('/auth/callback', {
+                    method: 'POST',
                     headers: {
+                        'Content-Type': 'application/json',
                         'Authorization': `Bearer ${authToken}`
-                    }
+                    },
+                    body: JSON.stringify({ 
+                        auth_code: authCode,
+                        state: state
+                    })
                 });
                 
                 const data = await response.json();
+                console.log('📡 Callback response:', data);
                 
-                if (response.ok && data.status === 'success') {
-                    // Success
-                    document.getElementById('loading').classList.add('hidden');
-                    document.getElementById('success').classList.remove('hidden');
+                if (response.ok) {
+                    console.log('🎉 Authentication successful!');
+                    message.innerHTML = `
+                        <div class="space-y-4">
+                            <div class="text-green-400 text-5xl">✅</div>
+                            <h2 class="text-xl font-bold text-green-400">Authentication Successful!</h2>
+                            <p class="text-gray-300">Your Fyers account has been connected successfully.</p>
+                            ${isPopup ? '<p class="text-sm text-gray-400">This window will close automatically...</p>' : ''}
+                            <button onclick="goToScreener()" class="px-6 py-2 bg-cyan-600 hover:bg-cyan-700 text-white rounded">
+                                Go to Stock Screener
+                            </button>
+                        </div>
+                    `;
+                    
+                    // Notify parent window if this is a popup
+                    if (isPopup) {
+                        try {
+                            window.opener.postMessage({ 
+                                type: 'fyers_auth_success',
+                                data: data 
+                            }, '*');
+                            
+                            // Auto-close after success
+                            setTimeout(() => {
+                                console.log('🚪 Closing popup window...');
+                                window.close();
+                            }, 2000);
+                        } catch (e) {
+                            console.error('Could not notify parent window:', e);
+                        }
+                    }
                 } else {
-                    throw new Error(data.message || 'Authentication failed');
+                    throw new Error(data.detail || data.message || 'Authentication failed');
                 }
                 
             } catch (error) {
-                console.error('Callback error:', error);
-                document.getElementById('loading').classList.add('hidden');
-                document.getElementById('error').classList.remove('hidden');
-                document.getElementById('errorMsg').textContent = error.message;
+                console.error('❌ Callback error:', error);
+                let errorMessage;
+                
+                if (error.message === 'CROSS_ORIGIN_BLOCKED' || error.message.includes('Cross-origin')) {
+                    errorMessage = `
+                        <div class="space-y-4">
+                            <div class="text-yellow-400 text-5xl">⚠️</div>
+                            <h2 class="text-xl font-bold text-yellow-400">Cross-Origin Issue</h2>
+                            <div class="text-gray-300 space-y-2">
+                                <p>Authentication popup cannot communicate with parent window due to security restrictions.</p>
+                                <p>Please try authenticating directly in the main window instead.</p>
+                            </div>
+                            <div class="flex gap-3 justify-center">
+                                <button onclick="goToScreener()" class="px-4 py-2 bg-cyan-600 hover:bg-cyan-700 text-white rounded">
+                                    Try Direct Authentication
+                                </button>
+                                <button onclick="window.close()" class="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded">
+                                    Close Window
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                } else if (error.message.includes('session has expired') || error.message.includes('Invalid token') || error.message.includes('login again')) {
+                    // TradeWise session expired - clear local storage and redirect to login
+                    localStorage.removeItem('auth_token');
+                    localStorage.removeItem('user');
+                    errorMessage = `
+                        <div class="space-y-4">
+                            <div class="text-yellow-400 text-5xl">🔄</div>
+                            <h2 class="text-xl font-bold text-yellow-400">Session Expired</h2>
+                            <div class="text-gray-300 space-y-2">
+                                <p>Your TradeWise session has expired.</p>
+                                <p>Please login again to continue with Fyers authentication.</p>
+                            </div>
+                            <div class="flex gap-3 justify-center">
+                                <a href="/login.html" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded text-decoration-none">
+                                    Login to TradeWise
+                                </a>
+                                <button onclick="window.close()" class="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded">
+                                    Close Window
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    errorMessage = `
+                        <div class="space-y-4">
+                            <div class="text-red-400 text-5xl">❌</div>
+                            <h2 class="text-xl font-bold text-red-400">Authentication Failed</h2>
+                            <p class="text-gray-300">${error.message}</p>
+                            <div class="flex gap-3 justify-center">
+                                <button onclick="window.close()" class="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded">
+                                    Close Window
+                                </button>
+                                <a href="/login.html" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded text-decoration-none">
+                                    Login to TradeWise
+                                </a>
+                            </div>
+                        </div>
+                    `;
+                }
+                
+                message.innerHTML = errorMessage;
+                
+                // Notify parent window of error if this is a popup
+                if (window.opener) {
+                    try {
+                        window.opener.postMessage({ 
+                            type: 'fyers_auth_error',
+                            error: error.message 
+                        }, '*');
+                    } catch (e) {
+                        console.error('Could not notify parent window of error:', e);
+                    }
+                }
             }
         }
         

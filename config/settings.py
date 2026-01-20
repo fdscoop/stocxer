@@ -30,6 +30,11 @@ class Settings(BaseSettings):
     # Supabase
     supabase_url: str
     supabase_key: str
+    supabase_service_key: Optional[str] = None  # Service role key for admin operations
+    
+    # Fallback Authentication (for localhost testing)
+    fallback_auth_token: Optional[str] = None
+    fallback_user_id: Optional[str] = None
     
     # API
     api_host: str = "0.0.0.0"

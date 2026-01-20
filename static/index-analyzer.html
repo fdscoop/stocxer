@@ -1,0 +1,724 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Index Probability Analyzer - TradeWise</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --primary: #3b82f6;
+            --success: #10b981;
+            --danger: #ef4444;
+            --warning: #f59e0b;
+            --dark: #1f2937;
+            --darker: #111827;
+        }
+        
+        body {
+            background: linear-gradient(135deg, var(--darker) 0%, var(--dark) 100%);
+            min-height: 100vh;
+        }
+        
+        .glass-card {
+            background: rgba(31, 41, 55, 0.8);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 1rem;
+        }
+        
+        .bullish { color: #10b981; }
+        .bearish { color: #ef4444; }
+        .neutral { color: #6b7280; }
+        
+        .direction-badge {
+            padding: 0.5rem 1rem;
+            border-radius: 9999px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        
+        .direction-bullish {
+            background: rgba(16, 185, 129, 0.2);
+            color: #10b981;
+            border: 1px solid rgba(16, 185, 129, 0.4);
+        }
+        
+        .direction-bearish {
+            background: rgba(239, 68, 68, 0.2);
+            color: #ef4444;
+            border: 1px solid rgba(239, 68, 68, 0.4);
+        }
+        
+        .direction-neutral {
+            background: rgba(107, 114, 128, 0.2);
+            color: #9ca3af;
+            border: 1px solid rgba(107, 114, 128, 0.4);
+        }
+        
+        .sector-bar {
+            height: 8px;
+            border-radius: 4px;
+            transition: width 0.5s ease-out;
+        }
+        
+        .stock-row:hover {
+            background: rgba(59, 130, 246, 0.1);
+        }
+        
+        .tab-active {
+            background: rgba(59, 130, 246, 0.2);
+            border-bottom: 2px solid #3b82f6;
+        }
+        
+        .progress-ring {
+            transform: rotate(-90deg);
+        }
+        
+        .spinner {
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        
+        .pulse-dot {
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+    </style>
+</head>
+<body class="text-gray-100">
+    <!-- Navigation -->
+    <nav class="glass-card m-4 p-4">
+        <div class="flex justify-between items-center">
+            <div class="flex items-center space-x-3">
+                <span class="text-2xl">📊</span>
+                <h1 class="text-xl font-bold">TradeWise Index Analyzer</h1>
+            </div>
+            <div class="flex space-x-2">
+                <a href="/" class="px-4 py-2 rounded-lg bg-gray-700 hover:bg-gray-600 transition">Home</a>
+                <a href="/screener.html" class="px-4 py-2 rounded-lg bg-gray-700 hover:bg-gray-600 transition">Screener</a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Index Selection -->
+    <div class="mx-4 mb-4">
+        <div class="glass-card p-4">
+            <div class="flex flex-wrap gap-3 items-center">
+                <span class="text-gray-400 font-medium">Select Index:</span>
+                <button onclick="selectIndex('NIFTY')" id="btn-NIFTY" class="index-btn px-6 py-3 rounded-lg bg-blue-600 hover:bg-blue-500 transition font-semibold">
+                    🔷 NIFTY 50
+                </button>
+                <button onclick="selectIndex('BANKNIFTY')" id="btn-BANKNIFTY" class="index-btn px-6 py-3 rounded-lg bg-gray-700 hover:bg-gray-600 transition font-semibold">
+                    🏦 BANK NIFTY
+                </button>
+                <button onclick="selectIndex('SENSEX')" id="btn-SENSEX" class="index-btn px-6 py-3 rounded-lg bg-gray-700 hover:bg-gray-600 transition font-semibold">
+                    📈 SENSEX
+                </button>
+                <button onclick="selectIndex('FINNIFTY')" id="btn-FINNIFTY" class="index-btn px-6 py-3 rounded-lg bg-gray-700 hover:bg-gray-600 transition font-semibold">
+                    💰 FINNIFTY
+                </button>
+                <button onclick="refreshAnalysis()" class="ml-auto px-4 py-3 rounded-lg bg-green-600 hover:bg-green-500 transition">
+                    🔄 Refresh
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="mx-4 grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <!-- Left Column - Main Prediction -->
+        <div class="lg:col-span-2 space-y-4">
+            <!-- Main Prediction Card -->
+            <div class="glass-card p-6" id="prediction-card">
+                <div class="flex justify-between items-start mb-6">
+                    <div>
+                        <h2 class="text-2xl font-bold mb-1" id="index-name">NIFTY 50</h2>
+                        <p class="text-gray-400" id="current-level">Loading...</p>
+                    </div>
+                    <div class="text-right">
+                        <div id="direction-badge" class="direction-badge direction-neutral">
+                            ANALYZING...
+                        </div>
+                        <p class="text-sm text-gray-400 mt-2" id="timestamp">--</p>
+                    </div>
+                </div>
+
+                <!-- Key Metrics -->
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                    <div class="bg-gray-800 rounded-xl p-4 text-center">
+                        <p class="text-gray-400 text-sm">Expected Move</p>
+                        <p class="text-2xl font-bold" id="expected-move">--</p>
+                    </div>
+                    <div class="bg-gray-800 rounded-xl p-4 text-center">
+                        <p class="text-gray-400 text-sm">Confidence</p>
+                        <p class="text-2xl font-bold" id="confidence">--</p>
+                    </div>
+                    <div class="bg-gray-800 rounded-xl p-4 text-center">
+                        <p class="text-gray-400 text-sm">Prob. Up</p>
+                        <p class="text-2xl font-bold bullish" id="prob-up">--</p>
+                    </div>
+                    <div class="bg-gray-800 rounded-xl p-4 text-center">
+                        <p class="text-gray-400 text-sm">Prob. Down</p>
+                        <p class="text-2xl font-bold bearish" id="prob-down">--</p>
+                    </div>
+                </div>
+
+                <!-- Regime & Action -->
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="bg-gray-800 rounded-xl p-4">
+                        <p class="text-gray-400 text-sm mb-2">Market Regime</p>
+                        <p class="text-lg font-semibold" id="regime">--</p>
+                        <div class="flex items-center mt-2">
+                            <span class="text-gray-400 text-sm">Trend Strength:</span>
+                            <span class="ml-2 font-semibold" id="trend-strength">--</span>
+                        </div>
+                    </div>
+                    <div class="bg-gray-800 rounded-xl p-4">
+                        <p class="text-gray-400 text-sm mb-2">Recommended Action</p>
+                        <p class="text-lg font-semibold" id="action">--</p>
+                        <div class="flex items-center mt-2">
+                            <span class="text-gray-400 text-sm">Signal Strength:</span>
+                            <span class="ml-2 font-semibold" id="action-strength">--</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Stock Breakdown Chart -->
+            <div class="glass-card p-6">
+                <h3 class="text-lg font-semibold mb-4">📊 Stock Signal Distribution</h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <canvas id="stockChart" width="200" height="200"></canvas>
+                    </div>
+                    <div class="space-y-4" id="stock-stats">
+                        <div class="flex items-center justify-between p-3 bg-gray-800 rounded-lg">
+                            <span class="flex items-center">
+                                <span class="w-3 h-3 rounded-full bg-green-500 mr-2"></span>
+                                Bullish Stocks
+                            </span>
+                            <span class="font-bold bullish" id="bullish-count">--</span>
+                        </div>
+                        <div class="flex items-center justify-between p-3 bg-gray-800 rounded-lg">
+                            <span class="flex items-center">
+                                <span class="w-3 h-3 rounded-full bg-red-500 mr-2"></span>
+                                Bearish Stocks
+                            </span>
+                            <span class="font-bold bearish" id="bearish-count">--</span>
+                        </div>
+                        <div class="flex items-center justify-between p-3 bg-gray-800 rounded-lg">
+                            <span class="flex items-center">
+                                <span class="w-3 h-3 rounded-full bg-gray-500 mr-2"></span>
+                                Neutral Stocks
+                            </span>
+                            <span class="font-bold neutral" id="neutral-count">--</span>
+                        </div>
+                        <div class="flex items-center justify-between p-3 bg-gray-800 rounded-lg">
+                            <span class="flex items-center">
+                                <span class="w-3 h-3 rounded-full bg-blue-500 mr-2"></span>
+                                Total Analyzed
+                            </span>
+                            <span class="font-bold" id="total-count">--</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sector Analysis -->
+            <div class="glass-card p-6">
+                <h3 class="text-lg font-semibold mb-4">🏭 Sector Analysis</h3>
+                <div class="space-y-4" id="sector-container">
+                    <!-- Sectors will be populated here -->
+                    <p class="text-gray-400">Loading sector data...</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Column - Top Movers & Signals -->
+        <div class="space-y-4">
+            <!-- ML Prediction -->
+            <div class="glass-card p-6" id="ml-card">
+                <h3 class="text-lg font-semibold mb-4">🤖 ML Prediction</h3>
+                <div id="ml-content">
+                    <p class="text-gray-400">Loading ML data...</p>
+                </div>
+            </div>
+
+            <!-- Top Bullish Contributors -->
+            <div class="glass-card p-6">
+                <h3 class="text-lg font-semibold mb-4 flex items-center">
+                    <span class="text-green-500 mr-2">📈</span>
+                    Top Bullish Contributors
+                </h3>
+                <div class="space-y-2" id="bullish-contributors">
+                    <p class="text-gray-400">Loading...</p>
+                </div>
+            </div>
+
+            <!-- Top Bearish Contributors -->
+            <div class="glass-card p-6">
+                <h3 class="text-lg font-semibold mb-4 flex items-center">
+                    <span class="text-red-500 mr-2">📉</span>
+                    Top Bearish Contributors
+                </h3>
+                <div class="space-y-2" id="bearish-contributors">
+                    <p class="text-gray-400">Loading...</p>
+                </div>
+            </div>
+
+            <!-- Quick Actions -->
+            <div class="glass-card p-6">
+                <h3 class="text-lg font-semibold mb-4">⚡ Quick Actions</h3>
+                <div class="space-y-3">
+                    <button onclick="getSurgeCandidates()" class="w-full py-3 rounded-lg bg-green-600 hover:bg-green-500 transition font-semibold">
+                        🚀 Find Surge Candidates
+                    </button>
+                    <button onclick="getExhaustionCandidates()" class="w-full py-3 rounded-lg bg-red-600 hover:bg-red-500 transition font-semibold">
+                        ⚠️ Find Exhaustion Zones
+                    </button>
+                    <button onclick="viewAllStocks()" class="w-full py-3 rounded-lg bg-blue-600 hover:bg-blue-500 transition font-semibold">
+                        📋 View All Stocks
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Stock List Modal -->
+    <div id="stock-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 overflow-y-auto">
+        <div class="min-h-screen px-4 py-8">
+            <div class="glass-card max-w-6xl mx-auto p-6">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-xl font-semibold" id="modal-title">All Stock Signals</h3>
+                    <button onclick="closeModal()" class="text-gray-400 hover:text-white text-2xl">&times;</button>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-sm">
+                        <thead>
+                            <tr class="text-gray-400 border-b border-gray-700">
+                                <th class="text-left py-3 px-2">Symbol</th>
+                                <th class="text-left py-3 px-2">Sector</th>
+                                <th class="text-right py-3 px-2">Weight</th>
+                                <th class="text-right py-3 px-2">Price</th>
+                                <th class="text-right py-3 px-2">Change</th>
+                                <th class="text-center py-3 px-2">Signal</th>
+                                <th class="text-right py-3 px-2">Expected Move</th>
+                                <th class="text-right py-3 px-2">Confidence</th>
+                                <th class="text-right py-3 px-2">RSI</th>
+                            </tr>
+                        </thead>
+                        <tbody id="stock-table-body">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Loading Overlay -->
+    <div id="loading-overlay" class="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 hidden">
+        <div class="text-center">
+            <div class="spinner w-16 h-16 border-4 border-blue-500 border-t-transparent rounded-full mx-auto mb-4"></div>
+            <p class="text-xl font-semibold">Analyzing Index...</p>
+            <p class="text-gray-400 mt-2">Scanning constituent stocks</p>
+        </div>
+    </div>
+
+    <script>
+        let currentIndex = 'NIFTY';
+        let analysisData = null;
+        let stockChart = null;
+
+        // Initialize on load
+        document.addEventListener('DOMContentLoaded', () => {
+            selectIndex('NIFTY');
+        });
+
+        function selectIndex(indexName) {
+            currentIndex = indexName;
+            
+            // Update button styles
+            document.querySelectorAll('.index-btn').forEach(btn => {
+                btn.classList.remove('bg-blue-600');
+                btn.classList.add('bg-gray-700');
+            });
+            document.getElementById(`btn-${indexName}`).classList.remove('bg-gray-700');
+            document.getElementById(`btn-${indexName}`).classList.add('bg-blue-600');
+            
+            // Load analysis
+            loadIndexAnalysis(indexName);
+        }
+
+        function refreshAnalysis() {
+            loadIndexAnalysis(currentIndex);
+        }
+
+        async function loadIndexAnalysis(indexName) {
+            showLoading(true);
+            
+            try {
+                const response = await fetch(`/index/probability/${indexName}?include_ml=true&include_stocks=true&include_sectors=true`);
+                const data = await response.json();
+                
+                if (data.status === 'success') {
+                    analysisData = data;
+                    updateUI(data);
+                } else {
+                    showError('Failed to load analysis');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                showError('Error loading analysis: ' + error.message);
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        function updateUI(data) {
+            // Update header
+            document.getElementById('index-name').textContent = data.index;
+            document.getElementById('current-level').textContent = data.current_level ? 
+                `Current Level: ${data.current_level.toLocaleString()}` : 'Level: --';
+            document.getElementById('timestamp').textContent = new Date(data.timestamp).toLocaleString();
+            
+            // Update direction badge
+            const badge = document.getElementById('direction-badge');
+            badge.textContent = data.prediction.expected_direction;
+            badge.className = 'direction-badge direction-' + data.prediction.expected_direction.toLowerCase();
+            
+            // Update key metrics
+            const expectedMove = data.prediction.expected_move_pct;
+            const moveEl = document.getElementById('expected-move');
+            moveEl.textContent = (expectedMove >= 0 ? '+' : '') + expectedMove.toFixed(2) + '%';
+            moveEl.className = `text-2xl font-bold ${expectedMove >= 0 ? 'bullish' : 'bearish'}`;
+            
+            document.getElementById('confidence').textContent = data.prediction.confidence.toFixed(0) + '%';
+            document.getElementById('prob-up').textContent = (data.prediction.probability_up * 100).toFixed(1) + '%';
+            document.getElementById('prob-down').textContent = (data.prediction.probability_down * 100).toFixed(1) + '%';
+            
+            // Update regime
+            document.getElementById('regime').textContent = data.regime.type;
+            document.getElementById('trend-strength').textContent = data.regime.trend_strength.toFixed(0) + '%';
+            
+            // Update action recommendation
+            const action = getActionRecommendation(data);
+            document.getElementById('action').textContent = action.text;
+            document.getElementById('action').className = `text-lg font-semibold ${action.color}`;
+            document.getElementById('action-strength').textContent = action.strength;
+            
+            // Update stock counts
+            document.getElementById('bullish-count').textContent = `${data.stock_summary.bullish} (${data.stock_summary.bullish_pct}%)`;
+            document.getElementById('bearish-count').textContent = `${data.stock_summary.bearish} (${data.stock_summary.bearish_pct}%)`;
+            document.getElementById('neutral-count').textContent = data.stock_summary.neutral;
+            document.getElementById('total-count').textContent = data.stock_summary.total_analyzed;
+            
+            // Update chart
+            updateStockChart(data.stock_summary);
+            
+            // Update sectors
+            updateSectors(data.sector_analysis);
+            
+            // Update contributors
+            updateContributors(data);
+            
+            // Update ML prediction
+            updateMLPrediction(data.ml_prediction);
+        }
+
+        function getActionRecommendation(data) {
+            const direction = data.prediction.expected_direction;
+            const confidence = data.prediction.confidence;
+            
+            if (direction === 'BULLISH') {
+                if (confidence >= 75) {
+                    return { text: 'Consider CALL Options', color: 'bullish', strength: 'Strong' };
+                } else if (confidence >= 60) {
+                    return { text: 'Mild Bullish Bias', color: 'bullish', strength: 'Moderate' };
+                }
+            } else if (direction === 'BEARISH') {
+                if (confidence >= 75) {
+                    return { text: 'Consider PUT Options', color: 'bearish', strength: 'Strong' };
+                } else if (confidence >= 60) {
+                    return { text: 'Mild Bearish Bias', color: 'bearish', strength: 'Moderate' };
+                }
+            }
+            return { text: 'Wait for Clearer Signals', color: 'neutral', strength: 'Weak' };
+        }
+
+        function updateStockChart(summary) {
+            const ctx = document.getElementById('stockChart').getContext('2d');
+            
+            if (stockChart) {
+                stockChart.destroy();
+            }
+            
+            stockChart = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Bullish', 'Bearish', 'Neutral'],
+                    datasets: [{
+                        data: [summary.bullish, summary.bearish, summary.neutral],
+                        backgroundColor: ['#10b981', '#ef4444', '#6b7280'],
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    },
+                    cutout: '60%'
+                }
+            });
+        }
+
+        function updateSectors(sectorAnalysis) {
+            const container = document.getElementById('sector-container');
+            
+            if (!sectorAnalysis || Object.keys(sectorAnalysis).length === 0) {
+                container.innerHTML = '<p class="text-gray-400">No sector data available</p>';
+                return;
+            }
+            
+            // Sort sectors by weight
+            const sectors = Object.entries(sectorAnalysis)
+                .sort((a, b) => b[1].sector_weight - a[1].sector_weight);
+            
+            container.innerHTML = sectors.map(([name, sector]) => {
+                const signalColor = sector.signal.includes('Buy') ? 'bullish' : 
+                                   sector.signal.includes('Sell') ? 'bearish' : 'neutral';
+                const barColor = sector.expected_move >= 0 ? 'bg-green-500' : 'bg-red-500';
+                const moveWidth = Math.min(Math.abs(sector.expected_move) * 30, 100);
+                
+                return `
+                    <div class="bg-gray-800 rounded-lg p-4">
+                        <div class="flex justify-between items-center mb-2">
+                            <span class="font-semibold">${name}</span>
+                            <span class="text-sm ${signalColor}">${sector.signal}</span>
+                        </div>
+                        <div class="flex items-center text-sm text-gray-400 mb-2">
+                            <span>Weight: ${sector.sector_weight.toFixed(1)}%</span>
+                            <span class="mx-2">•</span>
+                            <span>Stocks: ${sector.stock_count}</span>
+                            <span class="mx-2">•</span>
+                            <span class="${sector.expected_move >= 0 ? 'bullish' : 'bearish'}">
+                                Expected: ${sector.expected_move >= 0 ? '+' : ''}${sector.expected_move.toFixed(2)}%
+                            </span>
+                        </div>
+                        <div class="bg-gray-700 rounded-full h-2">
+                            <div class="${barColor} sector-bar" style="width: ${moveWidth}%"></div>
+                        </div>
+                        <div class="flex justify-between text-xs text-gray-500 mt-1">
+                            <span>📈 ${sector.bullish_stocks} bullish</span>
+                            <span>📉 ${sector.bearish_stocks} bearish</span>
+                            <span>➖ ${sector.neutral_stocks} neutral</span>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function updateContributors(data) {
+            // Bullish contributors
+            const bullishContainer = document.getElementById('bullish-contributors');
+            if (data.top_bullish_contributors && data.top_bullish_contributors.length > 0) {
+                bullishContainer.innerHTML = data.top_bullish_contributors.map(stock => `
+                    <div class="bg-gray-800 rounded-lg p-3 stock-row transition">
+                        <div class="flex justify-between items-center">
+                            <span class="font-semibold">${stock.symbol}</span>
+                            <span class="text-sm bullish">+${stock.expected_move.toFixed(1)}%</span>
+                        </div>
+                        <div class="flex justify-between text-xs text-gray-400 mt-1">
+                            <span>Weight: ${stock.weight_pct.toFixed(2)}%</span>
+                            <span>Confidence: ${stock.confidence.toFixed(0)}%</span>
+                        </div>
+                    </div>
+                `).join('');
+            } else {
+                bullishContainer.innerHTML = '<p class="text-gray-400 text-sm">No strong bullish signals</p>';
+            }
+            
+            // Bearish contributors
+            const bearishContainer = document.getElementById('bearish-contributors');
+            if (data.top_bearish_contributors && data.top_bearish_contributors.length > 0) {
+                bearishContainer.innerHTML = data.top_bearish_contributors.map(stock => `
+                    <div class="bg-gray-800 rounded-lg p-3 stock-row transition">
+                        <div class="flex justify-between items-center">
+                            <span class="font-semibold">${stock.symbol}</span>
+                            <span class="text-sm bearish">${stock.expected_move.toFixed(1)}%</span>
+                        </div>
+                        <div class="flex justify-between text-xs text-gray-400 mt-1">
+                            <span>Weight: ${stock.weight_pct.toFixed(2)}%</span>
+                            <span>Confidence: ${stock.confidence.toFixed(0)}%</span>
+                        </div>
+                    </div>
+                `).join('');
+            } else {
+                bearishContainer.innerHTML = '<p class="text-gray-400 text-sm">No strong bearish signals</p>';
+            }
+        }
+
+        function updateMLPrediction(mlData) {
+            const container = document.getElementById('ml-content');
+            
+            if (!mlData) {
+                container.innerHTML = '<p class="text-gray-400">ML model not available or not trained</p>';
+                return;
+            }
+            
+            const directionColor = mlData.predicted_direction === 'UP' ? 'bullish' : 
+                                  mlData.predicted_direction === 'DOWN' ? 'bearish' : 'neutral';
+            
+            container.innerHTML = `
+                <div class="space-y-3">
+                    <div class="flex justify-between items-center">
+                        <span class="text-gray-400">ML Direction:</span>
+                        <span class="font-bold ${directionColor}">${mlData.predicted_direction}</span>
+                    </div>
+                    <div class="flex justify-between items-center">
+                        <span class="text-gray-400">ML Confidence:</span>
+                        <span class="font-semibold">${mlData.ml_confidence.toFixed(0)}%</span>
+                    </div>
+                    <div class="space-y-2 text-sm">
+                        <div class="flex justify-between">
+                            <span>Up Prob:</span>
+                            <span class="bullish">${(mlData.probability_up * 100).toFixed(1)}%</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span>Down Prob:</span>
+                            <span class="bearish">${(mlData.probability_down * 100).toFixed(1)}%</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span>Flat Prob:</span>
+                            <span class="neutral">${(mlData.probability_flat * 100).toFixed(1)}%</span>
+                        </div>
+                    </div>
+                    <p class="text-xs text-gray-500 mt-2">Model: ${mlData.model_type}</p>
+                </div>
+            `;
+        }
+
+        async function getSurgeCandidates() {
+            showLoading(true);
+            try {
+                const response = await fetch(`/index/surge-candidates/${currentIndex}?min_expected_move=2.0&limit=15`);
+                const data = await response.json();
+                
+                if (data.status === 'success') {
+                    showStockModal('🚀 Surge Candidates', data.candidates, 'surge');
+                }
+            } catch (error) {
+                showError('Error loading surge candidates');
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        async function getExhaustionCandidates() {
+            showLoading(true);
+            try {
+                const response = await fetch(`/index/exhaustion-candidates/${currentIndex}?min_expected_decline=-2.0&limit=15`);
+                const data = await response.json();
+                
+                if (data.status === 'success') {
+                    showStockModal('⚠️ Exhaustion Zones', data.candidates, 'exhaustion');
+                }
+            } catch (error) {
+                showError('Error loading exhaustion candidates');
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        function viewAllStocks() {
+            if (!analysisData || !analysisData.stock_signals) {
+                showError('No stock data available');
+                return;
+            }
+            
+            showStockModal('📋 All Stock Signals', analysisData.stock_signals, 'all');
+        }
+
+        function showStockModal(title, stocks, type) {
+            document.getElementById('modal-title').textContent = title;
+            
+            const tbody = document.getElementById('stock-table-body');
+            tbody.innerHTML = stocks.map(stock => {
+                const signalColor = stock.signal?.includes('Buy') ? 'bullish' : 
+                                   stock.signal?.includes('Sell') ? 'bearish' : 'neutral';
+                const moveColor = (stock.expected_move || 0) >= 0 ? 'bullish' : 'bearish';
+                const changeColor = (stock.price_change_pct || 0) >= 0 ? 'bullish' : 'bearish';
+                
+                return `
+                    <tr class="border-b border-gray-700 stock-row">
+                        <td class="py-3 px-2 font-semibold">${stock.symbol}</td>
+                        <td class="py-3 px-2 text-gray-400">${stock.sector || '--'}</td>
+                        <td class="py-3 px-2 text-right">${(stock.weight_pct || 0).toFixed(2)}%</td>
+                        <td class="py-3 px-2 text-right">₹${(stock.current_price || 0).toLocaleString()}</td>
+                        <td class="py-3 px-2 text-right ${changeColor}">
+                            ${(stock.price_change_pct || 0) >= 0 ? '+' : ''}${(stock.price_change_pct || 0).toFixed(2)}%
+                        </td>
+                        <td class="py-3 px-2 text-center">
+                            <span class="px-2 py-1 rounded text-xs ${signalColor} bg-opacity-20" style="background: currentColor; opacity: 0.2;">
+                                ${stock.signal || '--'}
+                            </span>
+                        </td>
+                        <td class="py-3 px-2 text-right ${moveColor}">
+                            ${(stock.expected_move || 0) >= 0 ? '+' : ''}${(stock.expected_move || 0).toFixed(2)}%
+                        </td>
+                        <td class="py-3 px-2 text-right">${(stock.confidence || 0).toFixed(0)}%</td>
+                        <td class="py-3 px-2 text-right">${(stock.rsi || 0).toFixed(1)}</td>
+                    </tr>
+                `;
+            }).join('');
+            
+            document.getElementById('stock-modal').classList.remove('hidden');
+        }
+
+        function closeModal() {
+            document.getElementById('stock-modal').classList.add('hidden');
+        }
+
+        function showLoading(show) {
+            const overlay = document.getElementById('loading-overlay');
+            if (show) {
+                overlay.classList.remove('hidden');
+            } else {
+                overlay.classList.add('hidden');
+            }
+        }
+
+        function showError(message) {
+            alert(message); // Simple error display - can be enhanced
+        }
+
+        // Close modal on outside click
+        document.getElementById('stock-modal').addEventListener('click', (e) => {
+            if (e.target.id === 'stock-modal') {
+                closeModal();
+            }
+        });
+
+        // Keyboard shortcut to close modal
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                closeModal();
+            }
+        });
+    </script>
+</body>
+</html>

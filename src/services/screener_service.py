@@ -172,6 +172,47 @@ class ScreenerService:
             logger.error(f"Get scan history error: {str(e)}")
             return []
     
+    async def get_recent_signals(self, user_id: str, hours: int = 2, limit: int = 20) -> dict:
+        """Get recent signals from last N hours"""
+        try:
+            from datetime import datetime, timedelta
+            
+            # Calculate time threshold
+            time_threshold = (datetime.now() - timedelta(hours=hours)).isoformat()
+            
+            # Get recent signals
+            response = self.supabase.table("screener_results")\
+                .select("*")\
+                .eq("user_id", user_id)\
+                .gte("scanned_at", time_threshold)\
+                .order("confidence", desc=True)\
+                .limit(limit)\
+                .execute()
+            
+            if not response.data:
+                return {"buy": [], "sell": []}
+            
+            # Separate BUY and SELL signals
+            buy_signals = []
+            sell_signals = []
+            
+            for signal in response.data:
+                formatted_signal = self._format_signal_response(signal)
+                if signal["action"] == "BUY":
+                    buy_signals.append(formatted_signal)
+                else:
+                    sell_signals.append(formatted_signal)
+            
+            return {
+                "buy": buy_signals[:10],  # Top 10 buy signals
+                "sell": sell_signals[:10],  # Top 10 sell signals
+                "time_range_hours": hours
+            }
+            
+        except Exception as e:
+            logger.error(f"Get recent signals error: {str(e)}")
+            return {"buy": [], "sell": []}
+    
     def _format_signal_response(self, signal: dict) -> dict:
         """Format signal for response"""
         return {

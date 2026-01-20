@@ -722,9 +722,14 @@ class MultiTimeframeICTAnalyzer:
         # Get current price
         try:
             quote = self.fyers.get_quotes([symbol])
-            current_price = quote["d"][0]["v"]["lp"] if quote and quote.get("d") else 25000
-        except:
-            current_price = 25000
+            current_price = quote["d"][0]["v"]["lp"] if quote and quote.get("d") else None
+            
+            # If Fyers quote fails, raise error instead of using mock data
+            if not current_price:
+                raise Exception("❌ Fyers API authentication required. No valid access token found.")
+        except Exception as e:
+            logger.error(f"❌ Failed to get spot price from Fyers: {e}")
+            raise Exception(f"❌ Fyers authentication required. Please authenticate at /auth/url to get live data. Error: {str(e)}")
         
         # Analyze each timeframe
         analyses = {}

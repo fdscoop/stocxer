@@ -320,67 +320,70 @@ class SimpleLSTMPredictor:
 
 class EnsemblePredictor:
     """
-    Ensemble model combining ARIMA, LSTM, and other signals
-    
-    Uses weighted voting to combine predictions from multiple models,
-    giving more weight to models that have been more accurate recently.
+    Ensemble model combining ARIMA and Momentum signals
+
+    Uses weighted voting to combine predictions from multiple models.
+    LSTM removed - overkill and unstable for this use case.
     """
-    
+
     def __init__(self):
         self.arima = ARIMAPredictor(order=(5, 1, 2))
-        self.lstm = SimpleLSTMPredictor(lookback=20)
         self.is_fitted = False
-        
-        # Model weights (can be adjusted based on performance)
+        self.fitted_price_hash = None  # Track which data we're fitted on
+
+        # Model weights - ARIMA + Momentum only
         self.weights = {
-            'arima': 0.4,  # 40% weight to ARIMA (good for short-term)
-            'lstm': 0.4,   # 40% weight to LSTM (good for patterns)
-            'momentum': 0.2  # 20% weight to simple momentum
+            'arima': 0.6,     # 60% weight to ARIMA (good for short-term)
+            'momentum': 0.4   # 40% weight to simple momentum
         }
     
+    def _get_price_hash(self, prices: pd.Series) -> str:
+        """Generate a hash to identify the price series (for cache invalidation)"""
+        if prices is None or len(prices) == 0:
+            return ""
+        # Use first price, last price, length, and mean to create a unique identifier
+        return f"{prices.iloc[0]:.2f}_{prices.iloc[-1]:.2f}_{len(prices)}_{prices.mean():.2f}"
+
     def fit(self, prices: pd.Series) -> Dict:
         """
         Fit all models in the ensemble
-        
+
         Args:
             prices: Series of closing prices
-            
+
         Returns:
             Dict with metrics from all models
         """
         metrics = {}
-        
-        # Fit ARIMA
+
+        # Fit ARIMA only (LSTM removed)
         arima_metrics = self.arima.fit(prices)
         metrics['arima'] = arima_metrics
-        
-        # Fit LSTM
-        lstm_metrics = self.lstm.fit(prices)
-        metrics['lstm'] = lstm_metrics
-        
+
         self.is_fitted = True
-        logger.info("✅ Ensemble model fitted with ARIMA + LSTM + Momentum")
-        
+        self.fitted_price_hash = self._get_price_hash(prices)
+        logger.info("✅ Ensemble model fitted with ARIMA + Momentum")
+
         return metrics
     
     def predict(self, prices: pd.Series, steps: int = 1) -> Dict:
         """
-        Generate ensemble prediction combining all models
-        
+        Generate ensemble prediction combining ARIMA + Momentum
+
         Args:
             prices: Recent price series for prediction
             steps: Number of periods to forecast
-            
+
         Returns:
             Dict with combined prediction and individual model results
         """
         if not self.is_fitted:
             raise ValueError("Model not fitted. Call fit() first.")
-        
+
         results = {}
         predictions = []
         weights_sum = 0
-        
+
         # ARIMA prediction
         try:
             arima_result = self.arima.predict(steps)
@@ -396,28 +399,13 @@ class EnsemblePredictor:
         except Exception as e:
             logger.warning(f"ARIMA prediction failed: {e}")
             results['arima'] = {'error': str(e)}
-        
-        # LSTM prediction
-        try:
-            lstm_result = self.lstm.predict(prices, steps)
-            results['lstm'] = {
-                'predicted': lstm_result.predicted_price,
-                'direction': lstm_result.direction,
-                'confidence': lstm_result.confidence,
-                'momentum': lstm_result.metrics.get('momentum', 0)
-            }
-            predictions.append((lstm_result.predicted_price, self.weights['lstm'], lstm_result.direction))
-            weights_sum += self.weights['lstm']
-        except Exception as e:
-            logger.warning(f"LSTM prediction failed: {e}")
-            results['lstm'] = {'error': str(e)}
-        
-        # Simple momentum prediction
+
+        # Simple momentum prediction (no LSTM - removed as overkill)
         try:
             momentum = prices.pct_change().tail(10).mean()
             momentum_pred = prices.iloc[-1] * (1 + momentum * steps)
             momentum_direction = 'bullish' if momentum > 0.001 else ('bearish' if momentum < -0.001 else 'neutral')
-            
+
             results['momentum'] = {
                 'predicted': round(momentum_pred, 2),
                 'direction': momentum_direction,
@@ -428,32 +416,30 @@ class EnsemblePredictor:
         except Exception as e:
             logger.warning(f"Momentum calculation failed: {e}")
             results['momentum'] = {'error': str(e)}
-        
+
         # Combine predictions (weighted average)
         if predictions and weights_sum > 0:
             weighted_price = sum(p * w for p, w, _ in predictions) / weights_sum
-            
+
             # Determine ensemble direction by voting
             direction_votes = {'bullish': 0, 'bearish': 0, 'neutral': 0}
             for _, w, d in predictions:
                 direction_votes[d] += w
-            
+
             ensemble_direction = max(direction_votes, key=direction_votes.get)
             direction_confidence = direction_votes[ensemble_direction] / weights_sum
-            
-            # Calculate overall confidence
-            individual_confidences = [results.get(m, {}).get('confidence', 0) 
-                                     for m in ['arima', 'lstm']]
-            avg_confidence = sum(individual_confidences) / len(individual_confidences) if individual_confidences else 0.5
-            
+
+            # Calculate overall confidence (ARIMA only now)
+            arima_confidence = results.get('arima', {}).get('confidence', 0.5)
+
             last_price = prices.iloc[-1]
             price_change_pct = (weighted_price - last_price) / last_price * 100
-            
+
             results['ensemble'] = {
                 'predicted_price': round(weighted_price, 2),
                 'direction': ensemble_direction,
                 'direction_confidence': round(direction_confidence, 3),
-                'model_confidence': round(avg_confidence, 3),
+                'model_confidence': round(arima_confidence, 3),
                 'price_change_pct': round(price_change_pct, 2),
                 'last_price': round(last_price, 2),
                 'models_used': len(predictions),
@@ -466,7 +452,7 @@ class EnsemblePredictor:
                 'direction_confidence': 0,
                 'model_confidence': 0
             }
-        
+
         return results
     
     def _generate_recommendation(self, direction: str, confidence: float, price_change: float) -> str:
@@ -496,30 +482,37 @@ ensemble_predictor = EnsemblePredictor()
 def get_ml_signal(prices: pd.Series, steps: int = 1) -> Dict:
     """
     Convenience function to get ML signal for integration with trading system
-    
+
     Args:
         prices: Historical price data
         steps: Forecast periods
-        
+
     Returns:
         Dict with ML prediction results
     """
     global ensemble_predictor
-    
+
     try:
-        # Fit if not already fitted or data changed significantly
-        if not ensemble_predictor.is_fitted:
+        # Check if we need to refit (different data series or not fitted)
+        current_hash = ensemble_predictor._get_price_hash(prices)
+        needs_refit = (
+            not ensemble_predictor.is_fitted or
+            ensemble_predictor.fitted_price_hash != current_hash
+        )
+
+        if needs_refit:
+            logger.info(f"🔄 Refitting ML model for new price series (hash: {current_hash[:20]}...)")
             ensemble_predictor.fit(prices)
-        
+
         # Get prediction
         results = ensemble_predictor.predict(prices, steps)
-        
+
         return {
             'success': True,
             'predictions': results,
             'timestamp': datetime.now().isoformat()
         }
-        
+
     except Exception as e:
         logger.error(f"ML signal error: {e}")
         return {

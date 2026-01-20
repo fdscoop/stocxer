@@ -157,8 +157,45 @@
                     localStorage.setItem('auth_token', data.access_token);
                     localStorage.setItem('user', JSON.stringify(data.user));
                     
-                    showMessage('✅ Login successful! Redirecting...');
-                    setTimeout(() => window.location.href = '/', 1500);
+                    // Check if there's a pending Fyers auth code to process
+                    const urlParams = new URLSearchParams(window.location.search);
+                    const fyersAuthCode = urlParams.get('fyers_auth_code');
+                    const state = urlParams.get('state');
+                    
+                    if (fyersAuthCode) {
+                        showMessage('✅ Login successful! Processing Fyers authentication...');
+                        
+                        try {
+                            // Process the Fyers authentication
+                            const fyersResponse = await fetch(`${API_BASE}/auth/callback`, {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    'Authorization': `Bearer ${data.access_token}`
+                                },
+                                body: JSON.stringify({
+                                    auth_code: fyersAuthCode,
+                                    state: state
+                                })
+                            });
+                            
+                            const fyersData = await fyersResponse.json();
+                            
+                            if (fyersResponse.ok) {
+                                showMessage('✅ Login and Fyers authentication successful! Redirecting to screener...');
+                                setTimeout(() => window.location.href = '/screener.html', 2000);
+                            } else {
+                                showMessage('✅ Login successful, but Fyers authentication failed. You can try connecting Fyers again from the screener.', false);
+                                setTimeout(() => window.location.href = '/screener.html', 3000);
+                            }
+                        } catch (error) {
+                            showMessage('✅ Login successful, but Fyers authentication failed. You can try connecting Fyers again from the screener.', false);
+                            setTimeout(() => window.location.href = '/screener.html', 3000);
+                        }
+                    } else {
+                        showMessage('✅ Login successful! Redirecting...');
+                        setTimeout(() => window.location.href = '/', 1500);
+                    }
                 } else {
                     showMessage(data.detail || 'Login failed', true);
                     btn.textContent = 'Login';
@@ -238,6 +275,20 @@
         // Check if already logged in
         if (localStorage.getItem('auth_token')) {
             window.location.href = '/screener';
+        }
+        
+        // Check for Fyers auth code redirect message
+        const urlParams = new URLSearchParams(window.location.search);
+        const fyersAuthCode = urlParams.get('fyers_auth_code');
+        const messageParam = urlParams.get('message');
+        const errorParam = urlParams.get('error');
+        
+        if (fyersAuthCode) {
+            showMessage('🔗 Please login to complete your Fyers authentication.', false);
+        } else if (messageParam) {
+            showMessage(decodeURIComponent(messageParam), false);
+        } else if (errorParam) {
+            showMessage(decodeURIComponent(errorParam), true);
         }
     </script>
 </body>

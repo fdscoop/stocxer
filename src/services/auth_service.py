@@ -121,7 +121,8 @@ class AuthService:
                 try:
                     if isinstance(response.user.created_at, str):
                         created_at = datetime.fromisoformat(response.user.created_at.replace('Z', '+00:00'))
-                    elif isinstance(response.user.created_at, datetime):
+                    elif hasattr(response.user.created_at, 'isoformat'):
+                        # It's already a datetime object
                         created_at = response.user.created_at
                 except Exception as e:
                     logger.warning(f"Could not parse created_at: {e}")
@@ -184,11 +185,22 @@ class AuthService:
             user_profile = self.supabase.table("users").select("*").eq("id", user.user.id).execute()
             profile = user_profile.data[0] if user_profile.data else {}
             
+            # Handle created_at properly - it might be a string or datetime object
+            created_at = user.user.created_at
+            if isinstance(created_at, str):
+                created_at = datetime.fromisoformat(created_at.replace('Z', '+00:00'))
+            elif hasattr(created_at, 'isoformat'):
+                # It's already a datetime object
+                pass
+            else:
+                # Fallback to current time if we can't parse it
+                created_at = datetime.now()
+            
             return UserResponse(
                 id=user.user.id,
                 email=user.user.email,
                 full_name=profile.get("full_name"),
-                created_at=datetime.fromisoformat(user.user.created_at)
+                created_at=created_at
             )
             
         except Exception as e:

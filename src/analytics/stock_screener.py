@@ -229,122 +229,149 @@ class StockScreener:
         try:
             # Calculate indicators
             df = df.copy()
-            
-            # 1. Moving Averages (use 5/10/15 for faster signals with limited data)
-            df['sma_5'] = df['close'].rolling(5).mean()
-            df['sma_10'] = df['close'].rolling(10).mean()
-            df['sma_15'] = df['close'].rolling(15).mean()
-            
-            # 2. RSI
+
+            # ==================== TECHNICAL LAYER ====================
+            # 1. EMA Structure (trend detection) - replaces SMA
+            df['ema_5'] = df['close'].ewm(span=5, adjust=False).mean()
+            df['ema_10'] = df['close'].ewm(span=10, adjust=False).mean()
+            df['ema_20'] = df['close'].ewm(span=20, adjust=False).mean()
+
+            # 2. RSI (timing)
             delta = df['close'].diff()
             gain = (delta.where(delta > 0, 0)).rolling(14).mean()
             loss = (-delta.where(delta < 0, 0)).rolling(14).mean()
-            rs = gain / loss
+            rs = gain / (loss + 0.0001)  # Avoid division by zero
             df['rsi'] = 100 - (100 / (1 + rs))
-            
-            # 3. Volume analysis
+
+            # 3. VWAP (timing & fair value)
+            df['typical_price'] = (df['high'] + df['low'] + df['close']) / 3
+            df['vwap'] = (df['typical_price'] * df['volume']).cumsum() / df['volume'].cumsum()
+
+            # 4. Volume analysis (confirmation)
             df['volume_sma'] = df['volume'].rolling(10).mean()
-            volume_surge = df['volume'].iloc[-1] > df['volume_sma'].iloc[-1] * 1.5
-            
-            # 4. Price momentum (5-day change)
+            volume_surge = df['volume'].iloc[-1] > df['volume_sma'].iloc[-1] * 1.5 if not pd.isna(df['volume_sma'].iloc[-1]) else False
+
+            # 5. Price momentum (5-day change)
             if len(df) >= 6:
                 price_change_pct = ((current_price - df['close'].iloc[-6]) / df['close'].iloc[-6]) * 100
             else:
                 price_change_pct = 0
-            
+
             # Get latest values
-            sma_5 = df['sma_5'].iloc[-1]
-            sma_10 = df['sma_10'].iloc[-1]
-            sma_15 = df['sma_15'].iloc[-1]
+            ema_5 = df['ema_5'].iloc[-1]
+            ema_10 = df['ema_10'].iloc[-1]
+            ema_20 = df['ema_20'].iloc[-1]
             rsi = df['rsi'].iloc[-1]
-            
-            # Skip if key indicators not ready (need at least 15 days)
-            if pd.isna(rsi) or pd.isna(sma_15):
-                logger.debug(f"{symbol}: Indicators not ready (RSI={rsi}, SMA15={sma_15})")
+            vwap = df['vwap'].iloc[-1]
+
+            # Skip if key indicators not ready
+            if pd.isna(rsi) or pd.isna(ema_20) or pd.isna(vwap):
+                logger.debug(f"{symbol}: Indicators not ready")
                 return None
-            
-            # Signal generation logic
+
+            # Determine EMA alignment and VWAP position
+            ema_alignment = "bullish" if ema_5 > ema_10 > ema_20 else ("bearish" if ema_5 < ema_10 < ema_20 else "mixed")
+            vwap_position = "above" if current_price > vwap else "below"
+
+            # ==================== SIGNAL SCORING ====================
+            # Weights: EMA(25) + RSI(25) + VWAP(20) + Volume(15) + Momentum(15) = 100
             confidence = 0
             action = "HOLD"
             reasons = []
-            
+
             # BULLISH SIGNALS
             bullish_score = 0
-            
-            # Golden cross (short MA > long MA)
-            if sma_5 > sma_10 > sma_15:
-                bullish_score += 30
-                reasons.append("✅ Golden cross - all MAs aligned")
-            elif sma_5 > sma_15:
-                bullish_score += 15
-                reasons.append("📈 Price above 15 SMA")
-            
-            # RSI in buy zone
-            if rsi < 30:
-                bullish_score += 30  # Deeply oversold
-                reasons.append(f"✅ RSI deeply oversold: {rsi:.1f}")
-            elif 30 < rsi < 50:
+
+            # 1. EMA Structure - Trend (weight: 25)
+            if ema_alignment == "bullish":
                 bullish_score += 25
-                reasons.append(f"✅ RSI oversold recovery: {rsi:.1f}")
-            elif 50 < rsi < 70:
-                bullish_score += 15
+                reasons.append("✅ EMA bullish alignment (5>10>20)")
+            elif ema_5 > ema_20:
+                bullish_score += 12
+                reasons.append("📈 Price above EMA 20")
+
+            # 2. RSI - Timing (weight: 25)
+            if rsi < 30:
+                bullish_score += 25  # Deeply oversold - best buy
+                reasons.append(f"✅ RSI oversold: {rsi:.1f}")
+            elif 30 <= rsi < 45:
+                bullish_score += 20  # Recovery zone
+                reasons.append(f"📊 RSI recovery: {rsi:.1f}")
+            elif 45 <= rsi < 60:
+                bullish_score += 15  # Healthy uptrend
                 reasons.append(f"📊 RSI healthy: {rsi:.1f}")
-            
-            # Volume confirmation
-            if volume_surge and price_change_pct > 0:
+
+            # 3. VWAP Position - Timing (weight: 20)
+            if vwap_position == "above":
                 bullish_score += 20
-                reasons.append("🔥 High volume on uptrend")
-            
-            # Momentum
+                reasons.append("✅ Above VWAP (institutional buying)")
+
+            # 4. Volume Expansion - Confirmation (weight: 15)
+            if volume_surge and price_change_pct > 0:
+                bullish_score += 15
+                reasons.append("🔥 Volume expansion on uptrend")
+
+            # 5. Momentum (weight: 15)
             if price_change_pct > 3:
                 bullish_score += 15
                 reasons.append(f"🚀 Strong momentum: +{price_change_pct:.1f}%")
-            
+            elif price_change_pct > 1:
+                bullish_score += 8
+                reasons.append(f"📈 Positive momentum: +{price_change_pct:.1f}%")
+
             # BEARISH SIGNALS
             bearish_score = 0
-            
-            # Death cross
-            if sma_5 < sma_10 < sma_15:
-                bearish_score += 30
-                reasons.append("❌ Death cross - downtrend")
-            elif sma_5 < sma_15:
-                bearish_score += 15
-                reasons.append("📉 Price below 15 SMA")
-            
-            # RSI overbought
-            if rsi > 70:
+
+            # 1. EMA Structure - Trend (weight: 25)
+            if ema_alignment == "bearish":
                 bearish_score += 25
+                reasons.append("❌ EMA bearish alignment (5<10<20)")
+            elif ema_5 < ema_20:
+                bearish_score += 12
+                reasons.append("📉 Price below EMA 20")
+
+            # 2. RSI - Timing (weight: 25)
+            if rsi > 70:
+                bearish_score += 25  # Overbought - best sell
                 reasons.append(f"⚠️ RSI overbought: {rsi:.1f}")
-            elif rsi > 50 and price_change_pct < -2:
+            elif 55 < rsi <= 70:
                 bearish_score += 15
-                reasons.append(f"📊 RSI + negative momentum")
-            
-            # Volume on decline
-            if volume_surge and price_change_pct < -2:
+                reasons.append(f"📊 RSI elevated: {rsi:.1f}")
+
+            # 3. VWAP Position - Timing (weight: 20)
+            if vwap_position == "below":
                 bearish_score += 20
-                reasons.append("⚠️ High volume on decline")
-            
-            # Negative momentum
+                reasons.append("⚠️ Below VWAP (institutional selling)")
+
+            # 4. Volume Expansion - Confirmation (weight: 15)
+            if volume_surge and price_change_pct < -1:
+                bearish_score += 15
+                reasons.append("⚠️ Volume expansion on downtrend")
+
+            # 5. Momentum (weight: 15)
             if price_change_pct < -3:
                 bearish_score += 15
                 reasons.append(f"📉 Weak momentum: {price_change_pct:.1f}%")
-            
-            # Determine final action and confidence
-            # Lower threshold to 20 points for daily data analysis (works 24/7)
-            min_score = 20
-            
-            logger.info(f"{symbol}: Bullish={bullish_score}, Bearish={bearish_score}")
-            
+            elif price_change_pct < -1:
+                bearish_score += 8
+                reasons.append(f"📉 Negative momentum: {price_change_pct:.1f}%")
+
+            # ==================== FINAL SIGNAL ====================
+            # Minimum score threshold: 35 (need at least 2 confirming factors)
+            min_score = 35
+
+            logger.info(f"{symbol}: Bullish={bullish_score}, Bearish={bearish_score}, EMA={ema_alignment}, VWAP={vwap_position}")
+
             if bullish_score > bearish_score and bullish_score >= min_score:
                 action = "BUY"
-                confidence = min(bullish_score + 25, 95)  # Boost confidence
+                confidence = min(bullish_score, 95)
             elif bearish_score > bullish_score and bearish_score >= min_score:
                 action = "SELL"
-                confidence = min(bearish_score + 25, 95)  # Boost confidence
+                confidence = min(bearish_score, 95)
             else:
-                logger.info(f"{symbol}: No signal - Bullish={bullish_score}, Bearish={bearish_score}, min={min_score}")
-                return None  # No clear signal
-            
+                logger.debug(f"{symbol}: No signal - scores below threshold")
+                return None
+
             # Calculate targets and stop loss
             if action == "BUY":
                 target_1 = current_price * 1.05  # 5% gain
@@ -354,7 +381,7 @@ class StockScreener:
                 target_1 = current_price * 0.95  # 5% profit on short
                 target_2 = current_price * 0.90  # 10% profit on short
                 stop_loss = current_price * 1.03  # 3% loss on short
-            
+
             return {
                 "symbol": symbol,
                 "name": symbol.replace("NSE:", "").replace("-EQ", ""),
@@ -368,12 +395,15 @@ class StockScreener:
                 },
                 "indicators": {
                     "rsi": round(rsi, 1),
-                    "sma_5": round(sma_5, 2),
-                    "sma_15": round(sma_15, 2),
+                    "ema_5": round(ema_5, 2),
+                    "ema_20": round(ema_20, 2),
+                    "vwap": round(vwap, 2),
+                    "vwap_position": vwap_position,
+                    "ema_alignment": ema_alignment,
                     "momentum_5d": round(price_change_pct, 2),
-                    "volume_surge": bool(volume_surge)  # Convert numpy.bool_ to Python bool
+                    "volume_surge": bool(volume_surge)
                 },
-                "reasons": reasons[:3],  # Top 3 reasons
+                "reasons": reasons[:4],  # Top 4 reasons
                 "timestamp": datetime.now().isoformat(),
                 "change_pct": round(quote_data.get('ch', 0), 2),
                 "volume": quote_data.get('volume', 0)

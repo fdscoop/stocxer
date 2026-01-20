@@ -441,12 +441,18 @@ class IndexOptionsAnalyzer:
                 return None
             
             # Get spot price
-            spot_data = self.fyers.get_quotes([config["symbol"]])
-            if not spot_data or not spot_data.get("d"):
-                logger.error(f"Failed to get spot price for {index}")
-                return None
+            spot_price = None
+            try:
+                spot_data = self.fyers.get_quotes([config["symbol"]])
+                if spot_data and spot_data.get("d"):
+                    spot_price = spot_data["d"][0]["v"]["lp"]
+            except Exception as e:
+                logger.error(f"❌ Failed to fetch spot price from Fyers: {e}")
             
-            spot_price = spot_data["d"][0]["v"]["lp"]
+            # Raise error if no spot price instead of using mock data
+            if not spot_price:
+                logger.error("❌ Fyers API authentication required. Cannot fetch live spot price.")
+                raise Exception("❌ Fyers authentication required. Please authenticate to get live option chain data.")
             
             # Get future price (approximate)
             future_price = spot_price * 1.001  # ~0.1% basis
@@ -454,8 +460,13 @@ class IndexOptionsAnalyzer:
             basis_pct = (basis / spot_price) * 100
             
             # Get VIX
-            vix_data = self.fyers.get_quotes(["NSE:INDIAVIX-INDEX"])
-            vix = vix_data["d"][0]["v"]["lp"] if vix_data and vix_data.get("d") else 11.37
+            vix = 11.37  # Default value
+            try:
+                vix_data = self.fyers.get_quotes(["NSE:INDIAVIX-INDEX"])
+                if vix_data and vix_data.get("d"):
+                    vix = vix_data["d"][0]["v"]["lp"]
+            except Exception as e:
+                logger.warning(f"⚠️ Using default VIX value: {e}")
             
             # Get expiry dates
             expiries = self.get_expiry_dates(index)
@@ -468,13 +479,18 @@ class IndexOptionsAnalyzer:
             
             # Fetch REAL option chain data from Fyers
             logger.info(f"📡 Fetching actual option chain from Fyers for {index}")
-            chain_response = self.fyers.get_option_chain(config["symbol"], strike_count=15)
             
             strikes_data = []
             total_call_oi = 0
             total_put_oi = 0
             total_call_volume = 0
             total_put_volume = 0
+            
+            chain_response = None
+            try:
+                chain_response = self.fyers.get_option_chain(config["symbol"], strike_count=15)
+            except Exception as e:
+                logger.warning(f"⚠️ Fyers API error: {e}. Using fallback estimation.")
             
             if chain_response and chain_response.get("code") == 200:
                 options_chain = chain_response.get("data", {}).get("optionsChain", [])

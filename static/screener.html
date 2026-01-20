@@ -244,7 +244,7 @@
                                     <h2 class="text-xl font-bold text-cyan-400 mb-4">Fyers Authentication Required</h2>
                                     <p class="text-gray-300 mb-6">To fetch live market data and scan stocks, you need to connect your Fyers account.</p>
                                     <div class="flex gap-3 justify-center">
-                                        <button onclick="window.open('${data.detail.auth_url}', '_blank'); this.closest('.fixed').remove();" 
+                                        <button onclick="openFyersAuth('${data.detail.auth_url}'); this.closest('.fixed').remove();" 
                                                 class="px-6 py-2 bg-cyan-600 hover:bg-cyan-700 rounded text-white">
                                             Connect Fyers Account
                                         </button>
@@ -269,7 +269,7 @@
                                     <h2 class="text-xl font-bold text-yellow-400 mb-4">Authentication Expired</h2>
                                     <p class="text-gray-300 mb-6">Your Fyers authentication has expired (tokens last 24 hours). Please re-authenticate to continue.</p>
                                     <div class="flex gap-3 justify-center">
-                                        <button onclick="window.open('${data.detail.auth_url}', '_blank'); this.closest('.fixed').remove();" 
+                                        <button onclick="openFyersAuth('${data.detail.auth_url}'); this.closest('.fixed').remove();" 
                                                 class="px-6 py-2 bg-yellow-600 hover:bg-yellow-700 rounded text-white">
                                             Re-authenticate
                                         </button>
@@ -286,7 +286,7 @@
                 } else if (response.status === 401) {
                     // Supabase authentication expired
                     alert('Your session has expired. Please login again.');
-                    localStorage.removeItem('authToken');
+                    localStorage.removeItem('auth_token');
                     window.location.href = '/login.html';
                 } else {
                     // Other errors
@@ -447,6 +447,98 @@
             statusBar.classList.toggle('hidden', show);
         }
 
+        // Open Fyers authentication in popup
+        function openFyersAuth(authUrl) {
+            // Get fresh auth token from localStorage
+            const currentAuthToken = localStorage.getItem('auth_token');
+            console.log('🚀 Opening Fyers auth popup with authToken:', currentAuthToken ? 'Present' : 'Missing');
+            
+            if (!currentAuthToken) {
+                alert('Please login to TradeWise first!');
+                window.location.href = '/login.html';
+                return;
+            }
+            
+            // Check if we're running on the same domain (ngrok)
+            const isNgrokDomain = window.location.hostname.includes('ngrok-free.app');
+            
+            if (isNgrokDomain) {
+                console.log('🌐 Using ngrok domain - same-origin popup communication enabled');
+                // For same-domain, we can pass the auth token via URL fragment for easier access
+                const authUrlWithToken = `${authUrl}#token=${currentAuthToken}`;
+                const popup = window.open(authUrlWithToken, 'fyersAuth', 'width=600,height=700,scrollbars=yes,resizable=yes');
+                
+                // Listen for messages from popup (same-origin, should work perfectly)
+                const messageHandler = (event) => {
+                    console.log('📨 Received message in parent:', event.data);
+                    
+                    if (event.data.type === 'get_auth_token') {
+                        console.log('🔑 Popup requesting auth token');
+                        popup.postMessage({ 
+                            type: 'auth_token_response', 
+                            token: currentAuthToken 
+                        }, '*');
+                        console.log('📤 Sent auth token response to popup');
+                    } else if (event.data.type === 'fyers_auth_success') {
+                        console.log('🎉 Fyers authentication successful!');
+                        checkFyersAuth(); // Refresh auth status
+                        window.removeEventListener('message', messageHandler);
+                    } else if (event.data.type === 'fyers_auth_error') {
+                        console.error('❌ Fyers authentication failed:', event.data.error);
+                        window.removeEventListener('message', messageHandler);
+                    }
+                };
+                
+                window.addEventListener('message', messageHandler);
+                console.log('👂 Added message listener for same-origin popup communication');
+                
+                // Clean up if popup is closed manually
+                const checkClosed = setInterval(() => {
+                    if (popup.closed) {
+                        clearInterval(checkClosed);
+                        window.removeEventListener('message', messageHandler);
+                        console.log('🚪 Popup closed, cleaned up listeners');
+                    }
+                }, 1000);
+            } else {
+                console.log('🏠 Using localhost domain - opening popup with cross-origin fallback');
+                const popup = window.open(authUrl, 'fyersAuth', 'width=600,height=700,scrollbars=yes,resizable=yes');
+                
+                // For localhost, use the existing cross-origin handling
+                const messageHandler = (event) => {
+                    console.log('📨 Received message in parent:', event.data);
+                    
+                    if (event.data.type === 'get_auth_token') {
+                        console.log('🔑 Popup requesting auth token');
+                        popup.postMessage({ 
+                            type: 'auth_token_response', 
+                            token: currentAuthToken 
+                        }, '*');
+                        console.log('📤 Sent auth token response to popup');
+                    } else if (event.data.type === 'fyers_auth_success') {
+                        console.log('🎉 Fyers authentication successful!');
+                        checkFyersAuth(); // Refresh auth status
+                        window.removeEventListener('message', messageHandler);
+                    } else if (event.data.type === 'fyers_auth_error') {
+                        console.error('❌ Fyers authentication failed:', event.data.error);
+                        window.removeEventListener('message', messageHandler);
+                    }
+                };
+                
+                window.addEventListener('message', messageHandler);
+                console.log('👂 Added message listener for cross-origin popup communication');
+                
+                // Clean up if popup is closed manually
+                const checkClosed = setInterval(() => {
+                    if (popup.closed) {
+                        clearInterval(checkClosed);
+                        window.removeEventListener('message', messageHandler);
+                        console.log('🚪 Popup closed, cleaned up listeners');
+                    }
+                }, 1000);
+            }
+        }
+
         // Check Fyers authentication status
         async function checkFyersAuth() {
             if (!authToken) return;
@@ -472,10 +564,31 @@
                     authStatusDiv.className = 'bg-gray-800 rounded-lg p-4 mb-6 border-l-4 border-yellow-400';
                     authStatusText.innerHTML = '⚠️ Market data access required - click to connect your Fyers account.';
                     fyersAuthBtn.classList.remove('hidden');
-                    fyersAuthBtn.onclick = () => {
-                        fetch(`${API_BASE}/auth/url`)
-                        .then(res => res.json())
-                        .then(data => window.open(data.auth_url, '_blank'));
+                    fyersAuthBtn.onclick = async () => {
+                        try {
+                            const response = await fetch(`${API_BASE}/auth/url`);
+                            const data = await response.json();
+                            
+                            // Open in popup for better UX
+                            const popup = window.open(
+                                data.auth_url, 
+                                'fyersAuth', 
+                                'width=600,height=700,scrollbars=yes,resizable=yes'
+                            );
+                            
+                            // Check for popup completion
+                            const checkClosed = setInterval(() => {
+                                if (popup.closed) {
+                                    clearInterval(checkClosed);
+                                    // Refresh auth status after popup closes
+                                    setTimeout(() => checkFyersAuth(), 1000);
+                                }
+                            }, 1000);
+                            
+                        } catch (error) {
+                            console.error('Auth error:', error);
+                            alert('Failed to start authentication. Please try again.');
+                        }
                     };
                 }
             } catch (error) {
@@ -517,6 +630,61 @@
             }
         }, 5 * 60 * 1000);
         */
+
+        // Check for scan ID in URL parameter
+        async function loadScanFromURL() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const scanId = urlParams.get('scan') || localStorage.getItem('view_scan_id');
+            
+            if (scanId) {
+                console.log('Loading scan:', scanId);
+                localStorage.removeItem('view_scan_id'); // Clear after reading
+                
+                if (!authToken) {
+                    alert('Please login to view saved scans');
+                    return;
+                }
+                
+                try {
+                    // Note: We would need a new endpoint to fetch a specific scan
+                    // For now, we'll fetch latest and check if it matches
+                    const response = await fetch(`${API_BASE}/screener/history?limit=10`, {
+                        headers: {
+                            'Authorization': `Bearer ${authToken}`
+                        }
+                    });
+                    
+                    if (response.ok) {
+                        const data = await response.json();
+                        const scan = data.scans.find(s => s.scan_id === scanId);
+                        
+                        if (scan) {
+                            // Show notification that this is a saved scan
+                            const statusBar = document.querySelector('.bg-gray-800.rounded-lg');
+                            if (statusBar) {
+                                const notice = document.createElement('div');
+                                notice.className = 'bg-blue-900/50 border border-blue-500/50 rounded p-3 mb-4 text-sm';
+                                notice.innerHTML = `
+                                    <span class="text-blue-400">📋 Viewing saved scan from ${new Date(scan.scan_time).toLocaleString()}</span>
+                                    <button onclick="this.parentElement.remove()" class="float-right text-gray-400 hover:text-white">✕</button>
+                                `;
+                                statusBar.parentElement.insertBefore(notice, statusBar);
+                            }
+                            
+                            console.log('✅ Loaded saved scan:', scan);
+                            // You can add more logic here to display the scan results
+                        }
+                    }
+                } catch (error) {
+                    console.error('Error loading scan:', error);
+                }
+            }
+        }
+        
+        // Load scan if URL parameter is present
+        if (authToken) {
+            loadScanFromURL();
+        }
 
         // Initial message
         if (authToken) {
