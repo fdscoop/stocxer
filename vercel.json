@@ -3,7 +3,8 @@
   "public": true,
   "cleanUrls": true,
   "trailingSlash": false,
-  "buildCommand": "echo 'Static frontend only'",
+  "framework": null,
+  "buildCommand": null,
   "outputDirectory": "static",
   "rewrites": [
     { "source": "/", "destination": "/index.html" },
@@ -25,9 +26,5 @@
         { "key": "Cache-Control", "value": "public, max-age=3600, must-revalidate" }
       ]
     }
-  ],
-  "env": {
-    "API_URL": "@api_url",
-    "FYERS_REDIRECT_URI": "@fyers_redirect_uri"
-  }
+  ]
 }
