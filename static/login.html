@@ -99,9 +99,10 @@
         </div>
     </div>
 
+    <script src="config.js"></script>
     <script>
-        // API Base URL - use Railway backend or fallback to current origin for local development
-        const API_BASE = window.RAILWAY_API_URL || window.location.origin;
+        // API Base URL - use config or fallback
+        const API_BASE = window.APP_CONFIG?.API_URL || window.location.origin;
         
         const loginTab = document.getElementById('loginTab');
         const registerTab = document.getElementById('registerTab');

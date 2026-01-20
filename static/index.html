@@ -1312,8 +1312,9 @@
     </div> <!-- End Main Container -->
     </main>
 
+    <script src="config.js"></script>
     <script>
-        const API = '';
+        const API = window.APP_CONFIG?.API_URL || '';
         let currentIndex = 'NIFTY';
         let currentExpiry = 'weekly';
         let chainData = null;
