@@ -355,17 +355,36 @@
             const isBuy = signal.action === 'BUY';
             const borderColor = isBuy ? 'border-green-500' : 'border-red-500';
             const actionBg = isBuy ? 'bg-green-600' : 'bg-red-600';
-            const confidenceColor = signal.confidence >= 80 ? 'text-green-400' : signal.confidence >= 70 ? 'text-cyan-400' : 'text-yellow-400';
+            const confidence = signal.confidence || 0;
+            const confidenceColor = confidence >= 80 ? 'text-green-400' : confidence >= 70 ? 'text-cyan-400' : 'text-yellow-400';
 
-            const changeColor = signal.change_pct >= 0 ? 'text-green-400' : 'text-red-400';
+            // Safe number formatter
+            const safeNum = (val, decimals = 2) => {
+                if (val === null || val === undefined || isNaN(val)) return '--';
+                return Number(val).toFixed(decimals);
+            };
+
+            // Safe percentage calculator
+            const safePct = (target, current) => {
+                if (!target || !current || current === 0) return '--';
+                return ((target / current - 1) * 100).toFixed(1);
+            };
+
+            const currentPrice = signal.current_price || 0;
+            const changePct = signal.change_pct || 0;
+            const changeColor = changePct >= 0 ? 'text-green-400' : 'text-red-400';
+
+            const targets = signal.targets || {};
+            const indicators = signal.indicators || {};
+            const reasons = signal.reasons || [];
 
             return `
                 <div class="bg-gray-800 rounded-lg border-2 ${borderColor} p-4 hover:bg-gray-750 transition">
                     <!-- Header -->
                     <div class="flex justify-between items-start mb-3">
                         <div>
-                            <h3 class="text-lg font-bold">${signal.name}</h3>
-                            <span class="text-xs text-gray-400">₹${signal.current_price.toFixed(2)}</span>
+                            <h3 class="text-lg font-bold">${signal.name || 'Unknown'}</h3>
+                            <span class="text-xs text-gray-400">₹${safeNum(currentPrice)}</span>
                         </div>
                         <span class="${actionBg} px-3 py-1 rounded font-semibold text-sm">
                             ${signal.action}
@@ -376,13 +395,13 @@
                     <div class="grid grid-cols-2 gap-3 mb-3">
                         <div>
                             <div class="text-gray-400 text-xs">Current Price</div>
-                            <div class="text-xl font-bold">₹${signal.current_price.toFixed(2)}</div>
-                            <div class="${changeColor} text-xs">${signal.change_pct > 0 ? '+' : ''}${signal.change_pct}%</div>
+                            <div class="text-xl font-bold">₹${safeNum(currentPrice)}</div>
+                            <div class="${changeColor} text-xs">${changePct > 0 ? '+' : ''}${safeNum(changePct, 1)}%</div>
                         </div>
                         <div>
                             <div class="text-gray-400 text-xs">Confidence</div>
-                            <div class="text-xl font-bold ${confidenceColor}">${signal.confidence}%</div>
-                            <div class="text-xs text-gray-500">${signal.confidence >= 80 ? 'VERY HIGH' : signal.confidence >= 70 ? 'HIGH' : 'MODERATE'}</div>
+                            <div class="text-xl font-bold ${confidenceColor}">${safeNum(confidence, 0)}%</div>
+                            <div class="text-xs text-gray-500">${confidence >= 80 ? 'VERY HIGH' : confidence >= 70 ? 'HIGH' : 'MODERATE'}</div>
                         </div>
                     </div>
 
@@ -392,18 +411,18 @@
                         <div class="grid grid-cols-3 gap-2 text-xs">
                             <div class="bg-green-900/30 rounded p-2">
                                 <div class="text-gray-400">Target 1</div>
-                                <div class="font-semibold">₹${signal.targets.target_1.toFixed(2)}</div>
-                                <div class="text-green-400">+${((signal.targets.target_1 / signal.current_price - 1) * 100).toFixed(1)}%</div>
+                                <div class="font-semibold">₹${safeNum(targets.target_1)}</div>
+                                <div class="text-green-400">+${safePct(targets.target_1, currentPrice)}%</div>
                             </div>
                             <div class="bg-green-900/30 rounded p-2">
                                 <div class="text-gray-400">Target 2</div>
-                                <div class="font-semibold">₹${signal.targets.target_2.toFixed(2)}</div>
-                                <div class="text-green-400">+${((signal.targets.target_2 / signal.current_price - 1) * 100).toFixed(1)}%</div>
+                                <div class="font-semibold">₹${safeNum(targets.target_2)}</div>
+                                <div class="text-green-400">+${safePct(targets.target_2, currentPrice)}%</div>
                             </div>
                             <div class="bg-red-900/30 rounded p-2">
                                 <div class="text-gray-400">Stop Loss</div>
-                                <div class="font-semibold">₹${signal.targets.stop_loss.toFixed(2)}</div>
-                                <div class="text-red-400">${((signal.targets.stop_loss / signal.current_price - 1) * 100).toFixed(1)}%</div>
+                                <div class="font-semibold">₹${safeNum(targets.stop_loss)}</div>
+                                <div class="text-red-400">${safePct(targets.stop_loss, currentPrice)}%</div>
                             </div>
                         </div>
                     </div>
@@ -414,22 +433,22 @@
                         <div class="grid grid-cols-2 gap-2 text-xs">
                             <div>
                                 <span class="text-gray-500">RSI:</span>
-                                <span class="font-semibold">${signal.indicators.rsi}</span>
+                                <span class="font-semibold">${safeNum(indicators.rsi, 1)}</span>
                             </div>
                             <div>
                                 <span class="text-gray-500">5D Momentum:</span>
-                                <span class="font-semibold ${signal.indicators.momentum_5d >= 0 ? 'text-green-400' : 'text-red-400'}">
-                                    ${signal.indicators.momentum_5d > 0 ? '+' : ''}${signal.indicators.momentum_5d}%
+                                <span class="font-semibold ${(indicators.momentum_5d || 0) >= 0 ? 'text-green-400' : 'text-red-400'}">
+                                    ${(indicators.momentum_5d || 0) > 0 ? '+' : ''}${safeNum(indicators.momentum_5d, 1)}%
                                 </span>
                             </div>
                             <div>
                                 <span class="text-gray-500">SMA 5:</span>
-                                <span class="font-semibold">₹${signal.indicators.sma_5.toFixed(2)}</span>
+                                <span class="font-semibold">₹${safeNum(indicators.sma_5)}</span>
                             </div>
                             <div>
                                 <span class="text-gray-500">Volume:</span>
-                                <span class="font-semibold ${signal.indicators.volume_surge ? 'text-orange-400' : ''}">
-                                    ${signal.indicators.volume_surge ? '🔥 SURGE' : 'Normal'}
+                                <span class="font-semibold ${indicators.volume_surge ? 'text-orange-400' : ''}">
+                                    ${indicators.volume_surge ? '🔥 SURGE' : 'Normal'}
                                 </span>
                             </div>
                         </div>
@@ -439,7 +458,7 @@
                     <div class="border-t border-gray-700 pt-3">
                         <div class="text-xs text-gray-400 mb-2">SIGNAL REASONS</div>
                         <div class="space-y-1">
-                            ${signal.reasons.map(reason => `
+                            ${reasons.map(reason => `
                                 <div class="text-xs bg-gray-700/50 rounded px-2 py-1">${reason}</div>
                             `).join('')}
                         </div>
