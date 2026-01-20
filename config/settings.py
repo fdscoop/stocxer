@@ -15,9 +15,9 @@ class Settings(BaseSettings):
     fyers_redirect_uri: str = "http://localhost:8000/callback"
     fyers_access_token: Optional[str] = None
     
-    # Database
+    # Database (optional - only needed if using local PostgreSQL instead of Supabase)
     postgres_user: str = "tradewise"
-    postgres_password: str
+    postgres_password: Optional[str] = None
     postgres_db: str = "tradewise_db"
     postgres_host: str = "localhost"
     postgres_port: int = 5432
