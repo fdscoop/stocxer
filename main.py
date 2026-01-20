@@ -4632,18 +4632,46 @@ async def analyze_index_probability(
             except Exception as ml_error:
                 logger.warning(f"ML optimization skipped: {ml_error}")
         
+        # Calculate expected point movement and range from current level
+        current_level = prediction.current_level or 0
+        expected_move_pct = prediction.expected_move_pct
+
+        # Expected point movement = current_level × (expected_move_pct / 100)
+        expected_points = round(current_level * (expected_move_pct / 100), 2) if current_level > 0 else 0
+
+        # Calculate expected range (using typical daily volatility as spread)
+        # Use regime's ATR percentile to estimate range spread
+        atr_spread = prediction.regime.atr_percentile / 100 * 0.02  # Convert to decimal spread factor
+        range_spread = max(0.005, min(0.02, atr_spread))  # Clamp between 0.5% and 2%
+
+        if expected_move_pct >= 0:
+            # Bullish: upside target further, downside closer
+            expected_high = round(current_level * (1 + abs(expected_move_pct) / 100 + range_spread), 2)
+            expected_low = round(current_level * (1 - range_spread / 2), 2)
+        else:
+            # Bearish: downside target further, upside closer
+            expected_high = round(current_level * (1 + range_spread / 2), 2)
+            expected_low = round(current_level * (1 - abs(expected_move_pct) / 100 - range_spread), 2)
+
         # Build response
         response = {
             "status": "success",
             "index": index_name,
             "stocks_scanned": prediction.total_stocks_analyzed,
             "timestamp": prediction.timestamp.isoformat(),
-            "current_level": prediction.current_level,
-            
-            # Main prediction
+            "current_level": current_level,
+
+            # Main prediction with POINT MOVEMENTS
             "prediction": {
                 "expected_direction": prediction.expected_direction,
-                "expected_move_pct": round(prediction.expected_move_pct, 3),
+                "expected_move_pct": round(expected_move_pct, 3),
+                "expected_points": expected_points,
+                "expected_range": {
+                    "high": expected_high,
+                    "low": expected_low,
+                    "points_up": round(expected_high - current_level, 2) if current_level > 0 else 0,
+                    "points_down": round(current_level - expected_low, 2) if current_level > 0 else 0
+                },
                 "confidence": round(prediction.prediction_confidence, 1),
                 "probability_up": round(prediction.prob_up, 3),
                 "probability_down": round(prediction.prob_down, 3),
@@ -4699,7 +4727,67 @@ async def analyze_index_probability(
             # ML prediction (if available)
             "ml_prediction": ml_data
         }
-        
+
+        # Add strike price recommendations based on expected range
+        if current_level > 0:
+            # Determine strike interval based on index
+            if "BANK" in index_name.upper():
+                strike_interval = 100  # BANKNIFTY uses 100-point strikes
+            elif "FIN" in index_name.upper():
+                strike_interval = 50   # FINNIFTY uses 50-point strikes
+            else:
+                strike_interval = 50   # NIFTY uses 50-point strikes
+
+            # Calculate ATM strike
+            atm_strike = round(current_level / strike_interval) * strike_interval
+
+            # Recommended strikes based on direction and range
+            if prediction.expected_direction == "BULLISH":
+                # For bullish: recommend CE options
+                target_strike = round(expected_high / strike_interval) * strike_interval
+                response["option_recommendation"] = {
+                    "bias": "BULLISH",
+                    "recommended_option": "CE (Call)",
+                    "atm_strike": atm_strike,
+                    "target_strike": target_strike,
+                    "suggested_strikes": {
+                        "aggressive": atm_strike,  # ATM for higher delta
+                        "moderate": atm_strike + strike_interval,  # 1 OTM
+                        "conservative": atm_strike + (strike_interval * 2)  # 2 OTM
+                    },
+                    "expected_target": expected_high,
+                    "stop_loss_level": expected_low,
+                    "points_to_target": round(expected_high - current_level, 2),
+                    "risk_reward": f"Risk {round(current_level - expected_low, 0)} pts for {round(expected_high - current_level, 0)} pts gain"
+                }
+            elif prediction.expected_direction == "BEARISH":
+                # For bearish: recommend PE options
+                target_strike = round(expected_low / strike_interval) * strike_interval
+                response["option_recommendation"] = {
+                    "bias": "BEARISH",
+                    "recommended_option": "PE (Put)",
+                    "atm_strike": atm_strike,
+                    "target_strike": target_strike,
+                    "suggested_strikes": {
+                        "aggressive": atm_strike,  # ATM for higher delta
+                        "moderate": atm_strike - strike_interval,  # 1 OTM
+                        "conservative": atm_strike - (strike_interval * 2)  # 2 OTM
+                    },
+                    "expected_target": expected_low,
+                    "stop_loss_level": expected_high,
+                    "points_to_target": round(current_level - expected_low, 2),
+                    "risk_reward": f"Risk {round(expected_high - current_level, 0)} pts for {round(current_level - expected_low, 0)} pts gain"
+                }
+            else:
+                response["option_recommendation"] = {
+                    "bias": "NEUTRAL",
+                    "recommended_option": "Iron Condor / Strangle",
+                    "atm_strike": atm_strike,
+                    "range_high": expected_high,
+                    "range_low": expected_low,
+                    "suggestion": "Consider range-bound strategies or wait for clearer direction"
+                }
+
         # Add sector analysis if requested
         if include_sectors and prediction.sector_analysis:
             response["sector_analysis"] = {
