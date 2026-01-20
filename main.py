@@ -543,7 +543,10 @@ async def get_fyers_token(authorization: str = Header(None, description="Bearer 
         raise HTTPException(status_code=401, detail="Authorization header required")
     token = authorization.replace("Bearer ", "")
     user = await auth_service.get_current_user(token)
-    return await auth_service.get_fyers_token(user.id)
+    fyers_token = await auth_service.get_fyers_token(user.id)
+    if not fyers_token:
+        raise HTTPException(status_code=404, detail="No Fyers token found. Please connect your Fyers account.")
+    return fyers_token
 
 
 @app.delete("/api/fyers/token")
