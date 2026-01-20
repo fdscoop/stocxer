@@ -2,8 +2,8 @@
 // This file is dynamically generated during build/deployment
 
 window.APP_CONFIG = {
-    // Railway backend URL
-    API_URL: 'https://web-production-f6c7b.up.railway.app',
+    // ngrok backend URL
+    API_URL: 'https://7ba080a7b86b.ngrok-free.app',
     
     // Environment
     ENV: 'production',
