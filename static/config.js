@@ -21,19 +21,23 @@ window.API_BASE = window.APP_CONFIG.API_URL;
 
 // Override fetch to add ngrok header automatically for all API calls
 const originalFetch = window.fetch;
-window.fetch = function(url, options = {}) {
+window.fetch = function(url, options) {
+    // Ensure options is an object
+    options = options || {};
+
     const urlStr = url.toString();
-    const isApiCall = urlStr.includes(window.APP_CONFIG.API_URL) ||
-                      urlStr.includes('ngrok') ||
-                      urlStr.startsWith(window.APP_CONFIG.API_URL);
+    const isApiCall = urlStr.includes('ngrok') ||
+                      urlStr.includes(window.APP_CONFIG.API_URL);
 
     if (isApiCall) {
-        options.headers = {
-            'ngrok-skip-browser-warning': 'true',
-            ...(options.headers || {})
-        };
+        // Create new headers object with ngrok header first
+        const existingHeaders = options.headers || {};
+        options.headers = new Headers(existingHeaders);
+        options.headers.set('ngrok-skip-browser-warning', 'true');
+
+        console.log('Adding ngrok header to:', urlStr.substring(0, 60) + '...');
     }
-    return originalFetch(url, options);
+    return originalFetch.call(window, url, options);
 };
 
 console.log('TradeWise Config:', {
