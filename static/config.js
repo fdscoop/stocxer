@@ -13,8 +13,8 @@
         // Render deployment - API is on same origin
         apiUrl = window.location.origin;
     } else if (hostname === 'stocxer.in' || hostname.includes('stocxer')) {
-        // Custom domain pointing to Render
-        apiUrl = window.location.origin;
+        // Custom domain - API is on Render
+        apiUrl = 'https://stocxer-ai.onrender.com';
     } else {
         // Fallback - assume same origin
         apiUrl = window.location.origin;
