@@ -80,7 +80,7 @@
             </div>
             <div class="flex items-center gap-6">
                 <div class="flex gap-3">
-                    <a href="/static/screener.html" class="px-4 py-2 bg-green-600 hover:bg-green-700 rounded text-sm font-semibold transition">
+                    <a href="/screener.html" class="px-4 py-2 bg-green-600 hover:bg-green-700 rounded text-sm font-semibold transition">
                         📊 Stock Screener
                     </a>
                     <button onclick="showOptionsScanner()" class="px-4 py-2 bg-purple-600 hover:bg-purple-700 rounded text-sm font-semibold transition">
@@ -164,7 +164,7 @@
                         <span class="text-sm font-normal text-gray-400">(Last 2 Hours)</span>
                     </h2>
                     <div class="flex gap-2">
-                        <a href="/static/screener.html" class="px-4 py-2 bg-green-600 hover:bg-green-700 rounded text-sm">
+                        <a href="/screener.html" class="px-4 py-2 bg-green-600 hover:bg-green-700 rounded text-sm">
                             New Scan
                         </a>
                         <button onclick="loadRecentSignals()" class="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded text-sm flex items-center gap-2">
@@ -191,7 +191,7 @@
                     <span>Recent Stock Screener Scans</span>
                 </h2>
                 <div class="flex gap-2">
-                    <a href="/static/screener.html" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded text-sm">
+                    <a href="/screener.html" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded text-sm">
                         New Scan
                     </a>
                     <button onclick="loadRecentScans()" class="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded text-sm flex items-center gap-2">
@@ -1491,7 +1491,7 @@
                     <div class="col-span-2 text-center text-gray-500 py-8">
                         <p class="mb-2">No recent signals found (last 2 hours)</p>
                         <p class="text-sm text-gray-600 mb-4">Run a scan to generate new trading signals</p>
-                        <a href="/static/screener.html" class="px-6 py-3 bg-green-600 hover:bg-green-700 rounded inline-block">
+                        <a href="/screener.html" class="px-6 py-3 bg-green-600 hover:bg-green-700 rounded inline-block">
                             Run Stock Scan
                         </a>
                     </div>
@@ -1617,7 +1617,7 @@
 
         function viewStockDetails(symbol) {
             // Open screener with this stock
-            window.location.href = `/static/screener.html?symbol=${encodeURIComponent(symbol)}`;
+            window.location.href = `/screener.html?symbol=${encodeURIComponent(symbol)}`;
         }
 
         // Load Recent Scans
@@ -1650,7 +1650,7 @@
                 container.innerHTML = `
                     <div class="text-center text-gray-500 py-8">
                         <p class="mb-4">No recent scans found</p>
-                        <a href="/static/screener.html" class="px-6 py-3 bg-blue-600 hover:bg-blue-700 rounded inline-block">
+                        <a href="/screener.html" class="px-6 py-3 bg-blue-600 hover:bg-blue-700 rounded inline-block">
                             Run Your First Scan
                         </a>
                     </div>
@@ -1716,7 +1716,7 @@
         function viewScanDetails(scanId) {
             // Store the scan ID and redirect to screener to view details
             localStorage.setItem('view_scan_id', scanId);
-            window.location.href = '/static/screener.html?scan=' + scanId;
+            window.location.href = '/screener.html?scan=' + scanId;
         }
 
         // Load recent scans on page load
