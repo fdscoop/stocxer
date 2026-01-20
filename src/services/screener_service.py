@@ -175,10 +175,10 @@ class ScreenerService:
     async def get_recent_signals(self, user_id: str, hours: int = 2, limit: int = 20) -> dict:
         """Get recent signals from last N hours"""
         try:
-            from datetime import datetime, timedelta
+            from datetime import datetime, timedelta, timezone
             
-            # Calculate time threshold
-            time_threshold = (datetime.now() - timedelta(hours=hours)).isoformat()
+            # Calculate time threshold (use UTC for consistency with database)
+            time_threshold = (datetime.now(timezone.utc) - timedelta(hours=hours)).isoformat()
             
             # Get recent signals
             response = self.supabase.table("screener_results")\
@@ -197,11 +197,15 @@ class ScreenerService:
             sell_signals = []
             
             for signal in response.data:
-                formatted_signal = self._format_signal_response(signal)
-                if signal["action"] == "BUY":
-                    buy_signals.append(formatted_signal)
-                else:
-                    sell_signals.append(formatted_signal)
+                try:
+                    formatted_signal = self._format_signal_response(signal)
+                    if signal.get("action") == "BUY":
+                        buy_signals.append(formatted_signal)
+                    else:
+                        sell_signals.append(formatted_signal)
+                except Exception as fmt_error:
+                    logger.warning(f"Error formatting signal {signal.get('id')}: {fmt_error}")
+                    continue
             
             return {
                 "buy": buy_signals[:10],  # Top 10 buy signals
@@ -215,28 +219,37 @@ class ScreenerService:
     
     def _format_signal_response(self, signal: dict) -> dict:
         """Format signal for response"""
+        def safe_float(val, default=None):
+            """Safely convert value to float"""
+            if val is None:
+                return default
+            try:
+                return float(val)
+            except (ValueError, TypeError):
+                return default
+        
         return {
-            "symbol": signal["symbol"],
-            "name": signal["name"],
-            "current_price": float(signal["current_price"]),
-            "action": signal["action"],
-            "confidence": float(signal["confidence"]),
+            "symbol": signal.get("symbol", ""),
+            "name": signal.get("name", ""),
+            "current_price": safe_float(signal.get("current_price"), 0),
+            "action": signal.get("action", "BUY"),
+            "confidence": safe_float(signal.get("confidence"), 0),
             "targets": {
-                "target_1": float(signal["target_1"]) if signal.get("target_1") else None,
-                "target_2": float(signal["target_2"]) if signal.get("target_2") else None,
-                "stop_loss": float(signal["stop_loss"]) if signal.get("stop_loss") else None
+                "target_1": safe_float(signal.get("target_1")),
+                "target_2": safe_float(signal.get("target_2")),
+                "stop_loss": safe_float(signal.get("stop_loss"))
             },
             "indicators": {
-                "rsi": float(signal["rsi"]) if signal.get("rsi") else None,
-                "sma_5": float(signal["sma_5"]) if signal.get("sma_5") else None,
-                "sma_15": float(signal["sma_15"]) if signal.get("sma_15") else None,
-                "momentum_5d": float(signal["momentum_5d"]) if signal.get("momentum_5d") else None,
+                "rsi": safe_float(signal.get("rsi")),
+                "sma_5": safe_float(signal.get("sma_5")),
+                "sma_15": safe_float(signal.get("sma_15")),
+                "momentum_5d": safe_float(signal.get("momentum_5d")),
                 "volume_surge": signal.get("volume_surge", False)
             },
-            "change_pct": float(signal["change_pct"]) if signal.get("change_pct") else None,
+            "change_pct": safe_float(signal.get("change_pct")),
             "volume": signal.get("volume"),
             "reasons": signal.get("reasons", []),
-            "timestamp": signal["scanned_at"]
+            "timestamp": signal.get("scanned_at", "")
         }
 
 
