@@ -1,0 +1,29 @@
+services:
+  - type: web
+    name: tradewise
+    runtime: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.11"
+      # Fyers API
+      - key: FYERS_CLIENT_ID
+        sync: false
+      - key: FYERS_SECRET_KEY
+        sync: false
+      - key: FYERS_REDIRECT_URI
+        sync: false
+      - key: FYERS_ACCESS_TOKEN
+        sync: false
+      # Supabase
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_KEY
+        sync: false
+      - key: SUPABASE_SERVICE_KEY
+        sync: false
+      # App settings
+      - key: DEBUG_MODE
+        value: "False"
+    healthCheckPath: /health

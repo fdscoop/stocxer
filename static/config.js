@@ -1,50 +1,41 @@
 // API Configuration for TradeWise
-// This file is dynamically generated during build/deployment
+// Auto-detects environment and sets appropriate API URL
 
-window.APP_CONFIG = {
-    // ngrok backend URL
-    API_URL: 'https://7ba080a7b86b.ngrok-free.app',
+(function() {
+    const hostname = window.location.hostname;
 
-    // Environment
-    ENV: 'production',
-
-    // Feature flags
-    FEATURES: {
-        ML_PREDICTIONS: false, // Disabled in frontend-only deployment
-        LIVE_TRADING: false,
-        PAPER_TRADING: true
+    // Determine API URL based on current hostname
+    let apiUrl;
+    if (hostname === 'localhost' || hostname === '127.0.0.1') {
+        // Local development
+        apiUrl = 'http://localhost:8000';
+    } else if (hostname.includes('onrender.com')) {
+        // Render deployment - API is on same origin
+        apiUrl = window.location.origin;
+    } else if (hostname === 'stocxer.in' || hostname.includes('stocxer')) {
+        // Custom domain pointing to Render
+        apiUrl = window.location.origin;
+    } else {
+        // Fallback - assume same origin
+        apiUrl = window.location.origin;
     }
-};
 
-// Set global API base URL
-window.API_BASE = window.APP_CONFIG.API_URL;
-
-// Override fetch to add ngrok header automatically for all API calls
-const originalFetch = window.fetch;
-window.fetch = function(url, options = {}) {
-    const urlStr = url.toString();
-    const isApiCall = urlStr.includes('ngrok') ||
-                      urlStr.includes(window.APP_CONFIG.API_URL);
-
-    if (isApiCall) {
-        // Ensure headers object exists and add ngrok header
-        if (!options.headers) {
-            options.headers = {};
+    window.APP_CONFIG = {
+        API_URL: apiUrl,
+        ENV: hostname === 'localhost' ? 'development' : 'production',
+        FEATURES: {
+            ML_PREDICTIONS: true,
+            LIVE_TRADING: false,
+            PAPER_TRADING: true
         }
+    };
 
-        // Handle both Headers object and plain object
-        if (options.headers instanceof Headers) {
-            options.headers.set('ngrok-skip-browser-warning', 'true');
-        } else {
-            options.headers['ngrok-skip-browser-warning'] = 'true';
-        }
+    // Set global API base URL
+    window.API_BASE = window.APP_CONFIG.API_URL;
 
-        console.log('Adding ngrok header to:', urlStr.substring(0, 60) + '...');
-    }
-    return originalFetch.call(window, url, options);
-};
-
-console.log('TradeWise Config:', {
-    API_URL: window.APP_CONFIG.API_URL,
-    ENV: window.APP_CONFIG.ENV
-});
+    console.log('TradeWise Config:', {
+        API_URL: window.APP_CONFIG.API_URL,
+        ENV: window.APP_CONFIG.ENV,
+        hostname: hostname
+    });
+})();
