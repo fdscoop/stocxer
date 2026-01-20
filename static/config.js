@@ -19,11 +19,15 @@ window.APP_CONFIG = {
 // Set global API base URL
 window.API_BASE = window.APP_CONFIG.API_URL;
 
-// Override fetch to add ngrok header automatically
+// Override fetch to add ngrok header automatically for all API calls
 const originalFetch = window.fetch;
 window.fetch = function(url, options = {}) {
-    // Only add header for API calls to our backend
-    if (url && url.toString().includes(window.APP_CONFIG.API_URL)) {
+    const urlStr = url.toString();
+    const isApiCall = urlStr.includes(window.APP_CONFIG.API_URL) ||
+                      urlStr.includes('ngrok') ||
+                      urlStr.startsWith(window.APP_CONFIG.API_URL);
+
+    if (isApiCall) {
         options.headers = {
             'ngrok-skip-browser-warning': 'true',
             ...(options.headers || {})
