@@ -2,8 +2,8 @@
 // This file is dynamically generated during build/deployment
 
 window.APP_CONFIG = {
-    // Railway backend URL - set this during deployment
-    API_URL: window.RAILWAY_API_URL || 'PLACEHOLDER_API_URL' || window.location.origin,
+    // Railway backend URL
+    API_URL: 'https://web-production-f6c7b.up.railway.app',
     
     // Environment
     ENV: 'production',
