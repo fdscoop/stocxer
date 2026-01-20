@@ -1,55 +1,61 @@
 # ============================================
-# Vercel: Full Stack Deployment
+# Vercel: Full Stack Deployment (FastAPI Backend + Static Frontend)
 # ============================================
-# Note: Backend deployed to Vercel, use Railway for production if needed
+# 
+# Configuration for deploying TradeWise backend to Vercel
+# - FastAPI app in main.py will be deployed
+# - Static files will be served from /static
+# - Python dependencies installed from requirements.txt
+# ============================================
 
-# Exclude Python backend if deploying to Railway
-# Uncomment these lines to deploy only static frontend to Vercel:
-# main.py
-# config/
-# src/
+# DO NOT EXCLUDE PYTHON BACKEND - Vercel will handle it
+# These are needed for FastAPI deployment
+
 examples/
 
-# Python files
-*.py
+# Python cache files (safe to ignore)
 *.pyc
 __pycache__/
 *.pyo
 *.pyd
 .Python
 
-# Virtual Environment (not needed - Railway handles this)
+# Virtual Environment (Vercel builds fresh)
 venv/
 env/
 ENV/
 .venv
 virtualenv/
+.venv/
 
-# Dependencies (not needed - Railway handles this)
-requirements.txt
-requirements-vercel.txt
-runtime.txt
+# Dependencies (Vercel installs from requirements.txt)
+# DO NOT ignore requirements.txt - Vercel needs it!
+# requirements.txt  # KEEP THIS - Vercel needs it
+# requirements-vercel.txt  # KEEP THIS - Vercel needs it
+# runtime.txt  # KEEP THIS - Vercel needs it
 
-# Data and models
-data/
-logs/
-models/
+# Data and models (safe to ignore - not needed in deployment)
+# data/
+# logs/
+# models/
 
-# Database
-database/
-*.db
-*.sqlite
-*.sqlite3
+# Database (safe to ignore)
+# database/
+# *.db
+# *.sqlite
+# *.sqlite3
 
 # Deployment configs for other platforms
 railway.json
 Procfile
 
-# IDE
+# IDE and editor configs
 .vscode/
 .idea/
 *.swp
 *.swo
+*.sublime-project
+*.sublime-workspace
 
 # Environment and secrets
 .env
@@ -62,7 +68,7 @@ config/secrets.json
 .gitignore
 .gitattributes
 
-# Documentation (optional - comment out if you want docs on Vercel)
+# Documentation (comment out if needed on Vercel)
 *.md
 !README.md
 
@@ -72,6 +78,7 @@ tests/
 pytest.ini
 .pytest_cache/
 .coverage
+*_test.py
 
 # Build artifacts
 build/
@@ -95,7 +102,7 @@ fyersRequests.log
 server.log
 
 # ============================================
-# Result: Only /static folder will be deployed
-# Deployment size: ~2MB (HTML/CSS/JS only)
+# Result: /main.py, /src, /config, and /static will be deployed
+# Deployment size: ~5-10MB (backend + frontend)
 # ============================================
 
