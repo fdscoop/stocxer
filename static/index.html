@@ -3,10 +3,17 @@
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#0a0a0f">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>TradeWise - Index Options Dashboard</title>
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="/manifest.json">
     <!-- Tailwind CSS -->
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <!-- Mobile CSS -->
+    <link href="/mobile.css" rel="stylesheet">
     <script>
         // Suppress Tailwind console warnings
         const originalConsoleWarn = console.warn;
@@ -135,17 +142,50 @@
         </div>
     </div>
 
+    <!-- Mobile Menu Overlay -->
+    <div id="mobileMenuOverlay" class="mobile-nav-overlay" onclick="closeMobileMenu()"></div>
+
+    <!-- Mobile Slide Menu -->
+    <div id="mobileMenu" class="mobile-menu">
+        <button class="mobile-menu-close" onclick="closeMobileMenu()">✕</button>
+        <div class="mobile-menu-items">
+            <div class="text-gray-400 text-xs uppercase mb-2">Select Index</div>
+            <button onclick="selectIndex('NIFTY'); closeMobileMenu();" id="mobile-tab-NIFTY"
+                class="active">NIFTY</button>
+            <button onclick="selectIndex('BANKNIFTY'); closeMobileMenu();" id="mobile-tab-BANKNIFTY">BANKNIFTY</button>
+            <button onclick="selectIndex('FINNIFTY'); closeMobileMenu();" id="mobile-tab-FINNIFTY">FINNIFTY</button>
+            <button onclick="selectIndex('MIDCPNIFTY'); closeMobileMenu();"
+                id="mobile-tab-MIDCPNIFTY">MIDCPNIFTY</button>
+            <button onclick="selectIndex('SENSEX'); closeMobileMenu();" id="mobile-tab-SENSEX">SENSEX</button>
+            <button onclick="selectIndex('BANKEX'); closeMobileMenu();" id="mobile-tab-BANKEX">BANKEX</button>
+            <div class="border-t border-gray-700 my-3"></div>
+            <a href="/screener.html" class="bg-green-600">📊 Stock Screener</a>
+            <button onclick="showOptionsScanner(); closeMobileMenu();" class="bg-purple-600">🎯 Options Scanner</button>
+            <div class="border-t border-gray-700 my-3"></div>
+            <div id="mobileUserInfo" class="text-sm text-gray-400"></div>
+            <button id="mobileLogoutBtn" class="bg-red-600 hidden" onclick="logout()">Logout</button>
+        </div>
+    </div>
+
     <!-- Header -->
-    <header class="border-b border-gray-800 px-4 py-3">
+    <header class="border-b border-gray-800 px-3 md:px-4 py-2 md:py-3 sticky top-0 z-40 bg-opacity-95"
+        style="background: var(--bg-primary);">
         <div class="max-w-[1800px] mx-auto flex items-center justify-between">
-            <div class="flex items-center gap-4">
+            <!-- Left: Logo + Mobile Menu Button -->
+            <div class="flex items-center gap-2 md:gap-4">
+                <!-- Mobile Menu Button -->
+                <button id="mobileMenuBtn" class="md:hidden p-2 rounded-lg bg-gray-800" onclick="openMobileMenu()">
+                    <i data-lucide="menu" class="w-5 h-5"></i>
+                </button>
+                <!-- Logo -->
                 <div class="flex items-center gap-2">
                     <div class="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
                         <i data-lucide="trending-up" class="w-5 h-5"></i>
                     </div>
-                    <span class="text-xl font-bold">TradeWise</span>
+                    <span class="text-lg md:text-xl font-bold">TradeWise</span>
                 </div>
-                <div class="flex gap-1 ml-8">
+                <!-- Desktop Index Tabs -->
+                <div class="hidden md:flex gap-1 ml-8 index-tabs-container">
                     <button onclick="selectIndex('NIFTY')" id="tab-NIFTY"
                         class="px-4 py-2 text-sm font-medium tab-active rounded-t">NIFTY</button>
                     <button onclick="selectIndex('BANKNIFTY')" id="tab-BANKNIFTY"
@@ -160,7 +200,15 @@
                         class="px-4 py-2 text-sm font-medium tab-inactive rounded-t">BANKEX</button>
                 </div>
             </div>
-            <div class="flex items-center gap-6">
+
+            <!-- Mobile: Current Index + Live Status -->
+            <div class="flex md:hidden items-center gap-2">
+                <span id="mobile-current-index" class="text-sm font-semibold text-blue-400">NIFTY</span>
+                <span class="w-2 h-2 bg-green-500 rounded-full pulse"></span>
+            </div>
+
+            <!-- Desktop: Right Side Actions -->
+            <div class="hidden md:flex items-center gap-6">
                 <div class="flex gap-3">
                     <a href="/screener.html"
                         class="px-4 py-2 bg-green-600 hover:bg-green-700 rounded text-sm font-semibold transition">
@@ -188,6 +236,24 @@
                     <span class="text-gray-400">Live</span>
                 </div>
                 <span id="last-update" class="text-gray-500 text-sm"></span>
+            </div>
+        </div>
+
+        <!-- Mobile: Scrollable Index Tabs (below header on smaller screens) -->
+        <div class="md:hidden overflow-x-auto index-tabs-container mt-2 pb-1 -mx-3 px-3">
+            <div class="flex gap-1 min-w-max">
+                <button onclick="selectIndex('NIFTY')" id="mobile-tab-btn-NIFTY"
+                    class="px-3 py-1.5 text-xs font-medium tab-active rounded whitespace-nowrap">NIFTY</button>
+                <button onclick="selectIndex('BANKNIFTY')" id="mobile-tab-btn-BANKNIFTY"
+                    class="px-3 py-1.5 text-xs font-medium tab-inactive rounded whitespace-nowrap">BANKNIFTY</button>
+                <button onclick="selectIndex('FINNIFTY')" id="mobile-tab-btn-FINNIFTY"
+                    class="px-3 py-1.5 text-xs font-medium tab-inactive rounded whitespace-nowrap">FINNIFTY</button>
+                <button onclick="selectIndex('MIDCPNIFTY')" id="mobile-tab-btn-MIDCPNIFTY"
+                    class="px-3 py-1.5 text-xs font-medium tab-inactive rounded whitespace-nowrap">MIDCPNIFTY</button>
+                <button onclick="selectIndex('SENSEX')" id="mobile-tab-btn-SENSEX"
+                    class="px-3 py-1.5 text-xs font-medium tab-inactive rounded whitespace-nowrap">SENSEX</button>
+                <button onclick="selectIndex('BANKEX')" id="mobile-tab-btn-BANKEX"
+                    class="px-3 py-1.5 text-xs font-medium tab-inactive rounded whitespace-nowrap">BANKEX</button>
             </div>
         </div>
     </header>
@@ -1124,320 +1190,325 @@
     </div>
 
     <!-- Option Chain -->
-    <div class="card rounded-xl p-4">
-        <div class="flex items-center justify-between mb-4">
-            <div class="flex items-center gap-4">
+    <div class="card rounded-xl p-2 md:p-4">
+        <div class="flex flex-col md:flex-row md:items-center justify-between mb-4 gap-2">
+            <div class="flex flex-col md:flex-row md:items-center gap-2 md:gap-4">
                 <h3 class="font-semibold">Option Chain</h3>
-                <div class="flex items-center gap-2 text-sm">
-                    <span class="text-gray-500">Total Call OI:</span>
+                <div class="flex items-center gap-2 text-xs md:text-sm flex-wrap">
+                    <span class="text-gray-500">Call OI:</span>
                     <span id="total-call-oi" class="text-green-400">--</span>
-                    <span class="text-gray-600 mx-2">|</span>
-                    <span class="text-gray-500">Total Put OI:</span>
+                    <span class="text-gray-600">|</span>
+                    <span class="text-gray-500">Put OI:</span>
                     <span id="total-put-oi" class="text-red-400">--</span>
                 </div>
             </div>
-            <button onclick="refreshChain()" class="flex items-center gap-2 text-blue-400 hover:text-blue-300 text-sm">
+            <button onclick="refreshChain()"
+                class="flex items-center gap-2 text-blue-400 hover:text-blue-300 text-sm p-2 bg-gray-800 rounded md:bg-transparent">
                 <i data-lucide="refresh-cw" class="w-4 h-4"></i>
                 Refresh
             </button>
         </div>
 
-        <!-- Chain Header -->
-        <div
-            class="grid grid-cols-13 gap-1 text-xs text-gray-500 uppercase tracking-wide py-2 border-b border-gray-700">
-            <div class="text-center">Analysis</div>
-            <div class="text-center">IV</div>
-            <div class="text-right">OI</div>
-            <div class="text-center">OI Chg</div>
-            <div class="text-right">Volume</div>
-            <div class="text-right">LTP</div>
-            <div class="text-center font-bold text-white">STRIKE</div>
-            <div class="text-left">LTP</div>
-            <div class="text-left">Volume</div>
-            <div class="text-center">OI Chg</div>
-            <div class="text-left">OI</div>
-            <div class="text-center">IV</div>
-            <div class="text-center">Analysis</div>
-        </div>
+        <!-- Horizontal Scroll Wrapper for Mobile -->
+        <div class="horizontal-scroll-wrapper overflow-x-auto -mx-2 px-2">
 
-        <!-- Calls Header -->
-        <div class="grid grid-cols-13 gap-1 text-xs py-1 bg-gray-800/50">
-            <div class="col-span-6 text-center text-green-400 font-semibold">CALLS</div>
-            <div></div>
-            <div class="col-span-6 text-center text-red-400 font-semibold">PUTS</div>
-        </div>
-
-        <!-- Chain Body -->
-        <div id="chain-body" class="max-h-[500px] overflow-y-auto">
-            <div class="text-center py-8 text-gray-500">Loading option chain...</div>
-        </div>
-    </div>
-
-    <!-- OI Analysis -->
-    <div class="grid grid-cols-12 gap-4">
-        <div class="col-span-6 card rounded-xl p-4">
-            <h3 class="font-semibold mb-4">Call OI Distribution</h3>
-            <div id="call-oi-chart" class="space-y-2"></div>
-        </div>
-        <div class="col-span-6 card rounded-xl p-4">
-            <h3 class="font-semibold mb-4">Put OI Distribution</h3>
-            <div id="put-oi-chart" class="space-y-2"></div>
-        </div>
-    </div>
-
-    <!-- MTF ICT Analysis Section -->
-    <div class="card rounded-xl p-4 mt-4">
-        <div class="flex items-center justify-between mb-4">
-            <div class="flex items-center gap-3">
-                <h3 class="font-semibold text-lg">Multi-Timeframe ICT Analysis</h3>
-                <span class="text-xs bg-blue-600 px-2 py-1 rounded">Monthly → 15min</span>
-            </div>
-            <button onclick="loadMTFAnalysis()"
-                class="flex items-center gap-2 text-blue-400 hover:text-blue-300 text-sm">
-                <i data-lucide="refresh-cw" class="w-4 h-4"></i>
-                Refresh
-            </button>
-        </div>
-
-        <!-- Overall Bias -->
-        <div id="mtf-bias" class="bg-gray-800/50 rounded-lg p-3 mb-4">
-            <div class="flex items-center justify-between">
-                <span class="text-gray-400">Overall Market Bias</span>
-                <span id="overall-bias" class="text-xl font-bold">--</span>
-            </div>
-            <div id="mtf-summary" class="text-xs text-gray-500 mt-2">--</div>
-        </div>
-
-        <!-- Timeframe Tabs -->
-        <div class="flex gap-2 mb-4 flex-wrap">
-            <button onclick="showTimeframe('M')" id="tf-M"
-                class="px-3 py-1.5 rounded-lg bg-gray-700 text-sm">Monthly</button>
-            <button onclick="showTimeframe('W')" id="tf-W"
-                class="px-3 py-1.5 rounded-lg bg-gray-700 text-sm">Weekly</button>
-            <button onclick="showTimeframe('D')" id="tf-D"
-                class="px-3 py-1.5 rounded-lg bg-blue-600 text-sm">Daily</button>
-            <button onclick="showTimeframe('240')" id="tf-240"
-                class="px-3 py-1.5 rounded-lg bg-gray-700 text-sm">4H</button>
-            <button onclick="showTimeframe('60')" id="tf-60"
-                class="px-3 py-1.5 rounded-lg bg-gray-700 text-sm">1H</button>
-            <button onclick="showTimeframe('15')" id="tf-15"
-                class="px-3 py-1.5 rounded-lg bg-gray-700 text-sm">15min</button>
-        </div>
-
-        <!-- MTF Content Grid -->
-        <div class="grid grid-cols-3 gap-4" id="mtf-content">
-            <!-- FVG Section -->
-            <div class="bg-gray-800/30 rounded-lg p-4">
-                <h4 class="text-sm font-medium text-gray-400 mb-3 flex items-center gap-2">
-                    <i data-lucide="layers" class="w-4 h-4 text-purple-400"></i>
-                    Fair Value Gaps
-                </h4>
-                <div id="fvg-list" class="space-y-2 max-h-[250px] overflow-y-auto">
-                    <div class="text-gray-500 text-sm">Loading FVGs...</div>
-                </div>
+            <!-- Chain Header -->
+            <div
+                class="grid grid-cols-13 gap-1 text-xs text-gray-500 uppercase tracking-wide py-2 border-b border-gray-700">
+                <div class="text-center">Analysis</div>
+                <div class="text-center">IV</div>
+                <div class="text-right">OI</div>
+                <div class="text-center">OI Chg</div>
+                <div class="text-right">Volume</div>
+                <div class="text-right">LTP</div>
+                <div class="text-center font-bold text-white">STRIKE</div>
+                <div class="text-left">LTP</div>
+                <div class="text-left">Volume</div>
+                <div class="text-center">OI Chg</div>
+                <div class="text-left">OI</div>
+                <div class="text-center">IV</div>
+                <div class="text-center">Analysis</div>
             </div>
 
-            <!-- Order Blocks Section -->
-            <div class="bg-gray-800/30 rounded-lg p-4">
-                <h4 class="text-sm font-medium text-gray-400 mb-3 flex items-center gap-2">
-                    <i data-lucide="box" class="w-4 h-4 text-yellow-400"></i>
-                    Order Blocks
-                </h4>
-                <div id="ob-list" class="space-y-2 max-h-[250px] overflow-y-auto">
-                    <div class="text-gray-500 text-sm">Loading Order Blocks...</div>
-                </div>
+            <!-- Calls Header -->
+            <div class="grid grid-cols-13 gap-1 text-xs py-1 bg-gray-800/50">
+                <div class="col-span-6 text-center text-green-400 font-semibold">CALLS</div>
+                <div></div>
+                <div class="col-span-6 text-center text-red-400 font-semibold">PUTS</div>
             </div>
 
-            <!-- Liquidity Zones Section -->
-            <div class="bg-gray-800/30 rounded-lg p-4">
-                <h4 class="text-sm font-medium text-gray-400 mb-3 flex items-center gap-2">
-                    <i data-lucide="droplets" class="w-4 h-4 text-cyan-400"></i>
-                    Liquidity Zones
-                </h4>
-                <div id="liq-list" class="space-y-2 max-h-[250px] overflow-y-auto">
-                    <div class="text-gray-500 text-sm">Loading Liquidity...</div>
-                </div>
+            <!-- Chain Body -->
+            <div id="chain-body" class="max-h-[300px] md:max-h-[500px] overflow-y-auto">
+                <div class="text-center py-8 text-gray-500">Loading option chain...</div>
+            </div>
+        </div> <!-- End horizontal-scroll-wrapper -->
+
+        <!-- OI Analysis -->
+        <div class="grid grid-cols-12 gap-4">
+            <div class="col-span-6 card rounded-xl p-4">
+                <h3 class="font-semibold mb-4">Call OI Distribution</h3>
+                <div id="call-oi-chart" class="space-y-2"></div>
+            </div>
+            <div class="col-span-6 card rounded-xl p-4">
+                <h3 class="font-semibold mb-4">Put OI Distribution</h3>
+                <div id="put-oi-chart" class="space-y-2"></div>
             </div>
         </div>
 
-        <!-- Confluence Zones -->
-        <div class="mt-4 pt-4 border-t border-gray-700">
-            <h4 class="text-sm font-medium text-gray-400 mb-3">Confluence Zones (Multi-TF Alignment)</h4>
-            <div id="confluence-zones" class="flex gap-3 flex-wrap">
-                <div class="text-gray-500 text-sm">Loading confluence zones...</div>
+        <!-- MTF ICT Analysis Section -->
+        <div class="card rounded-xl p-4 mt-4">
+            <div class="flex items-center justify-between mb-4">
+                <div class="flex items-center gap-3">
+                    <h3 class="font-semibold text-lg">Multi-Timeframe ICT Analysis</h3>
+                    <span class="text-xs bg-blue-600 px-2 py-1 rounded">Monthly → 15min</span>
+                </div>
+                <button onclick="loadMTFAnalysis()"
+                    class="flex items-center gap-2 text-blue-400 hover:text-blue-300 text-sm">
+                    <i data-lucide="refresh-cw" class="w-4 h-4"></i>
+                    Refresh
+                </button>
             </div>
-        </div>
-    </div>
 
-    <!-- Session & Time Analysis Row -->
-    <div class="grid grid-cols-12 gap-4 mt-4">
-        <!-- Current Session -->
-        <div class="col-span-4 card rounded-xl p-4">
-            <div class="flex items-center justify-between mb-3">
-                <h3 class="font-semibold flex items-center gap-2">
-                    <i data-lucide="clock" class="w-4 h-4 text-blue-400"></i>
-                    Market Session
-                </h3>
-                <span id="session-badge" class="text-xs bg-green-600 px-2 py-1 rounded">OPEN</span>
-            </div>
-            <div id="session-name" class="text-2xl font-bold text-blue-400">--</div>
-            <div class="grid grid-cols-2 gap-3 mt-3 text-sm">
-                <div>
-                    <span class="text-gray-500">Time Elapsed</span>
-                    <div id="session-elapsed" class="font-medium">-- min</div>
+            <!-- Overall Bias -->
+            <div id="mtf-bias" class="bg-gray-800/50 rounded-lg p-3 mb-4">
+                <div class="flex items-center justify-between">
+                    <span class="text-gray-400">Overall Market Bias</span>
+                    <span id="overall-bias" class="text-xl font-bold">--</span>
                 </div>
-                <div>
-                    <span class="text-gray-500">Time Remaining</span>
-                    <div id="session-remaining" class="font-medium">-- min</div>
-                </div>
+                <div id="mtf-summary" class="text-xs text-gray-500 mt-2">--</div>
             </div>
-            <div class="mt-3 pt-3 border-t border-gray-700">
-                <div class="flex justify-between text-sm">
-                    <span class="text-gray-500">Volatility</span>
-                    <span id="session-volatility" class="font-medium">--</span>
-                </div>
-                <div class="flex justify-between text-sm mt-1">
-                    <span class="text-gray-500">Theta Impact</span>
-                    <span id="session-theta" class="font-medium">--</span>
-                </div>
-            </div>
-            <div id="session-recommendation" class="text-xs text-yellow-400 mt-3 p-2 bg-yellow-500/10 rounded">
-                --
-            </div>
-        </div>
 
-        <!-- Theta Decay Analysis -->
-        <div class="col-span-4 card rounded-xl p-4">
-            <div class="flex items-center justify-between mb-3">
-                <h3 class="font-semibold flex items-center gap-2">
-                    <i data-lucide="timer" class="w-4 h-4 text-orange-400"></i>
-                    Theta Decay Profile
-                </h3>
+            <!-- Timeframe Tabs -->
+            <div class="flex gap-2 mb-4 flex-wrap">
+                <button onclick="showTimeframe('M')" id="tf-M"
+                    class="px-3 py-1.5 rounded-lg bg-gray-700 text-sm">Monthly</button>
+                <button onclick="showTimeframe('W')" id="tf-W"
+                    class="px-3 py-1.5 rounded-lg bg-gray-700 text-sm">Weekly</button>
+                <button onclick="showTimeframe('D')" id="tf-D"
+                    class="px-3 py-1.5 rounded-lg bg-blue-600 text-sm">Daily</button>
+                <button onclick="showTimeframe('240')" id="tf-240"
+                    class="px-3 py-1.5 rounded-lg bg-gray-700 text-sm">4H</button>
+                <button onclick="showTimeframe('60')" id="tf-60"
+                    class="px-3 py-1.5 rounded-lg bg-gray-700 text-sm">1H</button>
+                <button onclick="showTimeframe('15')" id="tf-15"
+                    class="px-3 py-1.5 rounded-lg bg-gray-700 text-sm">15min</button>
             </div>
-            <div class="grid grid-cols-2 gap-4">
-                <div class="text-center p-2 bg-gray-800/50 rounded-lg">
-                    <div class="text-gray-500 text-xs">DTE</div>
-                    <div id="theta-dte" class="text-2xl font-bold">--</div>
-                    <div id="theta-hours" class="text-xs text-gray-400">-- hours</div>
-                </div>
-                <div class="text-center p-2 bg-gray-800/50 rounded-lg">
-                    <div class="text-gray-500 text-xs">Decay Speed</div>
-                    <div id="theta-speed" class="text-lg font-bold text-orange-400">--</div>
-                </div>
-            </div>
-            <div class="grid grid-cols-2 gap-3 mt-3 text-sm">
-                <div>
-                    <span class="text-gray-500">Daily Decay</span>
-                    <div id="theta-daily" class="font-medium down">--%</div>
-                </div>
-                <div>
-                    <span class="text-gray-500">Hourly Decay</span>
-                    <div id="theta-hourly" class="font-medium down">--%</div>
-                </div>
-            </div>
-            <div id="theta-strategy" class="text-xs text-blue-400 mt-3 p-2 bg-blue-500/10 rounded">
-                --
-            </div>
-        </div>
 
-        <!-- Option Price Calculator -->
-        <div class="col-span-4 card rounded-xl p-4">
-            <h3 class="font-semibold flex items-center gap-2 mb-3">
-                <i data-lucide="calculator" class="w-4 h-4 text-green-400"></i>
-                Price Projector
-            </h3>
-            <div class="grid grid-cols-2 gap-2 text-sm">
-                <div>
-                    <label class="text-gray-500 text-xs">Target Move (pts)</label>
-                    <input id="proj-move" type="number" value="50" class="w-full rounded px-2 py-1 text-white">
+            <!-- MTF Content Grid -->
+            <div class="grid grid-cols-3 gap-4" id="mtf-content">
+                <!-- FVG Section -->
+                <div class="bg-gray-800/30 rounded-lg p-4">
+                    <h4 class="text-sm font-medium text-gray-400 mb-3 flex items-center gap-2">
+                        <i data-lucide="layers" class="w-4 h-4 text-purple-400"></i>
+                        Fair Value Gaps
+                    </h4>
+                    <div id="fvg-list" class="space-y-2 max-h-[250px] overflow-y-auto">
+                        <div class="text-gray-500 text-sm">Loading FVGs...</div>
+                    </div>
                 </div>
-                <div>
-                    <label class="text-gray-500 text-xs">Current Premium</label>
-                    <input id="proj-premium" type="number" value="100" class="w-full rounded px-2 py-1 text-white">
+
+                <!-- Order Blocks Section -->
+                <div class="bg-gray-800/30 rounded-lg p-4">
+                    <h4 class="text-sm font-medium text-gray-400 mb-3 flex items-center gap-2">
+                        <i data-lucide="box" class="w-4 h-4 text-yellow-400"></i>
+                        Order Blocks
+                    </h4>
+                    <div id="ob-list" class="space-y-2 max-h-[250px] overflow-y-auto">
+                        <div class="text-gray-500 text-sm">Loading Order Blocks...</div>
+                    </div>
+                </div>
+
+                <!-- Liquidity Zones Section -->
+                <div class="bg-gray-800/30 rounded-lg p-4">
+                    <h4 class="text-sm font-medium text-gray-400 mb-3 flex items-center gap-2">
+                        <i data-lucide="droplets" class="w-4 h-4 text-cyan-400"></i>
+                        Liquidity Zones
+                    </h4>
+                    <div id="liq-list" class="space-y-2 max-h-[250px] overflow-y-auto">
+                        <div class="text-gray-500 text-sm">Loading Liquidity...</div>
+                    </div>
                 </div>
             </div>
-            <button onclick="calculateProjection()"
-                class="w-full mt-2 py-1.5 bg-green-600 hover:bg-green-500 rounded text-sm font-medium">
-                Calculate
-            </button>
-            <div id="projection-result" class="mt-3 text-sm">
-                <div class="flex justify-between">
-                    <span class="text-gray-500">Projected Price</span>
-                    <span id="proj-new-price" class="font-bold up">--</span>
-                </div>
-                <div class="flex justify-between mt-1">
-                    <span class="text-gray-500">Expected Profit</span>
-                    <span id="proj-profit" class="font-bold up">--</span>
-                </div>
-                <div class="flex justify-between mt-1">
-                    <span class="text-gray-500">Profit %</span>
-                    <span id="proj-profit-pct" class="font-bold up">--</span>
+
+            <!-- Confluence Zones -->
+            <div class="mt-4 pt-4 border-t border-gray-700">
+                <h4 class="text-sm font-medium text-gray-400 mb-3">Confluence Zones (Multi-TF Alignment)</h4>
+                <div id="confluence-zones" class="flex gap-3 flex-wrap">
+                    <div class="text-gray-500 text-sm">Loading confluence zones...</div>
                 </div>
             </div>
         </div>
-    </div>
 
-    <!-- News & Sentiment Section (Sentiment collapsed by default - data may be stale) -->
-    <div class="grid grid-cols-12 gap-4 mt-4">
-        <!-- Market Sentiment - COLLAPSED BY DEFAULT due to unreliable data -->
-        <div class="col-span-4 card rounded-xl p-4">
-            <details class="group">
-                <summary class="flex items-center justify-between cursor-pointer list-none">
+        <!-- Session & Time Analysis Row -->
+        <div class="grid grid-cols-12 gap-4 mt-4">
+            <!-- Current Session -->
+            <div class="col-span-4 card rounded-xl p-4">
+                <div class="flex items-center justify-between mb-3">
                     <h3 class="font-semibold flex items-center gap-2">
-                        <i data-lucide="heart-pulse" class="w-4 h-4 text-pink-400"></i>
-                        Market Sentiment
-                        <span class="text-xs bg-yellow-600 px-2 py-0.5 rounded">BETA</span>
+                        <i data-lucide="clock" class="w-4 h-4 text-blue-400"></i>
+                        Market Session
                     </h3>
-                    <div class="flex items-center gap-2">
-                        <span class="text-xs text-yellow-400">⚠️ May be outdated</span>
-                        <span class="text-gray-400 group-open:rotate-180 transition">▼</span>
+                    <span id="session-badge" class="text-xs bg-green-600 px-2 py-1 rounded">OPEN</span>
+                </div>
+                <div id="session-name" class="text-2xl font-bold text-blue-400">--</div>
+                <div class="grid grid-cols-2 gap-3 mt-3 text-sm">
+                    <div>
+                        <span class="text-gray-500">Time Elapsed</span>
+                        <div id="session-elapsed" class="font-medium">-- min</div>
                     </div>
-                </summary>
-                <div class="mt-3">
-                    <div class="flex justify-end mb-2">
-                        <button onclick="loadNewsSentiment()"
-                            class="text-blue-400 hover:text-blue-300 text-xs flex items-center gap-1">
-                            <i data-lucide="refresh-cw" class="w-3 h-3"></i>
-                            Refresh
-                        </button>
-                    </div>
-                    <div class="text-center py-4">
-                        <div id="sentiment-score" class="text-5xl font-bold">--</div>
-                        <div id="sentiment-label" class="text-lg mt-1">--</div>
-                    </div>
-                    <div class="grid grid-cols-3 gap-2 text-center text-sm">
-                        <div class="p-2 bg-green-900/30 rounded">
-                            <div class="text-green-400 font-bold" id="bullish-count">0</div>
-                            <div class="text-xs text-gray-500">Bullish</div>
-                        </div>
-                        <div class="p-2 bg-gray-800/50 rounded">
-                            <div class="text-gray-400 font-bold" id="neutral-count">0</div>
-                            <div class="text-xs text-gray-500">Neutral</div>
-                        </div>
-                        <div class="p-2 bg-red-900/30 rounded">
-                            <div class="text-red-400 font-bold" id="bearish-count">0</div>
-                            <div class="text-xs text-gray-500">Bearish</div>
-                        </div>
-                    </div>
-                    <div id="sentiment-mood" class="text-xs mt-3 p-2 bg-gray-800/50 rounded text-center">--</div>
-                    <div class="mt-2 p-2 bg-yellow-900/20 rounded border border-yellow-500/30 text-xs text-yellow-300">
-                        ⚠️ Sentiment data relies on news feeds that may be delayed. Use with caution.
+                    <div>
+                        <span class="text-gray-500">Time Remaining</span>
+                        <div id="session-remaining" class="font-medium">-- min</div>
                     </div>
                 </div>
-            </details>
-        </div>
+                <div class="mt-3 pt-3 border-t border-gray-700">
+                    <div class="flex justify-between text-sm">
+                        <span class="text-gray-500">Volatility</span>
+                        <span id="session-volatility" class="font-medium">--</span>
+                    </div>
+                    <div class="flex justify-between text-sm mt-1">
+                        <span class="text-gray-500">Theta Impact</span>
+                        <span id="session-theta" class="font-medium">--</span>
+                    </div>
+                </div>
+                <div id="session-recommendation" class="text-xs text-yellow-400 mt-3 p-2 bg-yellow-500/10 rounded">
+                    --
+                </div>
+            </div>
 
-        <!-- Latest News -->
-        <div class="col-span-8 card rounded-xl p-4">
-            <h3 class="font-semibold mb-3 flex items-center gap-2">
-                <i data-lucide="newspaper" class="w-4 h-4 text-blue-400"></i>
-                Market News & Events
-            </h3>
-            <div id="news-list" class="space-y-2 max-h-[300px] overflow-y-auto">
-                <div class="text-gray-500 text-sm">Loading news...</div>
+            <!-- Theta Decay Analysis -->
+            <div class="col-span-4 card rounded-xl p-4">
+                <div class="flex items-center justify-between mb-3">
+                    <h3 class="font-semibold flex items-center gap-2">
+                        <i data-lucide="timer" class="w-4 h-4 text-orange-400"></i>
+                        Theta Decay Profile
+                    </h3>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="text-center p-2 bg-gray-800/50 rounded-lg">
+                        <div class="text-gray-500 text-xs">DTE</div>
+                        <div id="theta-dte" class="text-2xl font-bold">--</div>
+                        <div id="theta-hours" class="text-xs text-gray-400">-- hours</div>
+                    </div>
+                    <div class="text-center p-2 bg-gray-800/50 rounded-lg">
+                        <div class="text-gray-500 text-xs">Decay Speed</div>
+                        <div id="theta-speed" class="text-lg font-bold text-orange-400">--</div>
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-3 mt-3 text-sm">
+                    <div>
+                        <span class="text-gray-500">Daily Decay</span>
+                        <div id="theta-daily" class="font-medium down">--%</div>
+                    </div>
+                    <div>
+                        <span class="text-gray-500">Hourly Decay</span>
+                        <div id="theta-hourly" class="font-medium down">--%</div>
+                    </div>
+                </div>
+                <div id="theta-strategy" class="text-xs text-blue-400 mt-3 p-2 bg-blue-500/10 rounded">
+                    --
+                </div>
+            </div>
+
+            <!-- Option Price Calculator -->
+            <div class="col-span-4 card rounded-xl p-4">
+                <h3 class="font-semibold flex items-center gap-2 mb-3">
+                    <i data-lucide="calculator" class="w-4 h-4 text-green-400"></i>
+                    Price Projector
+                </h3>
+                <div class="grid grid-cols-2 gap-2 text-sm">
+                    <div>
+                        <label class="text-gray-500 text-xs">Target Move (pts)</label>
+                        <input id="proj-move" type="number" value="50" class="w-full rounded px-2 py-1 text-white">
+                    </div>
+                    <div>
+                        <label class="text-gray-500 text-xs">Current Premium</label>
+                        <input id="proj-premium" type="number" value="100" class="w-full rounded px-2 py-1 text-white">
+                    </div>
+                </div>
+                <button onclick="calculateProjection()"
+                    class="w-full mt-2 py-1.5 bg-green-600 hover:bg-green-500 rounded text-sm font-medium">
+                    Calculate
+                </button>
+                <div id="projection-result" class="mt-3 text-sm">
+                    <div class="flex justify-between">
+                        <span class="text-gray-500">Projected Price</span>
+                        <span id="proj-new-price" class="font-bold up">--</span>
+                    </div>
+                    <div class="flex justify-between mt-1">
+                        <span class="text-gray-500">Expected Profit</span>
+                        <span id="proj-profit" class="font-bold up">--</span>
+                    </div>
+                    <div class="flex justify-between mt-1">
+                        <span class="text-gray-500">Profit %</span>
+                        <span id="proj-profit-pct" class="font-bold up">--</span>
+                    </div>
+                </div>
             </div>
         </div>
-    </div>
+
+        <!-- News & Sentiment Section (Sentiment collapsed by default - data may be stale) -->
+        <div class="grid grid-cols-12 gap-4 mt-4">
+            <!-- Market Sentiment - COLLAPSED BY DEFAULT due to unreliable data -->
+            <div class="col-span-4 card rounded-xl p-4">
+                <details class="group">
+                    <summary class="flex items-center justify-between cursor-pointer list-none">
+                        <h3 class="font-semibold flex items-center gap-2">
+                            <i data-lucide="heart-pulse" class="w-4 h-4 text-pink-400"></i>
+                            Market Sentiment
+                            <span class="text-xs bg-yellow-600 px-2 py-0.5 rounded">BETA</span>
+                        </h3>
+                        <div class="flex items-center gap-2">
+                            <span class="text-xs text-yellow-400">⚠️ May be outdated</span>
+                            <span class="text-gray-400 group-open:rotate-180 transition">▼</span>
+                        </div>
+                    </summary>
+                    <div class="mt-3">
+                        <div class="flex justify-end mb-2">
+                            <button onclick="loadNewsSentiment()"
+                                class="text-blue-400 hover:text-blue-300 text-xs flex items-center gap-1">
+                                <i data-lucide="refresh-cw" class="w-3 h-3"></i>
+                                Refresh
+                            </button>
+                        </div>
+                        <div class="text-center py-4">
+                            <div id="sentiment-score" class="text-5xl font-bold">--</div>
+                            <div id="sentiment-label" class="text-lg mt-1">--</div>
+                        </div>
+                        <div class="grid grid-cols-3 gap-2 text-center text-sm">
+                            <div class="p-2 bg-green-900/30 rounded">
+                                <div class="text-green-400 font-bold" id="bullish-count">0</div>
+                                <div class="text-xs text-gray-500">Bullish</div>
+                            </div>
+                            <div class="p-2 bg-gray-800/50 rounded">
+                                <div class="text-gray-400 font-bold" id="neutral-count">0</div>
+                                <div class="text-xs text-gray-500">Neutral</div>
+                            </div>
+                            <div class="p-2 bg-red-900/30 rounded">
+                                <div class="text-red-400 font-bold" id="bearish-count">0</div>
+                                <div class="text-xs text-gray-500">Bearish</div>
+                            </div>
+                        </div>
+                        <div id="sentiment-mood" class="text-xs mt-3 p-2 bg-gray-800/50 rounded text-center">--</div>
+                        <div
+                            class="mt-2 p-2 bg-yellow-900/20 rounded border border-yellow-500/30 text-xs text-yellow-300">
+                            ⚠️ Sentiment data relies on news feeds that may be delayed. Use with caution.
+                        </div>
+                    </div>
+                </details>
+            </div>
+
+            <!-- Latest News -->
+            <div class="col-span-8 card rounded-xl p-4">
+                <h3 class="font-semibold mb-3 flex items-center gap-2">
+                    <i data-lucide="newspaper" class="w-4 h-4 text-blue-400"></i>
+                    Market News & Events
+                </h3>
+                <div id="news-list" class="space-y-2 max-h-[300px] overflow-y-auto">
+                    <div class="text-gray-500 text-sm">Loading news...</div>
+                </div>
+            </div>
+        </div>
 
     </div> <!-- End Main Container -->
     </main>
@@ -1919,10 +1990,47 @@
 
         // Index Selection
         function selectIndex(index) {
+            // Update desktop tabs
             document.querySelectorAll('[id^="tab-"]').forEach(t => t.className = 'px-4 py-2 text-sm font-medium tab-inactive rounded-t');
-            document.getElementById(`tab-${index}`).className = 'px-4 py-2 text-sm font-medium tab-active rounded-t';
+            const desktopTab = document.getElementById(`tab-${index}`);
+            if (desktopTab) desktopTab.className = 'px-4 py-2 text-sm font-medium tab-active rounded-t';
+
+            // Update mobile tab buttons (horizontal scroll)
+            document.querySelectorAll('[id^="mobile-tab-btn-"]').forEach(t => t.className = 'px-3 py-1.5 text-xs font-medium tab-inactive rounded whitespace-nowrap');
+            const mobileTabBtn = document.getElementById(`mobile-tab-btn-${index}`);
+            if (mobileTabBtn) mobileTabBtn.className = 'px-3 py-1.5 text-xs font-medium tab-active rounded whitespace-nowrap';
+
+            // Update mobile menu tabs
+            document.querySelectorAll('.mobile-menu-items [id^="mobile-tab-"]').forEach(t => t.classList.remove('active'));
+            const mobileTab = document.getElementById(`mobile-tab-${index}`);
+            if (mobileTab) mobileTab.classList.add('active');
+
+            // Update mobile current index display
+            const mobileCurrentIndex = document.getElementById('mobile-current-index');
+            if (mobileCurrentIndex) mobileCurrentIndex.textContent = index;
+
             currentIndex = index;
             loadAllData();
+        }
+
+        // Mobile Menu Functions
+        function openMobileMenu() {
+            document.getElementById('mobileMenu').classList.add('active');
+            document.getElementById('mobileMenuOverlay').classList.add('active');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeMobileMenu() {
+            document.getElementById('mobileMenu').classList.remove('active');
+            document.getElementById('mobileMenuOverlay').classList.remove('active');
+            document.body.style.overflow = '';
+        }
+
+        // Logout function for mobile
+        function logout() {
+            localStorage.removeItem('auth_token');
+            localStorage.removeItem('user');
+            window.location.href = '/login.html';
         }
 
         // Expiry Selection
@@ -1968,8 +2076,15 @@
                     document.getElementById('index-low').textContent = idx.low.toFixed(2);
                     document.getElementById('lot-size').textContent = idx.lot_size;
                 } else {
-                    // Show error message instead of fallback data
-                    showAuthRequired();
+                    // Check if Fyers token exists before showing auth popup
+                    const hasToken = await checkFyersTokenExists();
+                    if (!hasToken) {
+                        showAuthRequired();
+                    } else {
+                        // Token exists but data still failed - try refreshing token
+                        console.log('Token exists but data failed, attempting refresh...');
+                        await refreshFyersToken();
+                    }
                 }
 
                 if (data.vix && data.vix.value > 0) {
@@ -1979,13 +2094,37 @@
                     vixChg.className = `text-sm mt-1 ${data.vix.change >= 0 ? 'up' : 'down'}`;
                 } else {
                     document.getElementById('vix-value').textContent = '--';
-                    document.getElementById('vix-change').textContent = 'Auth Required';
+                    document.getElementById('vix-change').textContent = 'Loading...';
                 }
             } catch (e) {
                 console.error('Error loading index data:', e);
-                if (e.message && e.message.includes('authentication')) {
-                    showAuthRequired();
-                }
+                // Don't show auth popup on network errors
+            }
+        }
+
+        // Quick check if Fyers token exists (without full auth check)
+        async function checkFyersTokenExists() {
+            if (!authToken) return false;
+            try {
+                const response = await fetch(`${API}/api/fyers/token`, {
+                    headers: { 'Authorization': `Bearer ${authToken}` }
+                });
+                return response.ok;
+            } catch (e) {
+                return false;
+            }
+        }
+
+        // Refresh Fyers token on server
+        async function refreshFyersToken() {
+            if (!authToken) return;
+            try {
+                await fetch(`${API}/api/fyers/refresh-token`, {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${authToken}` }
+                });
+            } catch (e) {
+                console.error('Error refreshing Fyers token:', e);
             }
         }
 
