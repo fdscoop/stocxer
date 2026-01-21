@@ -1,7 +1,7 @@
 """
 Authentication Service - Handles user authentication and token management
 """
-from config.supabase_config import supabase
+from config.supabase_config import supabase, supabase_admin
 from src.models.auth_models import (
     UserRegister, UserLogin, UserResponse, TokenResponse,
     FyersTokenStore, FyersTokenResponse
@@ -17,9 +17,11 @@ logger = logging.getLogger(__name__)
 
 class AuthService:
     """Handle authentication operations"""
-    
+
     def __init__(self):
         self.supabase = supabase
+        # Use admin client for operations that need to bypass RLS (like token storage)
+        self.supabase_admin = supabase_admin
     
     async def register_user(self, user_data: UserRegister) -> TokenResponse:
         """Register a new user"""
@@ -210,9 +212,10 @@ class AuthService:
     async def store_fyers_token(self, user_id: str, token_data: FyersTokenStore) -> FyersTokenResponse:
         """Store or update Fyers authentication token"""
         try:
+            # Use admin client to bypass RLS for token storage
             # Check if token exists
-            existing = self.supabase.table("fyers_tokens").select("*").eq("user_id", user_id).execute()
-            
+            existing = self.supabase_admin.table("fyers_tokens").select("*").eq("user_id", user_id).execute()
+
             token_record = {
                 "user_id": user_id,
                 "access_token": token_data.access_token,
@@ -221,15 +224,19 @@ class AuthService:
                 "expires_at": token_data.expires_at.isoformat() if token_data.expires_at else None,
                 "updated_at": datetime.now().isoformat()
             }
-            
+
+            logger.info(f"📝 Storing Fyers token for user {user_id}")
+
             if existing.data:
                 # Update existing token
-                response = self.supabase.table("fyers_tokens").update(token_record).eq("user_id", user_id).execute()
+                logger.info(f"🔄 Updating existing token for user {user_id}")
+                response = self.supabase_admin.table("fyers_tokens").update(token_record).eq("user_id", user_id).execute()
             else:
                 # Insert new token
+                logger.info(f"➕ Inserting new token for user {user_id}")
                 token_record["id"] = str(uuid.uuid4())
                 token_record["created_at"] = datetime.now().isoformat()
-                response = self.supabase.table("fyers_tokens").insert(token_record).execute()
+                response = self.supabase_admin.table("fyers_tokens").insert(token_record).execute()
             
             data = response.data[0]
             
@@ -249,13 +256,16 @@ class AuthService:
     async def get_fyers_token(self, user_id: str) -> Optional[FyersTokenResponse]:
         """Get Fyers token for user"""
         try:
-            response = self.supabase.table("fyers_tokens").select("*").eq("user_id", user_id).execute()
-            
+            # Use admin client to bypass RLS
+            response = self.supabase_admin.table("fyers_tokens").select("*").eq("user_id", user_id).execute()
+
             if not response.data:
+                logger.info(f"🔍 No Fyers token found for user {user_id}")
                 return None
-            
+
             data = response.data[0]
-            
+            logger.info(f"✅ Found Fyers token for user {user_id}")
+
             return FyersTokenResponse(
                 id=data["id"],
                 user_id=data["user_id"],
@@ -264,15 +274,17 @@ class AuthService:
                 created_at=datetime.fromisoformat(data["created_at"]),
                 updated_at=datetime.fromisoformat(data["updated_at"])
             )
-            
+
         except Exception as e:
             logger.error(f"Get Fyers token error: {str(e)}")
             return None
-    
+
     async def delete_fyers_token(self, user_id: str):
         """Delete Fyers token for user"""
         try:
-            self.supabase.table("fyers_tokens").delete().eq("user_id", user_id).execute()
+            # Use admin client to bypass RLS
+            self.supabase_admin.table("fyers_tokens").delete().eq("user_id", user_id).execute()
+            logger.info(f"🗑️ Deleted Fyers token for user {user_id}")
             return {"message": "Token deleted successfully"}
         except Exception as e:
             logger.error(f"Delete Fyers token error: {str(e)}")

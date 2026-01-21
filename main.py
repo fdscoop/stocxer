@@ -147,14 +147,11 @@ async def auto_scan_options():
 async def load_fyers_token_from_db():
     """Load any valid Fyers token from Supabase on startup"""
     try:
-        from supabase import create_client
-        
-        # Use service role key for admin access if available, fallback to anon key
-        service_key = getattr(settings, 'supabase_service_key', None)
-        key_to_use = service_key if service_key else settings.supabase_key
-        
-        supabase = create_client(settings.supabase_url, key_to_use)
-        
+        from config.supabase_config import supabase_admin
+
+        # Use admin client (service role key) to bypass RLS
+        supabase = supabase_admin
+
         logger.info(f"🔍 Attempting to load Fyers tokens from database...")
         
         # Get any non-expired token from the database
