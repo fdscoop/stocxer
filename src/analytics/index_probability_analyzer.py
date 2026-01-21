@@ -986,7 +986,9 @@ class IndexProbabilityAnalyzer:
             timestamp=datetime.now(),
             current_level=current_level,
             regime=regime,
-            expected_move_pct=total_weighted_contribution * 100,
+            # weighted_contribution already includes expected_move in % form
+            # So total_weighted_contribution is already in % (no need to multiply by 100)
+            expected_move_pct=total_weighted_contribution,
             expected_direction=direction,
             prediction_confidence=avg_confidence,
             prob_up=prob_up,

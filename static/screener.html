@@ -3,146 +3,173 @@
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#111827">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>TradeWise - Stock Screener</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <link href="/mobile.css" rel="stylesheet">
+    <style>
+        /* Screener-specific mobile styles */
+        @media screen and (max-width: 767px) {
+            .container { padding: 8px !important; }
+            .screener-header { flex-direction: column !important; gap: 12px !important; }
+            .screener-header > div:first-child { text-align: center; }
+            .screener-header .flex { flex-wrap: wrap !important; justify-content: center !important; }
+            .status-bar-grid { 
+                display: grid !important; 
+                grid-template-columns: repeat(2, 1fr) !important; 
+                gap: 8px !important; 
+            }
+            .status-bar-grid > div { text-align: center !important; padding: 8px !important; }
+            #signalsGrid { gap: 8px !important; }
+            .signal-card { padding: 12px !important; }
+        }
+    </style>
 </head>
 
 <body class="bg-gray-900 text-gray-100">
     <div class="container mx-auto px-4 py-6">
-        <!-- Header -->
-        <div class="flex justify-between items-center mb-6">
+        <!-- Header - Mobile Optimized -->
+        <div class="screener-header flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
             <div>
-                <h1 class="text-3xl font-bold text-cyan-400">📊 Stock Screener</h1>
-                <p class="text-gray-400">High-confidence BUY/SELL signals for penny & medium stocks</p>
+                <h1 class="text-2xl md:text-3xl font-bold text-cyan-400">📊 Stock Screener</h1>
+                <p class="text-gray-400 text-sm md:text-base">High-confidence signals for your portfolio</p>
             </div>
-            <div class="flex gap-3 items-center">
+            <div class="flex gap-2 md:gap-3 items-center flex-wrap justify-center">
                 <!-- User Info -->
                 <div id="userInfo" class="hidden">
-                    <div class="flex items-center gap-3">
-                        <div class="text-right">
-                            <div class="text-sm text-gray-400">Logged in as</div>
-                            <div id="userEmail" class="text-sm font-semibold"></div>
+                    <div class="flex items-center gap-2 md:gap-3">
+                        <div class="text-right hidden md:block">
+                            <div class="text-xs text-gray-400">Logged in as</div>
+                            <div id="userEmail" class="text-sm font-semibold text-cyan-400"></div>
                         </div>
-                        <button id="logoutBtn" class="px-3 py-2 bg-red-600 hover:bg-red-700 rounded text-sm">
+                        <button id="logoutBtn" class="px-2 md:px-3 py-2 bg-red-600 hover:bg-red-700 rounded text-xs md:text-sm">
                             Logout
                         </button>
                     </div>
                 </div>
                 <!-- Login Button -->
-                <a id="loginBtn" href="/login.html" class="px-4 py-2 bg-purple-600 hover:bg-purple-700 rounded">
+                <a id="loginBtn" href="/login.html" class="px-3 md:px-4 py-2 bg-purple-600 hover:bg-purple-700 rounded text-sm">
                     Login
                 </a>
-                <a href="/" class="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded">
+                <a href="/" class="px-3 md:px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded text-sm">
                     ← Dashboard
                 </a>
-                <button id="refreshBtn" class="px-4 py-2 bg-cyan-600 hover:bg-cyan-700 rounded">
-                    🔄 Refresh
-                </button>
             </div>
         </div>
 
-        <!-- Scan Controls -->
-        <div class="bg-gray-800 rounded-lg p-4 mb-6">
-            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <!-- User Dashboard Indicator -->
+        <div id="userDashboardBanner" class="bg-gradient-to-r from-cyan-900/30 to-blue-900/30 rounded-lg p-3 mb-4 border border-cyan-500/30 hidden">
+            <div class="flex items-center justify-between flex-wrap gap-2">
+                <div class="flex items-center gap-2">
+                    <span class="text-lg">👤</span>
+                    <span class="text-sm text-cyan-400">Your Personal Scanner</span>
+                    <span id="userEmailBanner" class="text-xs text-gray-400"></span>
+                </div>
+                <div class="text-xs text-gray-400">
+                    Results are saved to your account
+                </div>
+            </div>
+        </div>
+
+        <!-- Scan Controls - Compact for mobile -->
+        <div class="bg-gray-800 rounded-lg p-3 md:p-4 mb-4 md:mb-6">
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-4">
                 <div>
-                    <label class="block text-sm text-gray-400 mb-2">Stocks to Scan</label>
-                    <select id="limitSelect" class="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2">
-                        <option value="25">25 - Quick Scan</option>
+                    <label class="block text-xs md:text-sm text-gray-400 mb-1 md:mb-2">Stocks to Scan</label>
+                    <select id="limitSelect" class="w-full bg-gray-700 border border-gray-600 rounded px-2 md:px-3 py-2 text-sm">
+                        <option value="25">25 - Quick</option>
                         <option value="50" selected>50 - Balanced</option>
-                        <option value="100">100 - Comprehensive</option>
-                        <option value="200">200 - Deep Scan</option>
+                        <option value="100">100 - Deep</option>
+                        <option value="200">200 - Full</option>
                     </select>
                 </div>
                 <div>
-                    <label class="block text-sm text-gray-400 mb-2">Min Confidence</label>
-                    <select id="confidenceSelect" class="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2">
-                        <option value="60">60% - Moderate</option>
-                        <option value="70" selected>70% - High</option>
-                        <option value="80">80% - Very High</option>
+                    <label class="block text-xs md:text-sm text-gray-400 mb-1 md:mb-2">Min Confidence</label>
+                    <select id="confidenceSelect" class="w-full bg-gray-700 border border-gray-600 rounded px-2 md:px-3 py-2 text-sm">
+                        <option value="60">60%</option>
+                        <option value="70" selected>70%</option>
+                        <option value="80">80%</option>
                     </select>
                 </div>
                 <div>
-                    <label class="block text-sm text-gray-400 mb-2">Action Filter</label>
-                    <select id="actionFilter" class="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2">
-                        <option value="all">All Signals</option>
-                        <option value="BUY" selected>BUY Only</option>
-                        <option value="SELL">SELL Only</option>
+                    <label class="block text-xs md:text-sm text-gray-400 mb-1 md:mb-2">Action</label>
+                    <select id="actionFilter" class="w-full bg-gray-700 border border-gray-600 rounded px-2 md:px-3 py-2 text-sm">
+                        <option value="all">All</option>
+                        <option value="BUY" selected>BUY</option>
+                        <option value="SELL">SELL</option>
                     </select>
                 </div>
-                <div class="flex items-end">
-                    <button id="scanBtn" class="w-full px-4 py-2 bg-green-600 hover:bg-green-700 rounded font-semibold">
+                <div class="flex items-end col-span-2 md:col-span-1">
+                    <button id="scanBtn" class="w-full px-3 md:px-4 py-2 bg-green-600 hover:bg-green-700 rounded font-semibold text-sm md:text-base">
                         🔍 Scan Stocks
                     </button>
                 </div>
             </div>
-            <div class="mt-3 text-xs text-gray-400">
-                💡 Scans random selection from 500+ NSE stocks. Each scan gives different results for broader coverage.
+            <div class="mt-2 text-xs text-gray-500 hidden md:block">
+                💡 Each scan analyzes a random selection from 500+ NSE stocks for broader coverage.
             </div>
         </div>
 
-        <!-- Authentication Status -->
-        <div id="authStatus" class="bg-gray-800 rounded-lg p-4 mb-6 border-l-4 border-yellow-400">
-            <div class="flex items-center justify-between">
+        <!-- Authentication Status - Compact -->
+        <div id="authStatus" class="bg-gray-800 rounded-lg p-3 md:p-4 mb-4 md:mb-6 border-l-4 border-yellow-400">
+            <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-2">
                 <div>
-                    <h3 class="text-lg font-semibold text-yellow-400">🔐 Market Data Authentication</h3>
-                    <p id="authStatusText" class="text-gray-300 text-sm">Checking authentication status...</p>
+                    <h3 class="text-base md:text-lg font-semibold text-yellow-400">🔐 Market Data</h3>
+                    <p id="authStatusText" class="text-gray-300 text-xs md:text-sm">Checking status...</p>
                 </div>
-                <button id="fyersAuthBtn" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded text-sm hidden">
-                    Connect Fyers Account
+                <button id="fyersAuthBtn" class="px-3 py-2 bg-blue-600 hover:bg-blue-700 rounded text-xs md:text-sm hidden">
+                    Connect Fyers
                 </button>
             </div>
         </div>
 
-        <!-- Status Bar -->
-        <div id="statusBar" class="bg-gray-800 rounded-lg p-4 mb-6 hidden">
-            <div class="flex justify-between items-center">
-                <div class="flex gap-6">
-                    <div>
-                        <div class="text-gray-400 text-sm">Stocks Scanned</div>
-                        <div id="stocksScanned" class="text-2xl font-bold text-blue-400">0</div>
-                    </div>
-                    <div>
-                        <div class="text-gray-400 text-sm">Total Signals</div>
-                        <div id="totalSignals" class="text-2xl font-bold text-cyan-400">0</div>
-                    </div>
-                    <div>
-                        <div class="text-gray-400 text-sm">BUY Signals</div>
-                        <div id="buyCount" class="text-2xl font-bold text-green-400">0</div>
-                    </div>
-                    <div>
-                        <div class="text-gray-400 text-sm">SELL Signals</div>
-                        <div id="sellCount" class="text-2xl font-bold text-red-400">0</div>
-                    </div>
+        <!-- Status Bar - Mobile Grid -->
+        <div id="statusBar" class="bg-gray-800 rounded-lg p-3 md:p-4 mb-4 md:mb-6 hidden">
+            <div class="status-bar-grid flex flex-wrap md:flex-nowrap justify-between items-center gap-3 md:gap-6">
+                <div class="bg-gray-700/50 rounded-lg p-2 md:p-3 flex-1 min-w-[70px] text-center">
+                    <div class="text-gray-400 text-xs">Scanned</div>
+                    <div id="stocksScanned" class="text-xl md:text-2xl font-bold text-blue-400">0</div>
                 </div>
-                <div class="text-right">
-                    <div class="text-gray-400 text-sm">Last Scan</div>
-                    <div id="scanTime" class="text-sm">--</div>
+                <div class="bg-gray-700/50 rounded-lg p-2 md:p-3 flex-1 min-w-[70px] text-center">
+                    <div class="text-gray-400 text-xs">Total</div>
+                    <div id="totalSignals" class="text-xl md:text-2xl font-bold text-cyan-400">0</div>
+                </div>
+                <div class="bg-green-900/30 rounded-lg p-2 md:p-3 flex-1 min-w-[70px] text-center">
+                    <div class="text-gray-400 text-xs">BUY</div>
+                    <div id="buyCount" class="text-xl md:text-2xl font-bold text-green-400">0</div>
+                </div>
+                <div class="bg-red-900/30 rounded-lg p-2 md:p-3 flex-1 min-w-[70px] text-center">
+                    <div class="text-gray-400 text-xs">SELL</div>
+                    <div id="sellCount" class="text-xl md:text-2xl font-bold text-red-400">0</div>
+                </div>
+                <div class="text-center md:text-right flex-1 min-w-[80px]">
+                    <div class="text-gray-400 text-xs">Last Scan</div>
+                    <div id="scanTime" class="text-xs md:text-sm text-cyan-400">--</div>
                 </div>
             </div>
         </div>
-    </div>
-    </div>
-    </div>
 
     <!-- Loading -->
-    <div id="loadingDiv" class="text-center py-12 hidden">
-        <div class="animate-spin inline-block w-12 h-12 border-4 border-cyan-400 border-t-transparent rounded-full">
+    <div id="loadingDiv" class="text-center py-8 md:py-12 hidden">
+        <div class="animate-spin inline-block w-10 h-10 md:w-12 md:h-12 border-4 border-cyan-400 border-t-transparent rounded-full">
         </div>
-        <p class="mt-4 text-gray-400" id="loadingText">Scanning stocks... This may take 20-60 seconds</p>
-        <p class="mt-2 text-sm text-gray-500" id="scanProgress">Analyzing: 0 / 0 stocks</p>
+        <p class="mt-4 text-gray-400 text-sm md:text-base" id="loadingText">Scanning stocks...</p>
+        <p class="mt-2 text-xs md:text-sm text-gray-500" id="scanProgress">Analyzing: 0 / 0 stocks</p>
     </div>
 
-    <!-- Signals Grid -->
-    <div id="signalsGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+    <!-- Signals Grid - Responsive -->
+    <div id="signalsGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4 px-4 md:px-0">
         <!-- Stock cards will be inserted here -->
     </div>
 
     <!-- No Signals Message -->
-    <div id="noSignals" class="text-center py-12 hidden">
-        <div class="text-6xl mb-4">📭</div>
-        <h3 class="text-xl text-gray-400">No signals found</h3>
-        <p class="text-gray-500 mt-2">Try adjusting filters or scan again later</p>
+    <div id="noSignals" class="text-center py-8 md:py-12 hidden">
+        <div class="text-5xl md:text-6xl mb-4">📭</div>
+        <h3 class="text-lg md:text-xl text-gray-400">No signals found</h3>
+        <p class="text-gray-500 mt-2 text-sm">Try adjusting filters or scan again</p>
     </div>
     </div>
 
@@ -155,7 +182,6 @@
 
         // Elements
         const scanBtn = document.getElementById('scanBtn');
-        const refreshBtn = document.getElementById('refreshBtn');
         const limitSelect = document.getElementById('limitSelect');
         const confidenceSelect = document.getElementById('confidenceSelect');
         const actionFilter = document.getElementById('actionFilter');
@@ -167,6 +193,8 @@
         const loginBtn = document.getElementById('loginBtn');
         const logoutBtn = document.getElementById('logoutBtn');
         const userEmail = document.getElementById('userEmail');
+        const userDashboardBanner = document.getElementById('userDashboardBanner');
+        const userEmailBanner = document.getElementById('userEmailBanner');
 
         // Initialize authentication
         function initAuth() {
@@ -178,9 +206,16 @@
                 userEmail.textContent = currentUser.email;
                 userInfo.classList.remove('hidden');
                 loginBtn.classList.add('hidden');
+                
+                // Show user dashboard banner
+                if (userDashboardBanner) {
+                    userDashboardBanner.classList.remove('hidden');
+                    if (userEmailBanner) userEmailBanner.textContent = `(${currentUser.email})`;
+                }
             } else {
                 userInfo.classList.add('hidden');
                 loginBtn.classList.remove('hidden');
+                if (userDashboardBanner) userDashboardBanner.classList.add('hidden');
             }
         }
 
@@ -350,13 +385,14 @@
             signalsGrid.innerHTML = signals.map(signal => createStockCard(signal)).join('');
         }
 
-        // Create stock card
+        // Create stock card - Mobile optimized
         function createStockCard(signal) {
             const isBuy = signal.action === 'BUY';
             const borderColor = isBuy ? 'border-green-500' : 'border-red-500';
             const actionBg = isBuy ? 'bg-green-600' : 'bg-red-600';
             const confidence = signal.confidence || 0;
             const confidenceColor = confidence >= 80 ? 'text-green-400' : confidence >= 70 ? 'text-cyan-400' : 'text-yellow-400';
+            const confidenceBadge = confidence >= 80 ? 'HIGH' : confidence >= 70 ? 'MODERATE' : 'LOW';
 
             // Safe number formatter
             const safeNum = (val, decimals = 2) => {
@@ -379,64 +415,68 @@
             const reasons = signal.reasons || [];
 
             return `
-                <div class="bg-gray-800 rounded-lg border-2 ${borderColor} p-4 hover:bg-gray-750 transition">
-                    <!-- Header -->
-                    <div class="flex justify-between items-start mb-3">
-                        <div>
-                            <h3 class="text-lg font-bold">${signal.name || 'Unknown'}</h3>
-                            <span class="text-xs text-gray-400">₹${safeNum(currentPrice)}</span>
+                <div class="signal-card bg-gray-800 rounded-lg border-2 ${borderColor} p-3 md:p-4 hover:bg-gray-750 transition">
+                    <!-- Header - Compact -->
+                    <div class="flex justify-between items-start mb-2 md:mb-3">
+                        <div class="flex-1 min-w-0">
+                            <h3 class="text-base md:text-lg font-bold truncate">${signal.name || 'Unknown'}</h3>
+                            <div class="flex items-center gap-2">
+                                <span class="text-xs text-gray-400">₹${safeNum(currentPrice)}</span>
+                                <span class="${changeColor} text-xs">${changePct > 0 ? '+' : ''}${safeNum(changePct, 1)}%</span>
+                            </div>
                         </div>
-                        <span class="${actionBg} px-3 py-1 rounded font-semibold text-sm">
-                            ${signal.action}
-                        </span>
-                    </div>
-
-                    <!-- Price & Confidence -->
-                    <div class="grid grid-cols-2 gap-3 mb-3">
-                        <div>
-                            <div class="text-gray-400 text-xs">Current Price</div>
-                            <div class="text-xl font-bold">₹${safeNum(currentPrice)}</div>
-                            <div class="${changeColor} text-xs">${changePct > 0 ? '+' : ''}${safeNum(changePct, 1)}%</div>
-                        </div>
-                        <div>
-                            <div class="text-gray-400 text-xs">Confidence</div>
-                            <div class="text-xl font-bold ${confidenceColor}">${safeNum(confidence, 0)}%</div>
-                            <div class="text-xs text-gray-500">${confidence >= 80 ? 'VERY HIGH' : confidence >= 70 ? 'HIGH' : 'MODERATE'}</div>
+                        <div class="flex flex-col items-end gap-1">
+                            <span class="${actionBg} px-2 md:px-3 py-1 rounded font-semibold text-xs md:text-sm">
+                                ${signal.action}
+                            </span>
+                            <span class="text-xs ${confidenceColor}">${confidenceBadge}</span>
                         </div>
                     </div>
 
-                    <!-- Targets -->
-                    <div class="border-t border-gray-700 pt-3 mb-3">
-                        <div class="text-xs text-gray-400 mb-2">TARGETS & STOP LOSS</div>
-                        <div class="grid grid-cols-3 gap-2 text-xs">
-                            <div class="bg-green-900/30 rounded p-2">
-                                <div class="text-gray-400">Target 1</div>
-                                <div class="font-semibold">₹${safeNum(targets.target_1)}</div>
-                                <div class="text-green-400">+${safePct(targets.target_1, currentPrice)}%</div>
+                    <!-- Confidence Bar -->
+                    <div class="mb-2 md:mb-3">
+                        <div class="flex justify-between text-xs mb-1">
+                            <span class="text-gray-400">Confidence</span>
+                            <span class="${confidenceColor} font-bold">${safeNum(confidence, 0)}%</span>
+                        </div>
+                        <div class="w-full bg-gray-700 rounded-full h-2">
+                            <div class="${isBuy ? 'bg-green-500' : 'bg-red-500'} h-2 rounded-full transition-all" style="width: ${Math.min(confidence, 100)}%"></div>
+                        </div>
+                    </div>
+
+                    <!-- Targets - Compact -->
+                    <div class="border-t border-gray-700 pt-2 mb-2">
+                        <div class="grid grid-cols-3 gap-1 md:gap-2 text-xs">
+                            <div class="bg-green-900/30 rounded p-1.5 md:p-2 text-center">
+                                <div class="text-gray-400 text-[10px] md:text-xs">T1</div>
+                                <div class="font-semibold text-green-400">₹${safeNum(targets.target_1, 0)}</div>
+                                <div class="text-green-300 text-[10px]">+${safePct(targets.target_1, currentPrice)}%</div>
                             </div>
-                            <div class="bg-green-900/30 rounded p-2">
-                                <div class="text-gray-400">Target 2</div>
-                                <div class="font-semibold">₹${safeNum(targets.target_2)}</div>
-                                <div class="text-green-400">+${safePct(targets.target_2, currentPrice)}%</div>
+                            <div class="bg-green-900/40 rounded p-1.5 md:p-2 text-center">
+                                <div class="text-gray-400 text-[10px] md:text-xs">T2</div>
+                                <div class="font-semibold text-green-400">₹${safeNum(targets.target_2, 0)}</div>
+                                <div class="text-green-300 text-[10px]">+${safePct(targets.target_2, currentPrice)}%</div>
                             </div>
-                            <div class="bg-red-900/30 rounded p-2">
-                                <div class="text-gray-400">Stop Loss</div>
-                                <div class="font-semibold">₹${safeNum(targets.stop_loss)}</div>
-                                <div class="text-red-400">${safePct(targets.stop_loss, currentPrice)}%</div>
+                            <div class="bg-red-900/30 rounded p-1.5 md:p-2 text-center">
+                                <div class="text-gray-400 text-[10px] md:text-xs">SL</div>
+                                <div class="font-semibold text-red-400">₹${safeNum(targets.stop_loss, 0)}</div>
+                                <div class="text-red-300 text-[10px]">${safePct(targets.stop_loss, currentPrice)}%</div>
                             </div>
                         </div>
                     </div>
 
-                    <!-- Indicators -->
-                    <div class="border-t border-gray-700 pt-3 mb-3">
-                        <div class="text-xs text-gray-400 mb-2">TECHNICAL INDICATORS</div>
-                        <div class="grid grid-cols-2 gap-2 text-xs">
+                    <!-- Indicators - Collapsible on mobile -->
+                    <details class="border-t border-gray-700 pt-2">
+                        <summary class="text-xs text-gray-400 cursor-pointer hover:text-gray-300">
+                            Technical Details ▼
+                        </summary>
+                        <div class="grid grid-cols-2 gap-2 text-xs mt-2">
                             <div>
                                 <span class="text-gray-500">RSI:</span>
                                 <span class="font-semibold">${safeNum(indicators.rsi, 1)}</span>
                             </div>
                             <div>
-                                <span class="text-gray-500">5D Momentum:</span>
+                                <span class="text-gray-500">Momentum:</span>
                                 <span class="font-semibold ${(indicators.momentum_5d || 0) >= 0 ? 'text-green-400' : 'text-red-400'}">
                                     ${(indicators.momentum_5d || 0) > 0 ? '+' : ''}${safeNum(indicators.momentum_5d, 1)}%
                                 </span>
@@ -452,9 +492,9 @@
                                 </span>
                             </div>
                         </div>
-                    </div>
+                    </details>
 
-                    <!-- Reasons -->
+                    <!-- Reasons - Compact -->
                     <div class="border-t border-gray-700 pt-3">
                         <div class="text-xs text-gray-400 mb-2">SIGNAL REASONS</div>
                         <div class="space-y-1">

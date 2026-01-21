@@ -2830,6 +2830,60 @@ def _generate_actionable_signal(mtf_result, session_info, chain_data, historical
             "distance_pct": round(abs(strike - spot_price) / spot_price * 100, 2)
         }
     
+    # ==================== DISCOUNT ZONE ANALYSIS ====================
+    # Deep analysis of whether current price is in a discounted zone
+    # This verifies the entry price is optimal, not inflated
+    discount_zone_analysis = None
+    try:
+        # Determine market momentum from overall bias and FVG
+        market_momentum = overall_bias if overall_bias in ['bullish', 'bearish'] else 'neutral'
+        
+        # Get OI analysis from the selected strike if available
+        oi_analysis_str = 'neutral'
+        if strike_data:
+            option_type_key = "call" if "CALL" in action else "put"
+            option_data = strike_data.get(option_type_key, {})
+            analysis_text = option_data.get("analysis", "").lower()
+            if "long build" in analysis_text or "long_build" in analysis_text:
+                oi_analysis_str = "long_build"
+            elif "short build" in analysis_text or "short_build" in analysis_text:
+                oi_analysis_str = "short_build"
+            elif "short cover" in analysis_text or "short_cover" in analysis_text:
+                oi_analysis_str = "short_cover"
+            elif "long unwind" in analysis_text or "long_unwind" in analysis_text:
+                oi_analysis_str = "long_unwind"
+        
+        # Calculate discount zone using the comprehensive function
+        discount_zone_analysis = calculate_discount_zone(
+            option_ltp=current_ltp,
+            spot_price=spot_price,
+            strike=strike,
+            option_type="CALL" if "CALL" in action else "PUT",
+            iv=atm_iv,
+            delta=greeks.get('delta', 0.4),
+            dte=dte,
+            avg_iv=0.15,  # Historical average for NIFTY
+            market_momentum=market_momentum,
+            oi_analysis=oi_analysis_str
+        )
+        
+        # Log discount zone analysis
+        logger.info(f"💰 Discount Zone Analysis: {discount_zone_analysis.get('status', 'unknown').upper()}")
+        logger.info(f"   Current: ₹{current_ltp:.2f}, Best Entry: ₹{discount_zone_analysis.get('best_entry_price', current_ltp):.2f}")
+        logger.info(f"   {discount_zone_analysis.get('reasoning', '')}")
+        
+    except Exception as e:
+        logger.warning(f"Discount zone calculation failed: {e}")
+        discount_zone_analysis = {
+            "status": "unknown",
+            "current_price": round(current_ltp, 2),
+            "best_entry_price": round(current_ltp, 2),
+            "max_entry_price": round(current_ltp * 1.05, 2),
+            "supports_entry": True,
+            "reasoning": "Unable to calculate discount zone"
+        }
+    # ================================================================
+    
     return {
         "signal": signal_type,
         "action": action,
@@ -2855,6 +2909,18 @@ def _generate_actionable_signal(mtf_result, session_info, chain_data, historical
             "price_source": price_source,
             "price_vs_bs": "Fair" if abs(option_price - bs_price) < 5 else ("Expensive" if option_price > bs_price else "Cheap")
         },
+        # DISCOUNT ZONE ANALYSIS - Deep entry price validation
+        "discount_zone": discount_zone_analysis if discount_zone_analysis else {
+            "status": "unknown",
+            "current_price": round(current_ltp, 2),
+            "best_entry_price": round(current_ltp, 2),
+            "max_entry_price": round(strategic_entry_price, 2),
+            "target_price": round(target_1, 2),
+            "expected_pullback_pct": 0.0,
+            "time_feasible": True,
+            "supports_entry": True,
+            "reasoning": "Discount zone analysis pending"
+        },
         "market_depth": depth_data if depth_data else {
             "liquidity_score": 50,
             "execution_quality": "UNKNOWN",
@@ -2875,10 +2941,14 @@ def _generate_actionable_signal(mtf_result, session_info, chain_data, historical
         "entry": {
             "price": round(strategic_entry_price, 2),
             "ltp": round(current_ltp, 2),
+            "best_entry_price": discount_zone_analysis.get('best_entry_price', current_ltp) if discount_zone_analysis else round(current_ltp, 2),
+            "max_entry_price": discount_zone_analysis.get('max_entry_price', strategic_entry_price) if discount_zone_analysis else round(strategic_entry_price, 2),
             "trigger_level": round(entry_trigger, 2),
             "timing": timing,
             "reasoning": entry_reasoning,
-            "session_advice": session_timing
+            "session_advice": session_timing,
+            "discount_status": discount_zone_analysis.get('status', 'unknown') if discount_zone_analysis else 'unknown',
+            "supports_entry": discount_zone_analysis.get('supports_entry', True) if discount_zone_analysis else True
         },
         "targets": {
             "target_1": round(target_1, 2),

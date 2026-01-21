@@ -305,6 +305,35 @@
     <!-- Main Container -->
     <div class="max-w-[1800px] mx-auto px-4 py-6 space-y-6">
 
+        <!-- User Dashboard Header - Shows current user context -->
+        <div id="user-dashboard-header" class="card rounded-xl p-4 bg-gradient-to-r from-blue-900/30 to-purple-900/30 border border-blue-500/30">
+            <div class="flex flex-col md:flex-row md:items-center justify-between gap-3">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center">
+                        <span class="text-lg">👤</span>
+                    </div>
+                    <div>
+                        <div class="text-sm text-gray-400">Your Personal Dashboard</div>
+                        <div id="dashboard-user-email" class="font-semibold text-blue-400">Loading...</div>
+                    </div>
+                </div>
+                <div class="flex flex-wrap items-center gap-4 text-sm">
+                    <div class="bg-gray-800/50 px-3 py-2 rounded-lg">
+                        <span class="text-gray-400">Total Scans:</span>
+                        <span id="user-total-scans" class="font-bold text-white ml-1">0</span>
+                    </div>
+                    <div class="bg-gray-800/50 px-3 py-2 rounded-lg">
+                        <span class="text-gray-400">Active Signals:</span>
+                        <span id="user-active-signals" class="font-bold text-green-400 ml-1">0</span>
+                    </div>
+                    <div class="bg-gray-800/50 px-3 py-2 rounded-lg hidden" id="accuracy-box">
+                        <span class="text-gray-400">Signal Accuracy:</span>
+                        <span id="user-accuracy" class="font-bold text-yellow-400 ml-1">--%</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- Recent Stock Signals Section (Last 2 Hours) -->
         <div id="recent-signals-section" class="hidden">
             <div class="card rounded-xl p-6 border-2 border-blue-500/30">
@@ -313,6 +342,7 @@
                         <span>🎯</span>
                         <span>Recent Trading Signals</span>
                         <span class="text-sm font-normal text-gray-400">(Last 2 Hours)</span>
+                        <span class="text-xs bg-blue-600 px-2 py-1 rounded">YOUR DATA</span>
                     </h2>
                     <div class="flex gap-2">
                         <a href="/screener.html" class="px-4 py-2 bg-green-600 hover:bg-green-700 rounded text-sm">
@@ -337,14 +367,20 @@
 
         <!-- Recent Screener Scans Section - VISIBLE BY DEFAULT -->
         <div id="recent-scans-section" class="card rounded-xl p-6 border-2 border-green-500/20">
-            <div class="flex items-center justify-between mb-4">
-                <h2 class="text-xl font-bold flex items-center gap-2">
+            <div class="flex flex-col md:flex-row md:items-center justify-between gap-3 mb-4">
+                <h2 class="text-xl font-bold flex items-center gap-2 flex-wrap">
                     <span>📊</span>
-                    <span>Recent Stock Signals</span>
+                    <span>Your Stock Signals</span>
                     <span class="text-xs font-normal text-gray-400">(Last 7 Days)</span>
-                    <span class="text-xs font-normal bg-green-600 px-2 py-1 rounded">FROM DATABASE</span>
+                    <span class="text-xs font-normal bg-green-600 px-2 py-1 rounded">PERSONAL</span>
                 </h2>
-                <div class="flex gap-2">
+                <div class="flex gap-2 flex-wrap">
+                    <select id="signal-filter" class="px-3 py-2 bg-gray-700 rounded text-sm">
+                        <option value="all">All Signals</option>
+                        <option value="buy">BUY Only</option>
+                        <option value="sell">SELL Only</option>
+                        <option value="high">High Confidence (≥80%)</option>
+                    </select>
                     <a href="/screener.html" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded text-sm">
                         New Scan
                     </a>
@@ -353,6 +389,26 @@
                         <i data-lucide="refresh-cw" class="w-4 h-4"></i>
                         Refresh
                     </button>
+                </div>
+            </div>
+
+            <!-- Signal Summary Stats -->
+            <div id="signal-summary-stats" class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4 text-center">
+                <div class="bg-green-900/20 rounded-lg p-3 border border-green-500/30">
+                    <div class="text-2xl font-bold text-green-400" id="summary-buy-count">0</div>
+                    <div class="text-xs text-gray-400">BUY Signals</div>
+                </div>
+                <div class="bg-red-900/20 rounded-lg p-3 border border-red-500/30">
+                    <div class="text-2xl font-bold text-red-400" id="summary-sell-count">0</div>
+                    <div class="text-xs text-gray-400">SELL Signals</div>
+                </div>
+                <div class="bg-blue-900/20 rounded-lg p-3 border border-blue-500/30">
+                    <div class="text-2xl font-bold text-blue-400" id="summary-avg-confidence">--%</div>
+                    <div class="text-xs text-gray-400">Avg Confidence</div>
+                </div>
+                <div class="bg-yellow-900/20 rounded-lg p-3 border border-yellow-500/30">
+                    <div class="text-2xl font-bold text-yellow-400" id="summary-unique-stocks">0</div>
+                    <div class="text-xs text-gray-400">Unique Stocks</div>
                 </div>
             </div>
 
@@ -1189,226 +1245,11 @@
         </div>
     </div>
 
-    <!-- Option Chain -->
-    <div class="card rounded-xl p-2 md:p-4">
-        <div class="flex flex-col md:flex-row md:items-center justify-between mb-4 gap-2">
-            <div class="flex flex-col md:flex-row md:items-center gap-2 md:gap-4">
-                <h3 class="font-semibold">Option Chain</h3>
-                <div class="flex items-center gap-2 text-xs md:text-sm flex-wrap">
-                    <span class="text-gray-500">Call OI:</span>
-                    <span id="total-call-oi" class="text-green-400">--</span>
-                    <span class="text-gray-600">|</span>
-                    <span class="text-gray-500">Put OI:</span>
-                    <span id="total-put-oi" class="text-red-400">--</span>
-                </div>
-            </div>
-            <button onclick="refreshChain()"
-                class="flex items-center gap-2 text-blue-400 hover:text-blue-300 text-sm p-2 bg-gray-800 rounded md:bg-transparent">
-                <i data-lucide="refresh-cw" class="w-4 h-4"></i>
-                Refresh
-            </button>
-        </div>
 
-        <!-- Horizontal Scroll Wrapper for Mobile -->
-        <div class="horizontal-scroll-wrapper overflow-x-auto -mx-2 px-2">
 
-            <!-- Chain Header -->
-            <div
-                class="grid grid-cols-13 gap-1 text-xs text-gray-500 uppercase tracking-wide py-2 border-b border-gray-700">
-                <div class="text-center">Analysis</div>
-                <div class="text-center">IV</div>
-                <div class="text-right">OI</div>
-                <div class="text-center">OI Chg</div>
-                <div class="text-right">Volume</div>
-                <div class="text-right">LTP</div>
-                <div class="text-center font-bold text-white">STRIKE</div>
-                <div class="text-left">LTP</div>
-                <div class="text-left">Volume</div>
-                <div class="text-center">OI Chg</div>
-                <div class="text-left">OI</div>
-                <div class="text-center">IV</div>
-                <div class="text-center">Analysis</div>
-            </div>
 
-            <!-- Calls Header -->
-            <div class="grid grid-cols-13 gap-1 text-xs py-1 bg-gray-800/50">
-                <div class="col-span-6 text-center text-green-400 font-semibold">CALLS</div>
-                <div></div>
-                <div class="col-span-6 text-center text-red-400 font-semibold">PUTS</div>
-            </div>
 
-            <!-- Chain Body -->
-            <div id="chain-body" class="max-h-[300px] md:max-h-[500px] overflow-y-auto">
-                <div class="text-center py-8 text-gray-500">Loading option chain...</div>
-            </div>
-        </div> <!-- End horizontal-scroll-wrapper -->
 
-        <!-- OI Analysis -->
-        <div class="grid grid-cols-12 gap-4">
-            <div class="col-span-6 card rounded-xl p-4">
-                <h3 class="font-semibold mb-4">Call OI Distribution</h3>
-                <div id="call-oi-chart" class="space-y-2"></div>
-            </div>
-            <div class="col-span-6 card rounded-xl p-4">
-                <h3 class="font-semibold mb-4">Put OI Distribution</h3>
-                <div id="put-oi-chart" class="space-y-2"></div>
-            </div>
-        </div>
-
-        <!-- MTF ICT Analysis Section -->
-        <div class="card rounded-xl p-4 mt-4">
-            <div class="flex items-center justify-between mb-4">
-                <div class="flex items-center gap-3">
-                    <h3 class="font-semibold text-lg">Multi-Timeframe ICT Analysis</h3>
-                    <span class="text-xs bg-blue-600 px-2 py-1 rounded">Monthly → 15min</span>
-                </div>
-                <button onclick="loadMTFAnalysis()"
-                    class="flex items-center gap-2 text-blue-400 hover:text-blue-300 text-sm">
-                    <i data-lucide="refresh-cw" class="w-4 h-4"></i>
-                    Refresh
-                </button>
-            </div>
-
-            <!-- Overall Bias -->
-            <div id="mtf-bias" class="bg-gray-800/50 rounded-lg p-3 mb-4">
-                <div class="flex items-center justify-between">
-                    <span class="text-gray-400">Overall Market Bias</span>
-                    <span id="overall-bias" class="text-xl font-bold">--</span>
-                </div>
-                <div id="mtf-summary" class="text-xs text-gray-500 mt-2">--</div>
-            </div>
-
-            <!-- Timeframe Tabs -->
-            <div class="flex gap-2 mb-4 flex-wrap">
-                <button onclick="showTimeframe('M')" id="tf-M"
-                    class="px-3 py-1.5 rounded-lg bg-gray-700 text-sm">Monthly</button>
-                <button onclick="showTimeframe('W')" id="tf-W"
-                    class="px-3 py-1.5 rounded-lg bg-gray-700 text-sm">Weekly</button>
-                <button onclick="showTimeframe('D')" id="tf-D"
-                    class="px-3 py-1.5 rounded-lg bg-blue-600 text-sm">Daily</button>
-                <button onclick="showTimeframe('240')" id="tf-240"
-                    class="px-3 py-1.5 rounded-lg bg-gray-700 text-sm">4H</button>
-                <button onclick="showTimeframe('60')" id="tf-60"
-                    class="px-3 py-1.5 rounded-lg bg-gray-700 text-sm">1H</button>
-                <button onclick="showTimeframe('15')" id="tf-15"
-                    class="px-3 py-1.5 rounded-lg bg-gray-700 text-sm">15min</button>
-            </div>
-
-            <!-- MTF Content Grid -->
-            <div class="grid grid-cols-3 gap-4" id="mtf-content">
-                <!-- FVG Section -->
-                <div class="bg-gray-800/30 rounded-lg p-4">
-                    <h4 class="text-sm font-medium text-gray-400 mb-3 flex items-center gap-2">
-                        <i data-lucide="layers" class="w-4 h-4 text-purple-400"></i>
-                        Fair Value Gaps
-                    </h4>
-                    <div id="fvg-list" class="space-y-2 max-h-[250px] overflow-y-auto">
-                        <div class="text-gray-500 text-sm">Loading FVGs...</div>
-                    </div>
-                </div>
-
-                <!-- Order Blocks Section -->
-                <div class="bg-gray-800/30 rounded-lg p-4">
-                    <h4 class="text-sm font-medium text-gray-400 mb-3 flex items-center gap-2">
-                        <i data-lucide="box" class="w-4 h-4 text-yellow-400"></i>
-                        Order Blocks
-                    </h4>
-                    <div id="ob-list" class="space-y-2 max-h-[250px] overflow-y-auto">
-                        <div class="text-gray-500 text-sm">Loading Order Blocks...</div>
-                    </div>
-                </div>
-
-                <!-- Liquidity Zones Section -->
-                <div class="bg-gray-800/30 rounded-lg p-4">
-                    <h4 class="text-sm font-medium text-gray-400 mb-3 flex items-center gap-2">
-                        <i data-lucide="droplets" class="w-4 h-4 text-cyan-400"></i>
-                        Liquidity Zones
-                    </h4>
-                    <div id="liq-list" class="space-y-2 max-h-[250px] overflow-y-auto">
-                        <div class="text-gray-500 text-sm">Loading Liquidity...</div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Confluence Zones -->
-            <div class="mt-4 pt-4 border-t border-gray-700">
-                <h4 class="text-sm font-medium text-gray-400 mb-3">Confluence Zones (Multi-TF Alignment)</h4>
-                <div id="confluence-zones" class="flex gap-3 flex-wrap">
-                    <div class="text-gray-500 text-sm">Loading confluence zones...</div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Session & Time Analysis Row -->
-        <div class="grid grid-cols-12 gap-4 mt-4">
-            <!-- Current Session -->
-            <div class="col-span-4 card rounded-xl p-4">
-                <div class="flex items-center justify-between mb-3">
-                    <h3 class="font-semibold flex items-center gap-2">
-                        <i data-lucide="clock" class="w-4 h-4 text-blue-400"></i>
-                        Market Session
-                    </h3>
-                    <span id="session-badge" class="text-xs bg-green-600 px-2 py-1 rounded">OPEN</span>
-                </div>
-                <div id="session-name" class="text-2xl font-bold text-blue-400">--</div>
-                <div class="grid grid-cols-2 gap-3 mt-3 text-sm">
-                    <div>
-                        <span class="text-gray-500">Time Elapsed</span>
-                        <div id="session-elapsed" class="font-medium">-- min</div>
-                    </div>
-                    <div>
-                        <span class="text-gray-500">Time Remaining</span>
-                        <div id="session-remaining" class="font-medium">-- min</div>
-                    </div>
-                </div>
-                <div class="mt-3 pt-3 border-t border-gray-700">
-                    <div class="flex justify-between text-sm">
-                        <span class="text-gray-500">Volatility</span>
-                        <span id="session-volatility" class="font-medium">--</span>
-                    </div>
-                    <div class="flex justify-between text-sm mt-1">
-                        <span class="text-gray-500">Theta Impact</span>
-                        <span id="session-theta" class="font-medium">--</span>
-                    </div>
-                </div>
-                <div id="session-recommendation" class="text-xs text-yellow-400 mt-3 p-2 bg-yellow-500/10 rounded">
-                    --
-                </div>
-            </div>
-
-            <!-- Theta Decay Analysis -->
-            <div class="col-span-4 card rounded-xl p-4">
-                <div class="flex items-center justify-between mb-3">
-                    <h3 class="font-semibold flex items-center gap-2">
-                        <i data-lucide="timer" class="w-4 h-4 text-orange-400"></i>
-                        Theta Decay Profile
-                    </h3>
-                </div>
-                <div class="grid grid-cols-2 gap-4">
-                    <div class="text-center p-2 bg-gray-800/50 rounded-lg">
-                        <div class="text-gray-500 text-xs">DTE</div>
-                        <div id="theta-dte" class="text-2xl font-bold">--</div>
-                        <div id="theta-hours" class="text-xs text-gray-400">-- hours</div>
-                    </div>
-                    <div class="text-center p-2 bg-gray-800/50 rounded-lg">
-                        <div class="text-gray-500 text-xs">Decay Speed</div>
-                        <div id="theta-speed" class="text-lg font-bold text-orange-400">--</div>
-                    </div>
-                </div>
-                <div class="grid grid-cols-2 gap-3 mt-3 text-sm">
-                    <div>
-                        <span class="text-gray-500">Daily Decay</span>
-                        <div id="theta-daily" class="font-medium down">--%</div>
-                    </div>
-                    <div>
-                        <span class="text-gray-500">Hourly Decay</span>
-                        <div id="theta-hourly" class="font-medium down">--%</div>
-                    </div>
-                </div>
-                <div id="theta-strategy" class="text-xs text-blue-400 mt-3 p-2 bg-blue-500/10 rounded">
-                    --
-                </div>
-            </div>
 
             <!-- Option Price Calculator -->
             <div class="col-span-4 card rounded-xl p-4">
@@ -1498,16 +1339,7 @@
                 </details>
             </div>
 
-            <!-- Latest News -->
-            <div class="col-span-8 card rounded-xl p-4">
-                <h3 class="font-semibold mb-3 flex items-center gap-2">
-                    <i data-lucide="newspaper" class="w-4 h-4 text-blue-400"></i>
-                    Market News & Events
-                </h3>
-                <div id="news-list" class="space-y-2 max-h-[300px] overflow-y-auto">
-                    <div class="text-gray-500 text-sm">Loading news...</div>
-                </div>
-            </div>
+
         </div>
 
     </div> <!-- End Main Container -->
@@ -1918,12 +1750,18 @@
         }
 
         // Load Recent Scans - Now loads individual stock signals from screener_results
+        // Store all signals for filtering
+        let allUserSignals = [];
+
         async function loadRecentScans() {
             if (!authToken) return;
 
+            // Update user dashboard header
+            updateUserDashboardHeader();
+
             try {
                 // Try to fetch recent signals (individual stock results) from last 7 days
-                let response = await fetch(`${API}/screener/recent-signals?hours=168&limit=20`, {
+                let response = await fetch(`${API}/screener/recent-signals?hours=168&limit=50`, {
                     headers: {
                         'Authorization': `Bearer ${authToken}`
                     }
@@ -1936,16 +1774,28 @@
                         ...(data.signals?.buy || []).map(s => ({ ...s, action: s.action || 'BUY' })),
                         ...(data.signals?.sell || []).map(s => ({ ...s, action: s.action || 'SELL' }))
                     ];
-                    // Sort by confidence descending
-                    allSignals.sort((a, b) => (b.confidence || 0) - (a.confidence || 0));
-                    displayRecentScans(allSignals);
+                    
+                    // DEDUPLICATE: Keep only the latest signal per stock symbol
+                    const deduplicatedSignals = deduplicateSignals(allSignals);
+                    
+                    // Sort by timestamp (most recent first), then by confidence
+                    deduplicatedSignals.sort((a, b) => {
+                        const timeA = new Date(a.timestamp || 0).getTime();
+                        const timeB = new Date(b.timestamp || 0).getTime();
+                        if (timeB !== timeA) return timeB - timeA;
+                        return (b.confidence || 0) - (a.confidence || 0);
+                    });
+                    
+                    allUserSignals = deduplicatedSignals;
+                    updateSignalSummaryStats(deduplicatedSignals);
+                    displayRecentScans(deduplicatedSignals);
                     document.getElementById('recent-scans-section').classList.remove('hidden');
                     return;
                 }
 
                 // Fallback: Try the debug endpoint which returns raw data
                 console.log('Primary endpoint failed, trying fallback...');
-                response = await fetch(`${API}/screener/debug/check-data?limit=20`, {
+                response = await fetch(`${API}/screener/debug/check-data?limit=50`, {
                     headers: {
                         'Authorization': `Bearer ${authToken}`
                     }
@@ -1967,8 +1817,19 @@
                         reasons: s.reasons || [],
                         timestamp: s.scanned_at
                     }));
-                    formattedSignals.sort((a, b) => (b.confidence || 0) - (a.confidence || 0));
-                    displayRecentScans(formattedSignals);
+                    
+                    // DEDUPLICATE
+                    const deduplicatedSignals = deduplicateSignals(formattedSignals);
+                    deduplicatedSignals.sort((a, b) => {
+                        const timeA = new Date(a.timestamp || 0).getTime();
+                        const timeB = new Date(b.timestamp || 0).getTime();
+                        if (timeB !== timeA) return timeB - timeA;
+                        return (b.confidence || 0) - (a.confidence || 0);
+                    });
+                    
+                    allUserSignals = deduplicatedSignals;
+                    updateSignalSummaryStats(deduplicatedSignals);
+                    displayRecentScans(deduplicatedSignals);
                     document.getElementById('recent-scans-section').classList.remove('hidden');
                     return;
                 }
@@ -1981,13 +1842,94 @@
             }
         }
 
+        // Deduplicate signals - keep only the latest signal per stock symbol
+        function deduplicateSignals(signals) {
+            const signalMap = new Map();
+            
+            for (const signal of signals) {
+                const key = signal.symbol || signal.name;
+                if (!key) continue;
+                
+                const existing = signalMap.get(key);
+                if (!existing) {
+                    signalMap.set(key, signal);
+                } else {
+                    // Keep the more recent one
+                    const existingTime = new Date(existing.timestamp || 0).getTime();
+                    const newTime = new Date(signal.timestamp || 0).getTime();
+                    if (newTime > existingTime) {
+                        signalMap.set(key, signal);
+                    }
+                }
+            }
+            
+            return Array.from(signalMap.values());
+        }
+
+        // Update user dashboard header
+        function updateUserDashboardHeader() {
+            const emailEl = document.getElementById('dashboard-user-email');
+            if (emailEl && currentUser) {
+                emailEl.textContent = currentUser.email || 'Guest';
+            }
+        }
+
+        // Update signal summary stats
+        function updateSignalSummaryStats(signals) {
+            const buyCount = signals.filter(s => s.action === 'BUY').length;
+            const sellCount = signals.filter(s => s.action === 'SELL').length;
+            const avgConfidence = signals.length > 0 
+                ? signals.reduce((sum, s) => sum + (parseFloat(s.confidence) || 0), 0) / signals.length 
+                : 0;
+            const uniqueStocks = new Set(signals.map(s => s.symbol || s.name)).size;
+
+            document.getElementById('summary-buy-count').textContent = buyCount;
+            document.getElementById('summary-sell-count').textContent = sellCount;
+            document.getElementById('summary-avg-confidence').textContent = avgConfidence.toFixed(0) + '%';
+            document.getElementById('summary-unique-stocks').textContent = uniqueStocks;
+
+            // Update header stats
+            document.getElementById('user-total-scans').textContent = signals.length;
+            document.getElementById('user-active-signals').textContent = buyCount + sellCount;
+        }
+
+        // Filter signals based on user selection
+        function filterSignals(filter) {
+            let filtered = [...allUserSignals];
+            
+            switch(filter) {
+                case 'buy':
+                    filtered = filtered.filter(s => s.action === 'BUY');
+                    break;
+                case 'sell':
+                    filtered = filtered.filter(s => s.action === 'SELL');
+                    break;
+                case 'high':
+                    filtered = filtered.filter(s => (parseFloat(s.confidence) || 0) >= 80);
+                    break;
+                default:
+                    // 'all' - no filter
+                    break;
+            }
+            
+            displayRecentScans(filtered);
+        }
+
+        // Add filter change listener
+        document.addEventListener('DOMContentLoaded', () => {
+            const filterSelect = document.getElementById('signal-filter');
+            if (filterSelect) {
+                filterSelect.addEventListener('change', (e) => filterSignals(e.target.value));
+            }
+        });
+
         function displayRecentScans(signals) {
             const container = document.getElementById('recent-scans-content');
 
             if (!signals || signals.length === 0) {
                 container.innerHTML = `
                     <div class="text-center text-gray-500 py-8">
-                        <p class="mb-4">No recent stock signals found</p>
+                        <p class="mb-4">No stock signals found matching your criteria</p>
                         <a href="/screener.html" class="px-6 py-3 bg-blue-600 hover:bg-blue-700 rounded inline-block">
                             Run Stock Screener
                         </a>
@@ -2004,6 +1946,7 @@
                 const actionBg = isBuy ? 'bg-green-900/30 border-green-500/40' : 'bg-red-900/30 border-red-500/40';
                 const confidence = parseFloat(signal.confidence || 0);
                 const confidenceColor = confidence >= 80 ? 'text-green-400' : confidence >= 70 ? 'text-yellow-400' : 'text-gray-400';
+                const confidenceBadge = confidence >= 80 ? 'HIGH' : confidence >= 70 ? 'MODERATE' : 'LOW';
                 const price = parseFloat(signal.current_price || 0);
                 const target1 = signal.targets?.target_1 || signal.target_1;
                 const target2 = signal.targets?.target_2 || signal.target_2;
@@ -2011,9 +1954,11 @@
                 const reasons = signal.reasons || [];
                 const timeAgo = signal.timestamp ? getTimeAgo(new Date(signal.timestamp)) : '--';
                 const stockName = signal.name || signal.symbol?.split(':')[1]?.replace('-EQ', '') || '--';
+                const isRecent = signal.timestamp && (Date.now() - new Date(signal.timestamp).getTime()) < 2 * 60 * 60 * 1000; // 2 hours
 
                 return `
-                            <div class="card rounded-lg p-4 border ${actionBg} hover:border-${actionColor}-400/60 transition-all">
+                            <div class="card rounded-lg p-4 border ${actionBg} hover:border-${actionColor}-400/60 transition-all ${isRecent ? 'ring-2 ring-blue-500/50' : ''}">
+                                ${isRecent ? '<div class="text-xs text-blue-400 mb-2 flex items-center gap-1"><span class="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></span> Recent</div>' : ''}
                                 <div class="flex items-center justify-between mb-3">
                                     <div class="flex items-center gap-2">
                                         <div class="text-${actionColor}-400 font-bold text-lg px-2 py-1 rounded ${isBuy ? 'bg-green-600/20' : 'bg-red-600/20'}">
@@ -2027,6 +1972,7 @@
                                     <div class="text-right">
                                         <div class="text-xs text-gray-400">Confidence</div>
                                         <div class="text-lg font-bold ${confidenceColor}">${confidence.toFixed(0)}%</div>
+                                        <div class="text-xs ${confidenceColor}">${confidenceBadge}</div>
                                     </div>
                                 </div>
                                 
