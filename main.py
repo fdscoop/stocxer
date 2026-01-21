@@ -230,34 +230,11 @@ async def load_fyers_token_from_db():
         import traceback
         logger.error(traceback.format_exc())
     
-    # Start the background scheduler for auto-scanning
-    try:
-        logger.info("🚀 Starting background options scanner...")
-        
-        # Schedule auto-scan every 16 minutes
-        scheduler.add_job(
-            auto_scan_options,
-            trigger=IntervalTrigger(minutes=16),
-            id='options_auto_scan',
-            name='Auto Options Scanner',
-            replace_existing=True
-        )
-        
-        scheduler.start()
-        logger.info("✅ Background scheduler started - auto-scan every 16 minutes")
-        
-        # Run initial scan after 30 seconds
-        scheduler.add_job(
-            auto_scan_options,
-            'date',
-            run_date=datetime.now() + timedelta(seconds=30),
-            id='initial_scan',
-            name='Initial Options Scan'
-        )
-        logger.info("⏰ Initial scan scheduled in 30 seconds...")
-        
-    except Exception as scheduler_error:
-        logger.error(f"❌ Error starting background scheduler: {scheduler_error}")
+    # Auto options scanner has been disabled
+    # The scan is now only triggered on-demand from the frontend
+    logger.info("ℹ️ Auto options scanner disabled - scans are on-demand only")
+
+
 
 
 @app.on_event("shutdown")

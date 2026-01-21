@@ -27,14 +27,22 @@ class Timeframe(Enum):
 
 
 # Fyers resolution mapping
+# Note: Fyers API only supports up to 1D resolution
+# For Monthly and Weekly, we fetch daily data and aggregate
 FYERS_RESOLUTION = {
-    Timeframe.MONTHLY: "M",
-    Timeframe.WEEKLY: "W",
+    Timeframe.MONTHLY: "D",   # Fetch daily, aggregate to monthly
+    Timeframe.WEEKLY: "D",    # Fetch daily, aggregate to weekly
     Timeframe.DAILY: "D",
     Timeframe.FOUR_HOUR: "240",
     Timeframe.ONE_HOUR: "60",
     Timeframe.FIFTEEN_MIN: "15",
     Timeframe.FIVE_MIN: "5"
+}
+
+# Timeframes that need aggregation from daily data
+NEEDS_AGGREGATION = {
+    Timeframe.MONTHLY: "ME",  # Month End for pandas resampling
+    Timeframe.WEEKLY: "W",    # Weekly for pandas resampling
 }
 
 # Days of data needed for each timeframe
@@ -47,6 +55,7 @@ LOOKBACK_DAYS = {
     Timeframe.FIFTEEN_MIN: 10, # 10 days
     Timeframe.FIVE_MIN: 5     # 5 days
 }
+
 
 
 @dataclass
@@ -159,10 +168,23 @@ class MultiTimeframeICTAnalyzer:
                 # Generate sample data for testing
                 df = self._generate_sample_data(symbol, timeframe, days)
             
+            # Aggregate daily data to weekly/monthly if needed
+            if timeframe in NEEDS_AGGREGATION and not df.empty:
+                resample_rule = NEEDS_AGGREGATION[timeframe]
+                df = df.resample(resample_rule).agg({
+                    'open': 'first',
+                    'high': 'max',
+                    'low': 'min',
+                    'close': 'last',
+                    'volume': 'sum'
+                }).dropna()
+                logger.info(f"📊 Aggregated {timeframe.value} data: {len(df)} candles")
+            
             return df
         except Exception as e:
             logger.error(f"Error fetching data for {symbol} {timeframe}: {e}")
             return self._generate_sample_data(symbol, timeframe, LOOKBACK_DAYS[timeframe])
+
     
     def _generate_sample_data(self, symbol: str, timeframe: Timeframe, periods: int) -> pd.DataFrame:
         """Generate sample OHLC data for testing"""

@@ -81,8 +81,8 @@ NIFTY50_CONSTITUENTS: List[StockConstituent] = [
     StockConstituent("ASIANPAINT", "NSE:ASIANPAINT-EQ", "Asian Paints Ltd", 1.48, Sector.CONSUMER, 0.85, 0.65),
     StockConstituent("BAJAJ-AUTO", "NSE:BAJAJ-AUTO-EQ", "Bajaj Auto Ltd", 1.42, Sector.AUTO, 0.90, 0.68),
     StockConstituent("POWERGRID", "NSE:POWERGRID-EQ", "Power Grid Corporation", 1.38, Sector.POWER, 0.75, 0.62),
-    StockConstituent("SHRIRAMFIN", "NSE:SRTRANSFIN-EQ", "Shriram Finance Ltd", 1.35, Sector.NBFC, 1.20, 0.72),
-    StockConstituent("TATAMOTORS", "NSE:TATAMOTORS-EQ", "Tata Motors Ltd", 1.32, Sector.AUTO, 1.45, 0.78),
+    StockConstituent("SHRIRAMFIN", "NSE:SHRIRAMFIN-EQ", "Shriram Finance Ltd", 1.35, Sector.NBFC, 1.20, 0.72),
+    StockConstituent("TATAMOTORS", "NSE:TATAMOTOR-EQ", "Tata Motors Ltd", 1.32, Sector.AUTO, 1.45, 0.78),
     StockConstituent("EICHERMOT", "NSE:EICHERMOT-EQ", "Eicher Motors Ltd", 1.28, Sector.AUTO, 1.00, 0.70),
     
     # Lower Weight (0.5-1%)
@@ -166,7 +166,7 @@ SENSEX_CONSTITUENTS: List[StockConstituent] = [
     StockConstituent("TATASTEEL", "NSE:TATASTEEL-EQ", "Tata Steel Ltd", 1.15, Sector.METALS, 1.35, 0.72),
     StockConstituent("WIPRO", "NSE:WIPRO-EQ", "Wipro Ltd", 1.05, Sector.IT, 0.78, 0.68),
     StockConstituent("INDUSINDBK", "NSE:INDUSINDBK-EQ", "IndusInd Bank Ltd", 0.95, Sector.BANKING, 1.30, 0.78),
-    StockConstituent("TATAMOTORS", "NSE:TATAMOTORS-EQ", "Tata Motors Ltd", 0.88, Sector.AUTO, 1.45, 0.78),
+    StockConstituent("TATAMOTORS", "NSE:TATAMOTOR-EQ", "Tata Motors Ltd", 0.88, Sector.AUTO, 1.45, 0.78),
 ]
 
 
@@ -182,7 +182,7 @@ FINNIFTY_CONSTITUENTS: List[StockConstituent] = [
     StockConstituent("AXISBANK", "NSE:AXISBANK-EQ", "Axis Bank Ltd", 5.84, Sector.BANKING, 1.10, 0.92),
     StockConstituent("BAJAJFINSV", "NSE:BAJAJFINSV-EQ", "Bajaj Finserv Ltd", 4.70, Sector.NBFC, 1.15, 0.82),
     StockConstituent("SBILIFE", "NSE:SBILIFE-EQ", "SBI Life Insurance", 3.07, Sector.INSURANCE, 0.95, 0.78),
-    StockConstituent("SHRIRAMFIN", "NSE:SRTRANSFIN-EQ", "Shriram Finance Ltd", 2.71, Sector.NBFC, 1.10, 0.75),
+    StockConstituent("SHRIRAMFIN", "NSE:SHRIRAMFIN-EQ", "Shriram Finance Ltd", 2.71, Sector.NBFC, 1.10, 0.75),
     StockConstituent("JIOFIN", "NSE:JIOFIN-EQ", "Jio Financial Services", 2.70, Sector.FINANCIALS, 1.25, 0.70),
     StockConstituent("HDFCLIFE", "NSE:HDFCLIFE-EQ", "HDFC Life Insurance", 2.39, Sector.INSURANCE, 0.90, 0.75),
     StockConstituent("MUTHOOTFIN", "NSE:MUTHOOTFIN-EQ", "Muthoot Finance Ltd", 2.27, Sector.NBFC, 1.05, 0.72),
