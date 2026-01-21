@@ -46,8 +46,9 @@ NEEDS_AGGREGATION = {
 }
 
 # Days of data needed for each timeframe
+# Note: Fyers API limits 1D resolution to max 365 days
 LOOKBACK_DAYS = {
-    Timeframe.MONTHLY: 730,   # 2 years
+    Timeframe.MONTHLY: 365,   # 1 year (Fyers max for 1D)
     Timeframe.WEEKLY: 365,    # 1 year
     Timeframe.DAILY: 180,     # 6 months
     Timeframe.FOUR_HOUR: 60,  # 2 months
@@ -55,6 +56,7 @@ LOOKBACK_DAYS = {
     Timeframe.FIFTEEN_MIN: 10, # 10 days
     Timeframe.FIVE_MIN: 5     # 5 days
 }
+
 
 
 
