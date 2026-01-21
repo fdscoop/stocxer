@@ -1075,7 +1075,23 @@ async def get_option_chain_analysis(
                     }
                 }
                 for s in chain.strikes
-            ]
+            ],
+            # Actual futures data (if available)
+            "futures_data": {
+                "symbol": chain.futures_data.symbol,
+                "price": chain.futures_data.price,
+                "basis": chain.futures_data.basis,
+                "basis_pct": chain.futures_data.basis_pct,
+                "oi": chain.futures_data.oi,
+                "volume": chain.futures_data.volume,
+                "oi_change": chain.futures_data.oi_change,
+                "oi_analysis": chain.futures_data.oi_analysis,
+                "expiry_date": chain.futures_data.expiry_date,
+                "days_to_expiry": chain.futures_data.days_to_expiry,
+                "next_month_symbol": chain.futures_data.next_month_symbol,
+                "next_month_price": chain.futures_data.next_month_price,
+                "rollover_cost": chain.futures_data.rollover_cost
+            } if chain.futures_data else None
         }
     except Exception as e:
         logger.error(f"Error getting option chain: {e}")
@@ -1672,8 +1688,16 @@ async def get_actionable_trading_signal(
                 "support_levels": chain_data.get("levels", {}).get("support", []),
                 "resistance_levels": chain_data.get("levels", {}).get("resistance", []),
                 "total_call_oi": chain_data.get("totals", {}).get("call_oi", 0),
-                "total_put_oi": chain_data.get("totals", {}).get("put_oi", 0)
+                "total_put_oi": chain_data.get("totals", {}).get("put_oi", 0),
+                # Actual futures data
+                "futures_data": chain_data.get("futures_data")
             }
+            
+            # Log futures data if available
+            futures = chain_data.get("futures_data")
+            if futures:
+                logger.info(f"📊 FUTURES: {futures.get('symbol')} @ ₹{futures.get('price')}, Basis: {futures.get('basis_pct')}%, OI Analysis: {futures.get('oi_analysis')}")
+            
             logger.info(f"✅ Got option chain data for {index_name}")
             
             # Log sample strike data for debugging
@@ -2034,6 +2058,48 @@ def _generate_actionable_signal(mtf_result, session_info, chain_data, historical
             logger.info(f"⚠️ Constituent analysis CONFLICTS with bias: {constituent_boost}% confidence penalty")
         
         logger.info(f"📊 Constituent direction: {constituent_direction}, Overall bias: {overall_bias}")
+    # ================================================================
+    
+    # ==================== FUTURES SENTIMENT ANALYSIS ====================
+    # Use futures basis to boost signal confidence
+    futures_boost = 0
+    futures_sentiment = 'neutral'
+    
+    # Get futures data from chain_data if available
+    futures_data = chain_data.get("futures_data") if chain_data else None
+    if futures_data:
+        basis_pct = futures_data.get("basis_pct", 0)
+        futures_oi_analysis = futures_data.get("oi_analysis", "")
+        
+        # Analyze basis for sentiment
+        # Premium > 0.3%: Bullish (institutions buying futures)
+        # Discount < -0.1%: Bearish (institutions selling futures)
+        if basis_pct > 0.3:
+            futures_sentiment = 'bullish'
+            if overall_bias == 'bullish':
+                futures_boost = min(8, basis_pct * 15)  # Up to 8% boost
+                logger.info(f"📈 FUTURES BULLISH: Basis {basis_pct:.3f}% → +{futures_boost:.1f}% confidence")
+            elif overall_bias == 'bearish':
+                futures_boost = -3  # Penalty for conflicting signal
+                logger.info(f"⚠️ FUTURES CONFLICTS: Bullish basis vs bearish bias → {futures_boost}%")
+        elif basis_pct < -0.1:
+            futures_sentiment = 'bearish'
+            if overall_bias == 'bearish':
+                futures_boost = min(8, abs(basis_pct) * 15)  # Up to 8% boost
+                logger.info(f"📉 FUTURES BEARISH: Basis {basis_pct:.3f}% → +{futures_boost:.1f}% confidence")
+            elif overall_bias == 'bullish':
+                futures_boost = -3  # Penalty for conflicting signal
+                logger.info(f"⚠️ FUTURES CONFLICTS: Bearish basis vs bullish bias → {futures_boost}%")
+        else:
+            logger.info(f"📊 FUTURES NEUTRAL: Basis {basis_pct:.3f}% (within normal range)")
+        
+        # OI analysis can provide additional insight
+        if futures_oi_analysis == "Long Build" and overall_bias == 'bullish':
+            futures_boost += 2
+            logger.info(f"📊 Futures OI: Long Build → additional +2% boost")
+        elif futures_oi_analysis == "Short Build" and overall_bias == 'bearish':
+            futures_boost += 2
+            logger.info(f"📊 Futures OI: Short Build → additional +2% boost")
     # ================================================================
     
     # ==================== ML PREDICTION ANALYSIS ====================

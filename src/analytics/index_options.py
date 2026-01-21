@@ -106,6 +106,24 @@ class OptionStrike:
 
 
 @dataclass
+class FuturesData:
+    """Futures contract data for enhanced signal accuracy"""
+    symbol: str                    # e.g., "NSE:NIFTY26JANFUT"
+    price: float                   # Current futures LTP
+    basis: float                   # futures - spot
+    basis_pct: float               # (basis / spot) * 100
+    oi: int                        # Open interest
+    volume: int                    # Today's volume
+    oi_change: int                 # OI change from previous day
+    oi_analysis: str               # "Long Build", "Short Build", etc.
+    expiry_date: str               # Expiry date
+    days_to_expiry: int
+    next_month_symbol: str = ""    # Next month futures symbol
+    next_month_price: float = 0    # Next month futures LTP
+    rollover_cost: float = 0       # Next month - Current month price
+
+
+@dataclass
 class OptionChainAnalysis:
     """Complete option chain analysis"""
     index: str
@@ -130,6 +148,7 @@ class OptionChainAnalysis:
     support_levels: List[float]
     resistance_levels: List[float]
     oi_buildup_zones: Dict[str, List[float]]
+    futures_data: Optional[FuturesData] = None  # Actual futures data
 
 
 class IndexOptionsAnalyzer:
@@ -211,6 +230,151 @@ class IndexOptionsAnalyzer:
                 vix=15.0, vix_trend="stable", vix_percentile=50,
                 regime="normal", trend="sideways", strength=50
             )
+    
+    def get_futures_data(self, index: str, spot_price: float) -> Optional[FuturesData]:
+        """
+        Fetch actual futures data for an index from Fyers API
+        
+        Args:
+            index: Index name (NIFTY, BANKNIFTY, FINNIFTY)
+            spot_price: Current spot price for basis calculation
+            
+        Returns:
+            FuturesData with actual futures price, OI, volume, and analysis
+        """
+        try:
+            # Map index to futures symbol prefix
+            futures_map = {
+                "NIFTY": "NIFTY",
+                "BANKNIFTY": "NIFTYBANK",
+                "FINNIFTY": "FINNIFTY",
+                "MIDCPNIFTY": "MIDCPNIFTY"
+            }
+            
+            fut_prefix = futures_map.get(index.upper())
+            if not fut_prefix:
+                logger.warning(f"No futures mapping for index: {index}")
+                return None
+            
+            # Generate current and next month futures symbols
+            # Fyers format: NSE:NIFTY{YY}{MMM}FUT (e.g., NSE:NIFTY26JANFUT)
+            today = datetime.now()
+            
+            # Current month expiry (last Thursday)
+            current_month = today.month
+            current_year = today.year % 100  # 2-digit year
+            
+            # Month abbreviation mapping
+            month_abbr = {
+                1: "JAN", 2: "FEB", 3: "MAR", 4: "APR",
+                5: "MAY", 6: "JUN", 7: "JUL", 8: "AUG",
+                9: "SEP", 10: "OCT", 11: "NOV", 12: "DEC"
+            }
+            
+            # Current month symbol
+            current_month_symbol = f"NSE:{fut_prefix}{current_year}{month_abbr[current_month]}FUT"
+            
+            # Next month symbol
+            next_month = current_month + 1 if current_month < 12 else 1
+            next_year = current_year if current_month < 12 else current_year + 1
+            next_month_symbol = f"NSE:{fut_prefix}{next_year}{month_abbr[next_month]}FUT"
+            
+            logger.info(f"📊 Fetching futures data: {current_month_symbol}, {next_month_symbol}")
+            
+            # Fetch quotes for both months
+            futures_response = self.fyers.get_quotes([current_month_symbol, next_month_symbol])
+            
+            if not futures_response or futures_response.get("code") != 200:
+                logger.warning(f"Failed to fetch futures quotes: {futures_response}")
+                return None
+            
+            futures_data_list = futures_response.get("d", [])
+            
+            current_futures = None
+            next_futures = None
+            
+            for fut_data in futures_data_list:
+                symbol = fut_data.get("n", "")
+                vals = fut_data.get("v", {})
+                
+                if current_month_symbol in symbol or fut_prefix in symbol:
+                    if month_abbr[current_month] in symbol:
+                        current_futures = vals
+                    elif month_abbr[next_month] in symbol:
+                        next_futures = vals
+            
+            if not current_futures:
+                # First item is usually current month
+                if futures_data_list:
+                    current_futures = futures_data_list[0].get("v", {})
+                    if len(futures_data_list) > 1:
+                        next_futures = futures_data_list[1].get("v", {})
+            
+            if not current_futures:
+                logger.warning("No futures data found in response")
+                return None
+            
+            # Extract data
+            futures_price = current_futures.get("lp", 0) or current_futures.get("close_price", 0)
+            futures_oi = current_futures.get("oi", 0) or 0
+            futures_volume = current_futures.get("volume", 0) or 0
+            price_change = current_futures.get("ch", 0) or 0
+            
+            # Calculate basis
+            basis = futures_price - spot_price
+            basis_pct = (basis / spot_price * 100) if spot_price > 0 else 0
+            
+            # OI change (from the response if available)
+            oi_change = current_futures.get("oi_change", 0) or 0
+            
+            # Analyze OI
+            oi_analysis = self.analyze_oi_change(oi_change, price_change)
+            
+            # Calculate days to expiry (last Thursday of current month)
+            # Find last Thursday
+            year = today.year
+            month = current_month
+            if month == 12:
+                last_day = datetime(year + 1, 1, 1) - timedelta(days=1)
+            else:
+                last_day = datetime(year, month + 1, 1) - timedelta(days=1)
+            
+            # Find last Thursday
+            days_to_thursday = (last_day.weekday() - 3) % 7
+            last_thursday = last_day - timedelta(days=days_to_thursday)
+            days_to_expiry = (last_thursday - today).days
+            if days_to_expiry < 0:
+                # Already past expiry, move to next month
+                days_to_expiry = 0
+            
+            # Next month data
+            next_price = 0
+            rollover_cost = 0
+            if next_futures:
+                next_price = next_futures.get("lp", 0) or next_futures.get("close_price", 0)
+                rollover_cost = next_price - futures_price
+            
+            logger.info(f"✅ Futures: {current_month_symbol} @ ₹{futures_price:.2f}, Basis: {basis:.2f} ({basis_pct:.3f}%), OI: {futures_oi:,}")
+            
+            return FuturesData(
+                symbol=current_month_symbol,
+                price=round(futures_price, 2),
+                basis=round(basis, 2),
+                basis_pct=round(basis_pct, 4),
+                oi=futures_oi,
+                volume=futures_volume,
+                oi_change=oi_change,
+                oi_analysis=oi_analysis,
+                expiry_date=last_thursday.strftime("%Y-%m-%d"),
+                days_to_expiry=max(0, days_to_expiry),
+                next_month_symbol=next_month_symbol,
+                next_month_price=round(next_price, 2),
+                rollover_cost=round(rollover_cost, 2)
+            )
+            
+        except Exception as e:
+            logger.error(f"Error fetching futures data for {index}: {e}")
+            return None
     
     def get_expiry_dates(self, index: str) -> Dict[str, str]:
         """
@@ -454,10 +618,22 @@ class IndexOptionsAnalyzer:
                 logger.error("❌ Fyers API authentication required. Cannot fetch live spot price.")
                 raise Exception("❌ Fyers authentication required. Please authenticate to get live option chain data.")
             
-            # Get future price (approximate)
-            future_price = spot_price * 1.001  # ~0.1% basis
-            basis = future_price - spot_price
-            basis_pct = (basis / spot_price) * 100
+            # Get ACTUAL futures data (not estimated)
+            futures_data = self.get_futures_data(index, spot_price)
+            
+            if futures_data and futures_data.price > 0:
+                # Use actual futures price and basis
+                future_price = futures_data.price
+                basis = futures_data.basis
+                basis_pct = futures_data.basis_pct
+                logger.info(f"✅ Using ACTUAL futures data: ₹{future_price:.2f}, Basis: {basis_pct:.4f}%")
+            else:
+                # Fallback to estimation if futures data unavailable
+                future_price = spot_price * 1.001  # ~0.1% basis estimate
+                basis = future_price - spot_price
+                basis_pct = (basis / spot_price) * 100
+                futures_data = None
+                logger.warning(f"⚠️ Using ESTIMATED futures price: ₹{future_price:.2f} (futures data unavailable)")
             
             # Get VIX
             vix = 11.37  # Default value
@@ -644,7 +820,8 @@ class IndexOptionsAnalyzer:
                 oi_buildup_zones={
                     "bullish": bullish_zones,
                     "bearish": bearish_zones
-                }
+                },
+                futures_data=futures_data  # Actual futures data (or None if unavailable)
             )
             
         except Exception as e:
