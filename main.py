@@ -26,6 +26,9 @@ from src.services.auth_service import auth_service
 from src.services.screener_service import screener_service
 from src.models.auth_models import UserRegister, UserLogin, FyersTokenStore
 
+# IST timezone utilities for consistent time handling across geographies
+from src.utils.ist_utils import now_ist, get_ist_time, ist_timestamp, is_market_open, get_session_info as get_ist_session_info
+
 # Optional ML imports (not required for production API)
 try:
     from src.ml.price_prediction import price_predictor
@@ -3040,9 +3043,8 @@ def _get_theta_decay_analysis(dte: int, iv: float, current_theta: float) -> dict
     # Calculate expected decay
     hourly_decay_pct = daily_decay_pct / 6.25  # ~6.25 market hours per day
     
-    # Best time to buy based on DTE and market session
-    from datetime import datetime, time
-    now = datetime.now().time()
+    # Best time to buy based on DTE and market session - USE IST
+    now = get_ist_time()  # IST time for consistent session detection
     market_open = time(9, 15)
     market_close = time(15, 30)
     
@@ -3267,10 +3269,9 @@ def _get_trade_recommendation(probability: float, confidence: str, ml_signal: di
 
 
 def _get_session_timing(session):
-    """Get session-specific timing advice for Indian market (Mon-Fri)"""
-    from datetime import datetime
-    
-    now = datetime.now()
+    """Get session-specific timing advice for Indian market (Mon-Fri) in IST"""
+    # Use IST utilities for consistent timezone handling across geographies
+    now = now_ist()
     current_time = now.time()
     weekday = now.weekday()  # 0=Monday, 4=Friday
     
@@ -3284,7 +3285,6 @@ def _get_session_timing(session):
         }
     
     # Define Indian market sessions (IST)
-    from datetime import time
     market_open = time(9, 15)
     session_1_end = time(12, 30)  # First session: 9:15 AM - 12:30 PM
     session_2_end = time(15, 30)  # Second session: 12:30 PM - 3:30 PM
@@ -4436,9 +4436,21 @@ def generate_mock_options_scan_data(index: str, expiry: str, min_volume: int, mi
 
 
 def process_options_scan(chain, min_volume: int, min_oi: int, strategy: str):
-    """Process real option chain data for scanning"""
+    """Process real option chain data for scanning with discount zone analysis"""
     options = []
     spot_price = chain.spot_price
+    
+    # Get market context for discount zone calculations
+    dte = getattr(chain, 'days_to_expiry', 7)  # Default 7 days
+    avg_iv = 0.15  # Default average IV (can be enhanced with historical data)
+    market_momentum = "neutral"  # Can be enhanced with MTF analysis integration
+    
+    # Determine market momentum from chain data if available
+    pcr_oi = getattr(chain, 'pcr_oi', 1.0)
+    if pcr_oi > 1.2:
+        market_momentum = "bullish"  # High PCR = bullish
+    elif pcr_oi < 0.8:
+        market_momentum = "bearish"  # Low PCR = bearish
     
     for strike_data in chain.strikes:
         strike = strike_data.strike
@@ -4455,18 +4467,34 @@ def process_options_scan(chain, min_volume: int, min_oi: int, strategy: str):
                 delta, gamma, strategy
             )
             
+            # Calculate discount zone for this option
+            call_iv = getattr(strike_data, 'call_iv', 0.15) or 0.15
+            discount_zone = calculate_discount_zone(
+                option_ltp=strike_data.call_ltp,
+                spot_price=spot_price,
+                strike=strike,
+                option_type="CALL",
+                iv=call_iv,
+                delta=delta,
+                dte=dte,
+                avg_iv=avg_iv,
+                market_momentum=market_momentum,
+                oi_analysis=getattr(strike_data, 'call_analysis', 'neutral') or 'neutral'
+            )
+            
             options.append({
                 "strike": strike,
                 "type": "CALL",
                 "ltp": strike_data.call_ltp,
                 "volume": strike_data.call_volume,
                 "oi": strike_data.call_oi,
-                "iv": strike_data.call_iv,
+                "iv": call_iv,
                 "delta": delta,
                 "gamma": gamma,
                 "score": score,
                 "strategy_match": get_strategy_match(score, strategy),
-                "recommendation": get_option_recommendation(score, "CALL", spot_price / strike)
+                "recommendation": get_option_recommendation(score, "CALL", spot_price / strike),
+                "discount_zone": discount_zone
             })
         
         # Process PUT options
@@ -4481,18 +4509,34 @@ def process_options_scan(chain, min_volume: int, min_oi: int, strategy: str):
                 delta, gamma, strategy
             )
             
+            # Calculate discount zone for this option
+            put_iv = getattr(strike_data, 'put_iv', 0.15) or 0.15
+            discount_zone = calculate_discount_zone(
+                option_ltp=strike_data.put_ltp,
+                spot_price=spot_price,
+                strike=strike,
+                option_type="PUT",
+                iv=put_iv,
+                delta=delta,
+                dte=dte,
+                avg_iv=avg_iv,
+                market_momentum=market_momentum,
+                oi_analysis=getattr(strike_data, 'put_analysis', 'neutral') or 'neutral'
+            )
+            
             options.append({
                 "strike": strike,
                 "type": "PUT",
                 "ltp": strike_data.put_ltp,
                 "volume": strike_data.put_volume,
                 "oi": strike_data.put_oi,
-                "iv": strike_data.put_iv,
+                "iv": put_iv,
                 "delta": delta,
                 "gamma": gamma,
                 "score": score,
                 "strategy_match": get_strategy_match(score, strategy),
-                "recommendation": get_option_recommendation(score, "PUT", spot_price / strike)
+                "recommendation": get_option_recommendation(score, "PUT", spot_price / strike),
+                "discount_zone": discount_zone
             })
     
     # Sort by score (highest first)
@@ -4595,6 +4639,269 @@ def get_option_recommendation(score: float, option_type: str, moneyness: float) 
     
     position = "ITM" if (option_type == "CALL" and moneyness > 1) or (option_type == "PUT" and moneyness < 1) else "OTM"
     return f"{action} - {position} {option_type}"
+
+
+def calculate_discount_zone(
+    option_ltp: float,
+    spot_price: float,
+    strike: float,
+    option_type: str,
+    iv: float,
+    delta: float,
+    dte: int,
+    avg_iv: float = 0.15,  # Historical average IV (15% default for NIFTY)
+    market_momentum: str = "neutral",  # "bullish", "bearish", "neutral"
+    oi_analysis: str = "neutral"  # "long_build", "short_build", "long_unwind", "short_cover"
+) -> dict:
+    """
+    Calculate if current option price is in a discounted zone.
+    
+    This function determines whether the recommended buy price lies within a discounted
+    zone rather than at an inflated or peak price. It considers:
+    1. IV level relative to historical average
+    2. Underlying momentum and trend direction
+    3. Time feasibility for expected price movement
+    4. OI analysis for institutional positioning
+    
+    Args:
+        option_ltp: Current option LTP (Last Traded Price)
+        spot_price: Current underlying spot price
+        strike: Option strike price
+        option_type: "CALL" or "PUT"
+        iv: Current implied volatility (as decimal, e.g., 0.15 for 15%)
+        delta: Option delta
+        dte: Days to expiry
+        avg_iv: Historical average IV (default 15%)
+        market_momentum: Current market momentum direction
+        oi_analysis: OI-based analysis for positioning
+        
+    Returns:
+        dict with:
+            - status: "deep_discount", "discounted", "fair", "premium"
+            - current_price: Current option LTP
+            - best_entry_price: Recommended best entry price
+            - max_entry_price: Maximum price to pay for entry
+            - target_price: Expected target price
+            - expected_pullback_pct: Expected % pullback before move
+            - time_feasible: Whether time allows for entry setup
+            - supports_entry: Boolean - should user enter now
+            - reasoning: Explanation of the analysis
+    """
+    
+    # Default response structure
+    result = {
+        "status": "fair",
+        "current_price": round(option_ltp, 2),
+        "best_entry_price": round(option_ltp, 2),
+        "max_entry_price": round(option_ltp * 1.05, 2),
+        "target_price": round(option_ltp * 1.3, 2),
+        "expected_pullback_pct": 0.0,
+        "time_feasible": True,
+        "supports_entry": True,
+        "reasoning": "Option priced at fair value"
+    }
+    
+    if option_ltp <= 0:
+        result["status"] = "invalid"
+        result["supports_entry"] = False
+        result["reasoning"] = "Invalid option price"
+        return result
+    
+    # =====================================================
+    # 1. IV ANALYSIS - Compare current IV to historical average
+    # =====================================================
+    iv_ratio = iv / avg_iv if avg_iv > 0 else 1.0
+    iv_premium_pct = (iv_ratio - 1.0) * 100
+    
+    # IV Zones:
+    # - Deep Discount: IV < 80% of average (rare, often after IV crush)
+    # - Discounted: IV between 80-95% of average
+    # - Fair: IV between 95-110% of average
+    # - Premium: IV between 110-130% of average
+    # - High Premium: IV > 130% of average (avoid buying)
+    
+    iv_zone = "fair"
+    if iv_ratio < 0.80:
+        iv_zone = "deep_discount"
+    elif iv_ratio < 0.95:
+        iv_zone = "discounted"
+    elif iv_ratio <= 1.10:
+        iv_zone = "fair"
+    elif iv_ratio <= 1.30:
+        iv_zone = "premium"
+    else:
+        iv_zone = "high_premium"
+    
+    # =====================================================
+    # 2. MOMENTUM ANALYSIS - Does momentum support pullback?
+    # =====================================================
+    momentum_supports_pullback = False
+    expected_pullback_pct = 0.0
+    
+    # For CALL options: Bullish momentum means price may already be elevated
+    # A brief pullback before continuation is often expected
+    if option_type == "CALL":
+        if market_momentum == "bullish":
+            # In bullish trend, expect minor pullback before continuation
+            expected_pullback_pct = 3.0 if dte > 3 else 5.0
+            momentum_supports_pullback = True
+        elif market_momentum == "bearish":
+            # Bearish momentum - calls may get cheaper, wait for reversal
+            expected_pullback_pct = 8.0 if dte > 3 else 12.0
+            momentum_supports_pullback = True
+        else:
+            expected_pullback_pct = 2.0
+            momentum_supports_pullback = dte > 2
+    
+    # For PUT options: Bearish momentum means price may already be elevated
+    elif option_type == "PUT":
+        if market_momentum == "bearish":
+            expected_pullback_pct = 3.0 if dte > 3 else 5.0
+            momentum_supports_pullback = True
+        elif market_momentum == "bullish":
+            expected_pullback_pct = 8.0 if dte > 3 else 12.0
+            momentum_supports_pullback = True
+        else:
+            expected_pullback_pct = 2.0
+            momentum_supports_pullback = dte > 2
+    
+    # =====================================================
+    # 3. OI ANALYSIS - Institutional positioning
+    # =====================================================
+    oi_supports_entry = True
+    oi_reasoning = ""
+    
+    if option_type == "CALL":
+        if oi_analysis == "long_build":
+            oi_supports_entry = True
+            oi_reasoning = "Institutional long building - bullish"
+        elif oi_analysis == "short_build":
+            oi_supports_entry = False
+            oi_reasoning = "Writers adding positions - wait for pullback"
+        elif oi_analysis == "short_cover":
+            oi_supports_entry = True
+            oi_reasoning = "Short covering - momentum building"
+    else:  # PUT
+        if oi_analysis == "long_build":
+            oi_supports_entry = True
+            oi_reasoning = "Institutional put building - bearish"
+        elif oi_analysis == "short_build":
+            oi_supports_entry = False
+            oi_reasoning = "Put writers active - wait for better entry"
+        elif oi_analysis == "short_cover":
+            oi_supports_entry = True
+            oi_reasoning = "Put short covering - downside momentum"
+    
+    # =====================================================
+    # 4. TIME FEASIBILITY CHECK
+    # =====================================================
+    # Check if there's enough time for the expected pullback and move
+    time_feasible = True
+    time_warning = ""
+    
+    if dte <= 1:
+        time_feasible = expected_pullback_pct <= 5.0
+        time_warning = "Expiry day - very limited time for pullback"
+    elif dte <= 2:
+        time_feasible = expected_pullback_pct <= 8.0
+        time_warning = "Last 2 days - quick entries only"
+    elif dte <= 5:
+        time_feasible = True
+        time_warning = "Sufficient time for setup"
+    else:
+        time_feasible = True
+        time_warning = "Good time horizon"
+    
+    # Calculate time available in minutes (IST trading hours)
+    from src.utils.ist_utils import get_minutes_to_market_close, is_market_open
+    minutes_remaining = get_minutes_to_market_close() if is_market_open() else 375  # Full day
+    
+    # Estimate time needed for pullback (rough heuristic)
+    pullback_time_needed = expected_pullback_pct * 10  # ~10 minutes per 1% pullback expected
+    time_feasible = time_feasible and (minutes_remaining >= pullback_time_needed or not is_market_open())
+    
+    # =====================================================
+    # 5. CALCULATE ENTRY PRICES
+    # =====================================================
+    # Best entry: Current price adjusted for expected pullback
+    # Max entry: Upper bound still considered acceptable
+    
+    best_entry_price = option_ltp * (1 - expected_pullback_pct / 100)
+    
+    # Max entry depends on IV zone
+    if iv_zone in ["deep_discount", "discounted"]:
+        max_entry_price = option_ltp * 1.02  # Can pay slightly more
+    elif iv_zone == "fair":
+        max_entry_price = option_ltp * 1.01  # Tight range
+    elif iv_zone == "premium":
+        max_entry_price = option_ltp * 0.95  # Wait for pullback
+        best_entry_price = option_ltp * 0.90
+    else:  # high_premium
+        max_entry_price = option_ltp * 0.85  # Significant pullback needed
+        best_entry_price = option_ltp * 0.80
+    
+    # Target price based on delta and expected move
+    # Simplified: expect 30% gain for ATM options, scaled by delta
+    target_multiplier = 1.3 if abs(delta) > 0.4 else (1.5 if abs(delta) > 0.2 else 1.2)
+    target_price = option_ltp * target_multiplier
+    
+    # =====================================================
+    # 6. DETERMINE FINAL STATUS AND RECOMMENDATION
+    # =====================================================
+    
+    # Combine all factors
+    if iv_zone in ["deep_discount", "discounted"]:
+        if oi_supports_entry and time_feasible:
+            status = iv_zone
+            supports_entry = True
+            reasoning = f"✅ {iv_zone.upper()}: IV {iv_premium_pct:+.1f}% vs avg. {oi_reasoning}. {time_warning}"
+        else:
+            status = iv_zone
+            supports_entry = time_feasible
+            reasoning = f"⚠️ {iv_zone.upper()}: IV low but {oi_reasoning}. {time_warning}"
+    
+    elif iv_zone == "fair":
+        if oi_supports_entry and momentum_supports_pullback and time_feasible:
+            status = "fair"
+            supports_entry = True
+            reasoning = f"✅ FAIR VALUE: IV normal. {oi_reasoning}. Expect {expected_pullback_pct:.0f}% pullback window."
+        elif time_feasible:
+            status = "fair"
+            supports_entry = True
+            reasoning = f"⚠️ FAIR VALUE: Consider limit order at ₹{best_entry_price:.2f} for better entry."
+        else:
+            status = "fair"
+            supports_entry = False
+            reasoning = f"⏳ FAIR VALUE but time constrained. {time_warning}"
+    
+    elif iv_zone == "premium":
+        status = "premium"
+        supports_entry = False
+        best_entry_price = option_ltp * 0.90  # Need 10% pullback
+        reasoning = f"🔶 PREMIUM: IV +{iv_premium_pct:.0f}% elevated. Wait for pullback to ₹{best_entry_price:.2f}."
+    
+    else:  # high_premium
+        status = "high_premium"
+        supports_entry = False
+        best_entry_price = option_ltp * 0.80
+        reasoning = f"🔴 HIGH PREMIUM: IV +{iv_premium_pct:.0f}% very elevated. Avoid or wait for significant pullback."
+    
+    result = {
+        "status": status,
+        "current_price": round(option_ltp, 2),
+        "best_entry_price": round(best_entry_price, 2),
+        "max_entry_price": round(max_entry_price, 2),
+        "target_price": round(target_price, 2),
+        "expected_pullback_pct": round(expected_pullback_pct, 1),
+        "iv_vs_avg_pct": round(iv_premium_pct, 1),
+        "time_feasible": time_feasible,
+        "minutes_remaining": minutes_remaining,
+        "supports_entry": supports_entry,
+        "momentum_direction": market_momentum,
+        "reasoning": reasoning
+    }
+    
+    return result
 
 
 # =============================================================================

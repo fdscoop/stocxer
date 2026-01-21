@@ -9,6 +9,9 @@ from typing import Optional
 import logging
 import uuid
 
+# IST timezone utilities for consistent timestamps
+from src.utils.ist_utils import ist_timestamp
+
 logger = logging.getLogger(__name__)
 
 
@@ -43,7 +46,7 @@ class ScreenerService:
                     "min_confidence": scan_data.get("min_confidence", 0),
                     "randomized": scan_data.get("randomized", True)
                 },
-                "scan_time": datetime.now().isoformat()
+                "scan_time": ist_timestamp()  # Use IST for scan timestamps
             }
             
             self.supabase.table("screener_scans").insert(scan_record).execute()
@@ -100,7 +103,7 @@ class ScreenerService:
             "volume": signal.get("volume"),
             "reasons": signal.get("reasons", []),
             "scan_params": {},
-            "scanned_at": datetime.now().isoformat()
+            "scanned_at": ist_timestamp()  # Use IST for signal timestamps
         }
     
     async def get_latest_scan(self, user_id: str) -> Optional[dict]:
@@ -316,7 +319,7 @@ class ScreenerService:
                     "confidence_level": setup_details.get("confidence_level"),
                     "ml_confidence": ml_analysis.get("confidence")
                 },
-                "scanned_at": datetime.now().isoformat()
+                "scanned_at": ist_timestamp()  # Use IST for options signal timestamps
             }
             
             # Insert into screener_results table

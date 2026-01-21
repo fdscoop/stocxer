@@ -14,6 +14,9 @@ import numpy as np
 from scipy.stats import norm
 import logging
 
+# Import IST timezone utilities for consistent time handling
+from src.utils.ist_utils import get_ist_time, now_ist, MARKET_OPEN_TIME, MARKET_CLOSE_TIME
+
 logger = logging.getLogger(__name__)
 
 
@@ -96,7 +99,7 @@ class OptionsTimeAnalyzer:
     
     def get_current_session(self) -> SessionAnalysis:
         """Determine current market session and characteristics"""
-        now = datetime.now().time()
+        now = get_ist_time()  # Use IST time for session analysis
         
         # Check if market is open
         if now < MARKET_OPEN or now > MARKET_CLOSE:
@@ -175,7 +178,7 @@ class OptionsTimeAnalyzer:
         hours_to_expiry = days_to_expiry * market_hours_per_day
         
         # Current time adjustment
-        now = datetime.now().time()
+        now = get_ist_time()  # Use IST time for theta calculations
         if MARKET_OPEN <= now <= MARKET_CLOSE:
             now_minutes = now.hour * 60 + now.minute
             close_minutes = MARKET_CLOSE.hour * 60 + MARKET_CLOSE.minute
