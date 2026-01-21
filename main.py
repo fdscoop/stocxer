@@ -8,7 +8,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, RedirectResponse
 from pydantic import BaseModel
 from typing import Optional, List, Dict
-from datetime import datetime, timedelta, date, timezone
+from datetime import datetime, timedelta, date, timezone, time
 import pandas as pd
 import logging
 import os
