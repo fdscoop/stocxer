@@ -1936,7 +1936,30 @@ async def get_actionable_trading_signal(
             }
         
         logger.info(f"✅ Generated signal: {signal['action']} {signal['option']['strike']} {signal['option']['type']} @ ₹{signal['entry']['price']}")
+        
+        # Save options signal to database for authenticated users
+        try:
+            if authorization:
+                token = authorization.replace("Bearer ", "") if authorization.startswith("Bearer ") else authorization
+                user = await auth_service.get_current_user(token)
+                if user and user.id:
+                    # Save the signal
+                    save_result = await screener_service.save_options_signal(
+                        user_id=str(user.id),
+                        signal_data=signal,
+                        index=index_name
+                    )
+                    if save_result.get("saved"):
+                        logger.info(f"✅ Options signal saved to database for user {user.email}")
+                        signal["saved_to_db"] = True
+                        signal["signal_id"] = save_result.get("signal_id")
+                    else:
+                        logger.warning(f"⚠️ Could not save options signal: {save_result.get('error')}")
+        except Exception as save_error:
+            logger.warning(f"⚠️ Error saving options signal (non-fatal): {save_error}")
+        
         return signal
+
         
     except Exception as e:
         logger.error(f"Error generating actionable signal: {e}")
@@ -3906,9 +3929,10 @@ async def get_scan_history(
 async def get_recent_signals(
     authorization: str = Header(None, description="Bearer token"),
     hours: int = Query(2, description="Time range in hours"),
-    limit: int = Query(20, description="Max signals to retrieve")
+    limit: int = Query(20, description="Max signals to retrieve"),
+    signal_type: str = Query("ALL", description="Filter by signal type: STOCK, OPTIONS, or ALL")
 ):
-    """Get recent high-confidence signals from last N hours"""
+    """Get recent high-confidence signals from last N hours (includes both stock and options signals)"""
     try:
         if not authorization:
             raise HTTPException(status_code=401, detail="Authorization header required")
@@ -3916,17 +3940,28 @@ async def get_recent_signals(
         token = authorization.replace("Bearer ", "")
         user = await auth_service.get_current_user(token)
         
-        signals = await screener_service.get_recent_signals(user.id, hours, limit)
+        # Get stock signals
+        stock_signals = {"buy": [], "sell": []}
+        if signal_type.upper() in ["STOCK", "ALL"]:
+            stock_signals = await screener_service.get_recent_signals(user.id, hours, limit)
+        
+        # Get options signals
+        options_signals = []
+        if signal_type.upper() in ["OPTIONS", "ALL"]:
+            options_signals = await screener_service.get_recent_options_signals(user.id, hours, limit)
         
         return {
             "status": "success",
-            "signals": signals,
-            "time_range": f"Last {hours} hours"
+            "signals": stock_signals,
+            "options_signals": options_signals,
+            "time_range": f"Last {hours} hours",
+            "signal_type_filter": signal_type.upper()
         }
         
     except Exception as e:
         logger.error(f"Error getting recent signals: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
 
 
 @app.get("/screener/debug/check-data")

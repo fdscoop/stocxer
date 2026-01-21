@@ -249,9 +249,130 @@ class ScreenerService:
             "change_pct": safe_float(signal.get("change_pct")),
             "volume": signal.get("volume"),
             "reasons": signal.get("reasons", []),
-            "timestamp": signal.get("scanned_at", "")
+            "timestamp": signal.get("scanned_at", ""),
+            # Options-specific fields
+            "signal_type": signal.get("signal_type", "STOCK"),
+            "strike": safe_float(signal.get("strike")),
+            "option_type": signal.get("option_type"),
+            "expiry_date": signal.get("expiry_date"),
+            "entry_price": safe_float(signal.get("entry_price")),
+            "reversal_probability": safe_float(signal.get("reversal_probability"))
         }
+    
+    async def save_options_signal(
+        self,
+        user_id: str,
+        signal_data: dict,
+        index: str
+    ) -> dict:
+        """Save options trading signal to database"""
+        try:
+            signal_id = str(uuid.uuid4())
+            
+            # Extract data from the actionable signal response
+            option_info = signal_data.get("option", {})
+            pricing = signal_data.get("pricing", {})
+            targets = signal_data.get("targets", {})
+            setup_details = signal_data.get("setup_details", {})
+            ml_analysis = signal_data.get("ml_analysis", {})
+            
+            # Create record for database
+            signal_record = {
+                "id": signal_id,
+                "user_id": user_id,
+                "scan_id": signal_id,  # Use same ID for scan_id
+                "symbol": f"NSE:{index}-INDEX",
+                "name": index,
+                "signal_type": "OPTIONS",  # Mark as options signal
+                "current_price": signal_data.get("index_data", {}).get("spot_price", 0),
+                "action": signal_data.get("action", ""),
+                "confidence": setup_details.get("reversal_probability", 50),
+                "target_1": targets.get("target_1"),
+                "target_2": targets.get("target_2"),
+                "stop_loss": targets.get("stop_loss"),
+                # Options-specific fields (stored in JSON-compatible columns)
+                "strike": option_info.get("strike"),
+                "option_type": option_info.get("type"),  # CE or PE
+                "expiry_date": option_info.get("expiry_date"),
+                "entry_price": pricing.get("entry_price"),
+                "rsi": None,  # N/A for options
+                "sma_5": None,
+                "sma_15": None,
+                "momentum_5d": ml_analysis.get("price_change_pct"),
+                "volume_surge": False,
+                "change_pct": None,
+                "volume": None,
+                "reasons": [
+                    f"{signal_data.get('action')} at ₹{pricing.get('entry_price', 0)}",
+                    f"Probability: {setup_details.get('reversal_probability', 0)}%",
+                    f"ML: {ml_analysis.get('direction', 'neutral').upper()}"
+                ],
+                "scan_params": {
+                    "index": index,
+                    "signal_type": "OPTIONS",
+                    "trading_symbol": option_info.get("trading_symbol"),
+                    "ltp": pricing.get("ltp"),
+                    "reversal_direction": setup_details.get("reversal_direction"),
+                    "confidence_level": setup_details.get("confidence_level"),
+                    "ml_confidence": ml_analysis.get("confidence")
+                },
+                "scanned_at": datetime.now().isoformat()
+            }
+            
+            # Insert into screener_results table
+            self.supabase.table("screener_results").insert(signal_record).execute()
+            
+            logger.info(f"✅ Saved OPTIONS signal for {index}: {signal_data.get('action')} - ID: {signal_id}")
+            
+            return {
+                "signal_id": signal_id,
+                "saved": True,
+                "timestamp": signal_record["scanned_at"]
+            }
+            
+        except Exception as e:
+            logger.error(f"Save options signal error: {str(e)}")
+            # Don't raise exception - just log and return failure
+            return {"saved": False, "error": str(e)}
+    
+    async def get_recent_options_signals(self, user_id: str, hours: int = 24, limit: int = 10) -> list:
+        """Get recent options signals from database"""
+        try:
+            from datetime import datetime, timedelta, timezone
+            
+            # Calculate time threshold
+            time_threshold = (datetime.now(timezone.utc) - timedelta(hours=hours)).isoformat()
+            
+            # Get recent options signals
+            response = self.supabase.table("screener_results")\
+                .select("*")\
+                .eq("user_id", user_id)\
+                .eq("signal_type", "OPTIONS")\
+                .gte("scanned_at", time_threshold)\
+                .order("scanned_at", desc=True)\
+                .limit(limit)\
+                .execute()
+            
+            if not response.data:
+                return []
+            
+            # Format signals
+            signals = []
+            for signal in response.data:
+                try:
+                    formatted = self._format_signal_response(signal)
+                    signals.append(formatted)
+                except Exception as fmt_error:
+                    logger.warning(f"Error formatting options signal {signal.get('id')}: {fmt_error}")
+                    continue
+            
+            return signals
+            
+        except Exception as e:
+            logger.error(f"Get recent options signals error: {str(e)}")
+            return []
 
 
 # Create screener service instance
 screener_service = ScreenerService()
+

@@ -1688,7 +1688,7 @@
 
                 if (response.ok) {
                     const data = await response.json();
-                    displayRecentSignals(data.signals);
+                    displayRecentSignals(data.signals, data.options_signals);
                     document.getElementById('recent-signals-section').classList.remove('hidden');
                 } else {
                     console.log('Could not load recent signals');
@@ -1698,10 +1698,13 @@
             }
         }
 
-        function displayRecentSignals(signals) {
+        function displayRecentSignals(signals, optionsSignals = []) {
             const container = document.getElementById('recent-signals-content');
 
-            if (!signals || (signals.buy.length === 0 && signals.sell.length === 0)) {
+            const hasStockSignals = signals && (signals.buy.length > 0 || signals.sell.length > 0);
+            const hasOptionsSignals = optionsSignals && optionsSignals.length > 0;
+
+            if (!hasStockSignals && !hasOptionsSignals) {
                 container.innerHTML = `
                     <div class="col-span-2 text-center text-gray-500 py-8">
                         <p class="mb-2">No recent signals found (last 2 hours)</p>
@@ -1715,6 +1718,20 @@
             }
 
             container.innerHTML = `
+                <!-- OPTIONS Signals (NEW) -->
+                ${hasOptionsSignals ? `
+                    <div class="col-span-2 mb-4 p-4 bg-gradient-to-r from-purple-900/30 to-blue-900/30 rounded-xl border border-purple-500/30">
+                        <h3 class="text-lg font-semibold text-purple-400 flex items-center gap-2 mb-3">
+                            <span>🎯</span>
+                            <span>Options Signals (${optionsSignals.length})</span>
+                            <span class="text-xs bg-purple-600 px-2 py-1 rounded">INDEX</span>
+                        </h3>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            ${optionsSignals.map(signal => createOptionsSignalCard(signal)).join('')}
+                        </div>
+                    </div>
+                ` : ''}
+                
                 <!-- BUY Signals -->
                 <div class="space-y-3">
                     <div class="flex items-center justify-between mb-2">
@@ -1747,6 +1764,71 @@
             // Reinitialize icons
             lucide.createIcons();
         }
+
+        function createOptionsSignalCard(signal) {
+            const isPut = signal.action && signal.action.includes('PUT');
+            const bgColor = isPut ? 'bg-red-900/20' : 'bg-green-900/20';
+            const borderColor = isPut ? 'border-red-500/30' : 'border-green-500/30';
+            const textColor = isPut ? 'text-red-400' : 'text-green-400';
+            const actionIcon = isPut ? '📉 PUT' : '📈 CALL';
+
+            const timeAgo = getTimeAgo(new Date(signal.timestamp));
+
+            return `
+                <div class="card ${bgColor} border ${borderColor} p-3 hover:border-opacity-60 transition-all">
+                    <div class="flex items-start justify-between mb-2">
+                        <div class="flex-1">
+                            <div class="flex items-center gap-2 mb-1">
+                                <span class="${textColor} font-bold">${actionIcon}</span>
+                                <h4 class="font-semibold text-white">${signal.name || 'INDEX'}</h4>
+                                <span class="text-xs bg-purple-600 px-1 rounded">OPTIONS</span>
+                            </div>
+                            <div class="space-y-1">
+                                <div class="flex items-center gap-2">
+                                    <span class="text-xs text-gray-400">Strike:</span>
+                                    <span class="text-lg font-bold text-white">${signal.strike || '--'}</span>
+                                    <span class="text-xs text-gray-400">@ ₹${signal.entry_price || signal.current_price || '--'}</span>
+                                </div>
+                                ${signal.expiry_date ? `<div class="text-xs text-gray-400">Expiry: ${signal.expiry_date}</div>` : ''}
+                            </div>
+                        </div>
+                        <div class="text-right">
+                            <div class="text-xs text-gray-400">Probability</div>
+                            <div class="text-lg font-bold ${textColor}">${signal.confidence ? signal.confidence.toFixed(0) : '--'}%</div>
+                        </div>
+                    </div>
+                    
+                    ${signal.targets && (signal.targets.target_1 || signal.targets.stop_loss) ? `
+                        <div class="grid grid-cols-3 gap-2 mb-2 text-xs">
+                            ${signal.targets.target_1 ? `
+                                <div class="text-center p-1 bg-gray-800/50 rounded">
+                                    <div class="text-gray-400">Target 1</div>
+                                    <div class="font-semibold text-green-400">₹${signal.targets.target_1.toFixed ? signal.targets.target_1.toFixed(2) : signal.targets.target_1}</div>
+                                </div>
+                            ` : ''}
+                            ${signal.targets.target_2 ? `
+                                <div class="text-center p-1 bg-gray-800/50 rounded">
+                                    <div class="text-gray-400">Target 2</div>
+                                    <div class="font-semibold text-green-400">₹${signal.targets.target_2.toFixed ? signal.targets.target_2.toFixed(2) : signal.targets.target_2}</div>
+                                </div>
+                            ` : ''}
+                            ${signal.targets.stop_loss ? `
+                                <div class="text-center p-1 bg-gray-800/50 rounded">
+                                    <div class="text-gray-400">Stop Loss</div>
+                                    <div class="font-semibold text-red-400">₹${signal.targets.stop_loss.toFixed ? signal.targets.stop_loss.toFixed(2) : signal.targets.stop_loss}</div>
+                                </div>
+                            ` : ''}
+                        </div>
+                    ` : ''}
+                    
+                    <div class="flex items-center justify-between text-xs text-gray-500">
+                        <span>${signal.reasons && signal.reasons.length > 0 ? signal.reasons[0] : ''}</span>
+                        <span>${timeAgo}</span>
+                    </div>
+                </div>
+            `;
+        }
+
 
         function createSignalCard(signal, type) {
             const bgColor = type === 'buy' ? 'bg-green-900/20' : 'bg-red-900/20';
