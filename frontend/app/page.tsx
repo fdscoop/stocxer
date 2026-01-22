@@ -237,6 +237,8 @@ export default function DashboardPage() {
     const email = localStorage.getItem('userEmail')
     if (token && email) {
       setUser({ email })
+      // Check Fyers authentication status on page load
+      checkFyersAuth(token)
     } else {
       // Redirect to landing page if not authenticated
       router.push('/landing')
@@ -244,6 +246,76 @@ export default function DashboardPage() {
 
     return () => clearInterval(timer)
   }, [router])
+
+  // Check Fyers authentication status
+  const checkFyersAuth = async (token: string) => {
+    try {
+      const apiUrl = getApiUrl()
+      const response = await fetch(`${apiUrl}/api/fyers/token`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        console.log('✅ Fyers token found:', data)
+        // Refresh the server's Fyers client with this token
+        await fetch(`${apiUrl}/api/fyers/refresh-token`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        })
+      } else {
+        console.warn('⚠️ Fyers authentication required for live data')
+        // Show a toast notification about Fyers auth
+        setToast({ 
+          message: 'Fyers authentication required for live market data. Please connect your Fyers account.', 
+          type: 'error' 
+        })
+        setTimeout(() => setToast(null), 5000)
+      }
+    } catch (error) {
+      console.error('Error checking Fyers auth:', error)
+    }
+  }
+
+  // Open Fyers authentication popup
+  const openFyersAuthPopup = async () => {
+    try {
+      const apiUrl = getApiUrl()
+      const response = await fetch(`${apiUrl}/auth/url`)
+      const data = await response.json()
+
+      // Open in popup for better UX
+      const popup = window.open(
+        data.auth_url,
+        'fyersAuth',
+        'width=600,height=700,scrollbars=yes,resizable=yes'
+      )
+
+      // Check for popup completion
+      const checkClosed = setInterval(() => {
+        if (popup && popup.closed) {
+          clearInterval(checkClosed)
+          // Refresh auth status after popup closes
+          const token = localStorage.getItem('token') || localStorage.getItem('jwt_token')
+          if (token) {
+            setTimeout(() => {
+              checkFyersAuth(token)
+              setToast({ message: 'Fyers authentication completed!', type: 'success' })
+              setTimeout(() => setToast(null), 3000)
+            }, 1000)
+          }
+        }
+      }, 1000)
+    } catch (error) {
+      console.error('Auth error:', error)
+      setToast({ message: 'Failed to start authentication. Please try again.', type: 'error' })
+      setTimeout(() => setToast(null), 3000)
+    }
+  }
 
   const handleLogout = () => {
     localStorage.removeItem('token')
@@ -484,7 +556,7 @@ export default function DashboardPage() {
         </Card>
 
         {/* Quick Actions */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-2 md:gap-4">
           <Link href="/screener" className="block">
             <Button variant="outline" className="w-full h-auto py-4 flex flex-col gap-2">
               <BarChart3 className="w-5 h-5 md:w-6 md:h-6" />
@@ -503,6 +575,14 @@ export default function DashboardPage() {
               <span className="text-xs md:text-sm">Index Analyzer</span>
             </Button>
           </Link>
+          <Button
+            variant="outline"
+            className="w-full h-auto py-4 flex flex-col gap-2 border-orange-500/50 hover:border-orange-500 hover:bg-orange-500/10"
+            onClick={openFyersAuthPopup}
+          >
+            <span className="text-lg">🔑</span>
+            <span className="text-xs md:text-sm">Fyers Auth</span>
+          </Button>
           <Button
             variant="default"
             className="w-full h-auto py-4 flex flex-col gap-2 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700"
