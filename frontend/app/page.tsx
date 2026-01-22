@@ -145,34 +145,34 @@ export default function DashboardPage() {
   // Calculate trading signal from scan results
   const calculateTradingSignal = (data: ScanResults): TradingSignal | null => {
     if (!data.probability_analysis || !data.options || data.options.length === 0) return null
-    
+
     const prob = data.probability_analysis
     const recommendedType = data.recommended_option_type || 'CALL'
-    
+
     // Find the RECOMMENDED option (the one with probability_boost = true)
     let bestOption = data.options.find(opt => opt.probability_boost === true)
-    
+
     // Fallback: Find the best option matching the recommendation type
     if (!bestOption) {
       const matchingOptions = data.options.filter(opt => {
         const optType = opt.type === 'CE' ? 'CALL' : opt.type === 'PE' ? 'PUT' : opt.type
         return optType === recommendedType
       })
-      
-      bestOption = matchingOptions.length > 0 
+
+      bestOption = matchingOptions.length > 0
         ? matchingOptions.sort((a, b) => (b.score || 0) - (a.score || 0))[0]
         : data.options[0]
     }
-    
+
     const entryPrice = bestOption.ltp
     const optionType = bestOption.type === 'CE' ? 'CALL' : bestOption.type === 'PE' ? 'PUT' : bestOption.type
-    
+
     // Calculate realistic targets and stop loss based on option premium
     // Lower premiums need higher % gains, higher premiums need lower % gains
     let target1Multiplier = 1.30  // Default 30%
     let target2Multiplier = 1.80  // Default 80%
     let stopLossMultiplier = 0.75 // Default 25% loss
-    
+
     // Adjust multipliers based on option price
     if (entryPrice < 50) {
       // Deep OTM options: higher % targets
@@ -185,28 +185,28 @@ export default function DashboardPage() {
       target2Multiplier = 1.50  // 50%
       stopLossMultiplier = 0.80 // 20% loss
     }
-    
+
     const target1 = Math.round(entryPrice * target1Multiplier * 100) / 100
     const target2 = Math.round(entryPrice * target2Multiplier * 100) / 100
     const stopLoss = Math.round(entryPrice * stopLossMultiplier * 100) / 100
-    
+
     // Calculate risk-reward ratio
     const risk = entryPrice - stopLoss
     const reward1 = target1 - entryPrice
     const riskReward = risk > 0 ? `1:${(reward1 / risk).toFixed(1)}` : '1:2'
-    
+
     // Determine action and direction
     const action = recommendedType === 'CALL' ? 'BUY CALL' : recommendedType === 'PUT' ? 'BUY PUT' : 'STRADDLE'
     const direction = prob.expected_direction
-    
+
     // Calculate confidence
     const confidence = Math.round(prob.confidence * 100)
-    
+
     // Build trading symbol
     const indexSymbol = data.index || 'NIFTY'
     const expiry = data.market_data?.expiry_date || data.expiry || ''
     const tradingSymbol = `${indexSymbol} ${bestOption.strike} ${optionType}`
-    
+
     return {
       action,
       strike: bestOption.strike,
@@ -226,31 +226,37 @@ export default function DashboardPage() {
     // Mark as mounted for client-side rendering
     setMounted(true)
     setCurrentTime(new Date().toLocaleTimeString('en-IN'))
-    
+
     // Update time every minute
     const timer = setInterval(() => {
       setCurrentTime(new Date().toLocaleTimeString('en-IN'))
     }, 60000)
-    
-    // Check for auth token
-    const token = localStorage.getItem('token')
+
+    // Check for auth token - redirect to landing if not logged in
+    const token = localStorage.getItem('token') || localStorage.getItem('jwt_token')
     const email = localStorage.getItem('userEmail')
     if (token && email) {
       setUser({ email })
+    } else {
+      // Redirect to landing page if not authenticated
+      router.push('/landing')
     }
-    
+
     return () => clearInterval(timer)
-  }, [])
+  }, [router])
 
   const handleLogout = () => {
     localStorage.removeItem('token')
+    localStorage.removeItem('jwt_token')
     localStorage.removeItem('userEmail')
     setUser(null)
+    // Redirect to landing page after logout
+    router.push('/landing')
   }
 
   const handleQuickScan = async () => {
     const token = localStorage.getItem('token') || localStorage.getItem('jwt_token')
-    
+
     // Check if user is logged in
     if (!token) {
       setToast({ message: 'Please login first to scan options', type: 'error' })
@@ -260,11 +266,11 @@ export default function DashboardPage() {
       }, 2000)
       return
     }
-    
+
     setLoading(true)
     setLoadingMessage('Loading Data...')
     setLoadingProgress(0)
-    
+
     // Reset loading steps
     const resetSteps = [
       { id: '1', label: 'Fetching spot price...', status: 'pending' as const },
@@ -275,53 +281,53 @@ export default function DashboardPage() {
       { id: '6', label: 'Generating signals...', status: 'pending' as const },
     ]
     setLoadingSteps(resetSteps)
-    
+
     // Helper to update a step
     const updateStep = (stepId: string, status: 'pending' | 'loading' | 'complete' | 'error', progress: number) => {
-      setLoadingSteps(prev => prev.map(s => 
+      setLoadingSteps(prev => prev.map(s =>
         s.id === stepId ? { ...s, status } : s
       ))
       setLoadingProgress(progress)
     }
-    
+
     try {
       // Step 1: Fetching spot price
       updateStep('1', 'loading', 10)
-      
+
       console.log(`🔍 Scanning ${selectedIndex} options...`)
-      
+
       const apiUrl = getApiUrl()
-      
+
       // Step 1 complete, Step 2: Getting expiry dates
       updateStep('1', 'complete', 17)
       updateStep('2', 'loading', 25)
-      
+
       // Get the next weekly expiry (for demo, using current date)
       const today = new Date()
       const nextThursday = new Date(today)
       nextThursday.setDate(today.getDate() + ((4 - today.getDay() + 7) % 7))
       const expiry = nextThursday.toISOString().split('T')[0]
-      
+
       // Step 2 complete, Step 3: Generating option symbols
       updateStep('2', 'complete', 33)
       updateStep('3', 'loading', 40)
-      
+
       const url = `${apiUrl}/options/scan?index=${selectedIndex}&expiry=${expiry}&min_volume=1000&min_oi=10000&strategy=all&include_probability=true`
-      
+
       console.log(`📡 Fetching scan data from: ${url}`)
       console.log(`📈 Selected index: ${selectedIndex}`)
-      
+
       // Step 3 complete, Step 4: Fetching option chain data
       updateStep('3', 'complete', 45)
       updateStep('4', 'loading', 50)
-      
+
       const response = await fetch(url, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         }
       })
-      
+
       if (response.status === 401) {
         // Token expired or invalid
         localStorage.removeItem('token')
@@ -333,66 +339,66 @@ export default function DashboardPage() {
         }, 2000)
         return
       }
-      
+
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({ detail: response.statusText }))
         throw new Error(errorData.detail || `Scan failed: ${response.statusText}`)
       }
-      
+
       const data = await response.json()
       setScanResults(data)
-      
+
       // Step 4 complete, Step 5: Analyzing data
       updateStep('4', 'complete', 60)
       updateStep('5', 'loading', 70)
-      
+
       // Get actionable signal from backend (like old frontend does)
       // This returns the analyzed signal with exact strike, price, and calculated targets
       // Map frontend index names to backend symbol format
       const symbolMapping: Record<string, string> = {
         'NIFTY': 'NSE:NIFTY50-INDEX',
         'BANKNIFTY': 'NSE:NIFTYBANK-INDEX',
-        'FINNIFTY': 'NSE:FINNIFTY-INDEX', 
+        'FINNIFTY': 'NSE:FINNIFTY-INDEX',
         'MIDCPNIFTY': 'NSE:MIDCPNIFTY-INDEX',
         'SENSEX': 'BSE:SENSEX-INDEX',
         'BANKEX': 'BSE:BANKEX-INDEX'
       }
-      
+
       const symbol = symbolMapping[selectedIndex] || `NSE:${selectedIndex}-INDEX`
       const signalUrl = `${apiUrl}/signals/${encodeURIComponent(symbol)}/actionable`
-      
+
       console.log(`🎯 Fetching actionable signal for ${selectedIndex} -> ${symbol}`)
       console.log(`📡 Signal URL: ${signalUrl}`)
-      
+
       setLoadingMessage('Analyzing multi-timeframe trends...')
-      
+
       // Step 5 complete, Step 6: Generating signals
       updateStep('5', 'complete', 80)
       updateStep('6', 'loading', 85)
-      
+
       const signalResponse = await fetch(signalUrl, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         }
       })
-      
+
       if (signalResponse.ok) {
         const backendSignal = await signalResponse.json()
-        
+
         // Step 6 complete
         updateStep('6', 'complete', 100)
         setLoadingProgress(100)
-        
+
         // Map backend signal to frontend format
         // Use reversal_probability from setup_details as the numeric confidence (72% etc)
         // backendSignal.confidence is a string like "HIGH", "VERY HIGH" etc
-        const numericConfidence = backendSignal.setup_details?.reversal_probability || 
-          (backendSignal.confidence === 'VERY HIGH' ? 85 : 
-           backendSignal.confidence === 'HIGH' ? 72 : 
-           backendSignal.confidence === 'MODERATE' ? 55 : 
-           backendSignal.confidence === 'MEDIUM' ? 50 : 35)
-        
+        const numericConfidence = backendSignal.setup_details?.reversal_probability ||
+          (backendSignal.confidence === 'VERY HIGH' ? 85 :
+            backendSignal.confidence === 'HIGH' ? 72 :
+              backendSignal.confidence === 'MODERATE' ? 55 :
+                backendSignal.confidence === 'MEDIUM' ? 50 : 35)
+
         const tradingSignal: TradingSignal = {
           action: backendSignal.action,
           strike: backendSignal.option.strike,
@@ -406,33 +412,33 @@ export default function DashboardPage() {
           direction: backendSignal.signal_type || 'NEUTRAL',
           trading_symbol: backendSignal.option.symbol
         }
-        
+
         setTradingSignal(tradingSignal)
-        
+
         // Show success toast with backend signal info
         const direction = backendSignal.signal_type || 'NEUTRAL'
         const optionType = backendSignal.option.type
-        setToast({ 
-          message: `✅ Scan complete! ${direction} - Recommended: ${optionType} @ ${backendSignal.option.strike}`, 
-          type: 'success' 
+        setToast({
+          message: `✅ Scan complete! ${direction} - Recommended: ${optionType} @ ${backendSignal.option.strike}`,
+          type: 'success'
         })
       } else {
         // Fallback to manual calculation if backend signal fails
         const signal = calculateTradingSignal(data)
         setTradingSignal(signal)
-        
+
         const direction = data.probability_analysis?.expected_direction || 'NEUTRAL'
         const optionType = data.recommended_option_type || 'N/A'
-        setToast({ 
-          message: `✅ Scan complete! ${direction} - Recommended: ${optionType} options`, 
-          type: 'success' 
+        setToast({
+          message: `✅ Scan complete! ${direction} - Recommended: ${optionType} options`,
+          type: 'success'
         })
       }
-      
+
       setTimeout(() => setToast(null), 5000)
-      
+
       // Don't redirect - show results on dashboard like old frontend
-      
+
     } catch (error) {
       console.error('Scan error:', error)
       const errorMessage = error instanceof Error ? error.message : 'Scan failed. Please try again.'
@@ -497,9 +503,9 @@ export default function DashboardPage() {
               <span className="text-xs md:text-sm">Index Analyzer</span>
             </Button>
           </Link>
-          <Button 
-            variant="default" 
-            className="w-full h-auto py-4 flex flex-col gap-2 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700" 
+          <Button
+            variant="default"
+            className="w-full h-auto py-4 flex flex-col gap-2 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700"
             onClick={handleQuickScan}
             disabled={loading}
           >
@@ -597,7 +603,7 @@ export default function DashboardPage() {
                 <div className="text-sm font-medium text-primary mb-1">📋 What This Means:</div>
                 <div className="text-xs text-muted-foreground space-y-1">
                   <p>
-                    • Based on analyzing {scanResults.probability_analysis?.stocks_scanned || 0} stocks, 
+                    • Based on analyzing {scanResults.probability_analysis?.stocks_scanned || 0} stocks,
                     the market looks <span className={tradingSignal.direction === 'BULLISH' ? 'text-green-500 font-semibold' : 'text-red-500 font-semibold'}>{tradingSignal.direction}</span>
                   </p>
                   <p>
@@ -622,10 +628,9 @@ export default function DashboardPage() {
               </CardTitle>
               <div className="flex items-center gap-2">
                 {scanResults && (
-                  <Badge className={`text-xs ${
-                    scanResults.probability_analysis?.expected_direction === 'BULLISH' ? 'bg-bullish' :
-                    scanResults.probability_analysis?.expected_direction === 'BEARISH' ? 'bg-bearish' : 'bg-neutral'
-                  }`}>
+                  <Badge className={`text-xs ${scanResults.probability_analysis?.expected_direction === 'BULLISH' ? 'bg-bullish' :
+                      scanResults.probability_analysis?.expected_direction === 'BEARISH' ? 'bg-bearish' : 'bg-neutral'
+                    }`}>
                     {scanResults.probability_analysis?.expected_direction || 'N/A'}
                   </Badge>
                 )}
@@ -676,24 +681,23 @@ export default function DashboardPage() {
                   )}
                 </h4>
                 <div className="space-y-3">
-                  <ProbabilityBar 
-                    label="📈 Bullish" 
-                    value={scanResults?.probability_analysis?.probability_up ? scanResults.probability_analysis.probability_up * 100 : 0} 
-                    color="bullish" 
+                  <ProbabilityBar
+                    label="📈 Bullish"
+                    value={scanResults?.probability_analysis?.probability_up ? scanResults.probability_analysis.probability_up * 100 : 0}
+                    color="bullish"
                   />
-                  <ProbabilityBar 
-                    label="📉 Bearish" 
-                    value={scanResults?.probability_analysis?.probability_down ? scanResults.probability_analysis.probability_down * 100 : 0} 
-                    color="bearish" 
+                  <ProbabilityBar
+                    label="📉 Bearish"
+                    value={scanResults?.probability_analysis?.probability_down ? scanResults.probability_analysis.probability_down * 100 : 0}
+                    color="bearish"
                   />
                 </div>
                 <div className="mt-3 pt-3 border-t space-y-2">
                   <div className="flex justify-between text-sm">
                     <span className="text-muted-foreground">Expected Direction</span>
-                    <span className={`font-semibold ${
-                      scanResults?.probability_analysis?.expected_direction === 'BULLISH' ? 'text-bullish' :
-                      scanResults?.probability_analysis?.expected_direction === 'BEARISH' ? 'text-bearish' : 'text-neutral'
-                    }`}>
+                    <span className={`font-semibold ${scanResults?.probability_analysis?.expected_direction === 'BULLISH' ? 'text-bullish' :
+                        scanResults?.probability_analysis?.expected_direction === 'BEARISH' ? 'text-bearish' : 'text-neutral'
+                      }`}>
                       {scanResults?.probability_analysis?.expected_direction === 'BULLISH' && '📈 '}
                       {scanResults?.probability_analysis?.expected_direction === 'BEARISH' && '📉 '}
                       {scanResults?.probability_analysis?.expected_direction === 'NEUTRAL' && '➖ '}
@@ -702,21 +706,20 @@ export default function DashboardPage() {
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="text-muted-foreground">Expected Move</span>
-                    <span className={`font-semibold ${
-                      (scanResults?.probability_analysis?.expected_move_pct || 0) > 0 ? 'text-bullish' : 'text-bearish'
-                    }`}>
-                      {scanResults?.probability_analysis?.expected_move_pct 
-                        ? `${scanResults.probability_analysis.expected_move_pct > 0 ? '+' : ''}${scanResults.probability_analysis.expected_move_pct.toFixed(2)}%` 
+                    <span className={`font-semibold ${(scanResults?.probability_analysis?.expected_move_pct || 0) > 0 ? 'text-bullish' : 'text-bearish'
+                      }`}>
+                      {scanResults?.probability_analysis?.expected_move_pct
+                        ? `${scanResults.probability_analysis.expected_move_pct > 0 ? '+' : ''}${scanResults.probability_analysis.expected_move_pct.toFixed(2)}%`
                         : '--'}
                     </span>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="text-muted-foreground">Signal Confidence</span>
                     <span className="font-semibold text-primary">
-                      {tradingSignal?.confidence 
-                        ? `${tradingSignal.confidence}%` 
-                        : scanResults?.probability_analysis?.confidence 
-                          ? `${(scanResults.probability_analysis.confidence * 100).toFixed(0)}%` 
+                      {tradingSignal?.confidence
+                        ? `${tradingSignal.confidence}%`
+                        : scanResults?.probability_analysis?.confidence
+                          ? `${(scanResults.probability_analysis.confidence * 100).toFixed(0)}%`
                           : '--'}
                     </span>
                   </div>
@@ -725,13 +728,13 @@ export default function DashboardPage() {
 
               <Card className="p-4">
                 <h4 className="text-sm font-medium mb-3">Constituent Sentiment</h4>
-                <SentimentGauge 
-                  bullish={scanResults?.probability_analysis?.bullish_stocks || 0} 
-                  bearish={scanResults?.probability_analysis?.bearish_stocks || 0} 
+                <SentimentGauge
+                  bullish={scanResults?.probability_analysis?.bullish_stocks || 0}
+                  bearish={scanResults?.probability_analysis?.bearish_stocks || 0}
                 />
                 <div className="mt-3 text-xs text-muted-foreground text-center">
-                  {scanResults?.probability_analysis 
-                    ? `Based on ${scanResults.probability_analysis.stocks_scanned} ${selectedIndex} stocks` 
+                  {scanResults?.probability_analysis
+                    ? `Based on ${scanResults.probability_analysis.stocks_scanned} ${selectedIndex} stocks`
                     : `Click "Scan ${selectedIndex}" to analyze constituent stocks`}
                 </div>
                 {scanResults?.probability_analysis && (
@@ -841,60 +844,59 @@ export default function DashboardPage() {
                     const optType = option.type === 'CE' ? 'CE' : option.type === 'PE' ? 'PE' : option.type === 'CALL' ? 'CE' : 'PE'
                     const isCall = optType === 'CE' || option.type === 'CALL'
                     const isBoosted = option.probability_boost
-                    
+
                     return (
-                    <div 
-                      key={`${option.symbol || option.strike}-${index}`}
-                      className={`p-3 rounded-lg border ${
-                        isCall ? 'border-bullish/30 bg-bullish/5' : 'border-bearish/30 bg-bearish/5'
-                      } ${isBoosted ? 'ring-2 ring-purple-500/50' : ''}`}
-                    >
-                      <div className="flex flex-col md:flex-row md:items-center justify-between gap-2">
-                        <div className="flex items-center gap-3">
-                          <Badge className={isCall ? 'bg-bullish' : 'bg-bearish'}>
-                            {optType}
-                          </Badge>
-                          <div>
-                            <div className="font-semibold text-sm">{option.strike}</div>
-                            {option.symbol && <div className="text-xs text-muted-foreground">{option.symbol}</div>}
+                      <div
+                        key={`${option.symbol || option.strike}-${index}`}
+                        className={`p-3 rounded-lg border ${isCall ? 'border-bullish/30 bg-bullish/5' : 'border-bearish/30 bg-bearish/5'
+                          } ${isBoosted ? 'ring-2 ring-purple-500/50' : ''}`}
+                      >
+                        <div className="flex flex-col md:flex-row md:items-center justify-between gap-2">
+                          <div className="flex items-center gap-3">
+                            <Badge className={isCall ? 'bg-bullish' : 'bg-bearish'}>
+                              {optType}
+                            </Badge>
+                            <div>
+                              <div className="font-semibold text-sm">{option.strike}</div>
+                              {option.symbol && <div className="text-xs text-muted-foreground">{option.symbol}</div>}
+                            </div>
+                            {isBoosted && (
+                              <Badge className="bg-purple-600 text-xs">⚡ RECOMMENDED</Badge>
+                            )}
                           </div>
-                          {isBoosted && (
-                            <Badge className="bg-purple-600 text-xs">⚡ RECOMMENDED</Badge>
-                          )}
-                        </div>
-                        <div className="flex items-center gap-4 text-sm">
-                          <div className="text-right">
-                            <div className="font-semibold">₹{option.ltp?.toFixed(2)}</div>
-                            {option.change_pct !== undefined && (
-                              <div className={`text-xs ${
-                                option.change_pct >= 0 ? 'text-bullish' : 'text-bearish'
-                              }`}>
-                                {option.change_pct >= 0 ? '+' : ''}{option.change_pct?.toFixed(2)}%
+                          <div className="flex items-center gap-4 text-sm">
+                            <div className="text-right">
+                              <div className="font-semibold">₹{option.ltp?.toFixed(2)}</div>
+                              {option.change_pct !== undefined && (
+                                <div className={`text-xs ${option.change_pct >= 0 ? 'text-bullish' : 'text-bearish'
+                                  }`}>
+                                  {option.change_pct >= 0 ? '+' : ''}{option.change_pct?.toFixed(2)}%
+                                </div>
+                              )}
+                            </div>
+                            <div className="text-right text-xs text-muted-foreground">
+                              <div>Vol: {(option.volume / 1000).toFixed(0)}K</div>
+                              <div>OI: {(option.oi / 1000).toFixed(0)}K</div>
+                            </div>
+                            {option.iv && (
+                              <div className="text-right text-xs">
+                                <div className="text-muted-foreground">IV</div>
+                                <div className="font-medium">{option.iv.toFixed(1)}%</div>
+                              </div>
+                            )}
+                            {option.score !== undefined && (
+                              <div className="text-right text-xs">
+                                <div className="text-muted-foreground">Score</div>
+                                <div className={`font-medium ${option.score >= 80 ? 'text-green-500' : option.score >= 60 ? 'text-yellow-500' : 'text-muted-foreground'}`}>
+                                  {option.score.toFixed(0)}
+                                </div>
                               </div>
                             )}
                           </div>
-                          <div className="text-right text-xs text-muted-foreground">
-                            <div>Vol: {(option.volume / 1000).toFixed(0)}K</div>
-                            <div>OI: {(option.oi / 1000).toFixed(0)}K</div>
-                          </div>
-                          {option.iv && (
-                            <div className="text-right text-xs">
-                              <div className="text-muted-foreground">IV</div>
-                              <div className="font-medium">{option.iv.toFixed(1)}%</div>
-                            </div>
-                          )}
-                          {option.score !== undefined && (
-                            <div className="text-right text-xs">
-                              <div className="text-muted-foreground">Score</div>
-                              <div className={`font-medium ${option.score >= 80 ? 'text-green-500' : option.score >= 60 ? 'text-yellow-500' : 'text-muted-foreground'}`}>
-                                {option.score.toFixed(0)}
-                              </div>
-                            </div>
-                          )}
                         </div>
                       </div>
-                    </div>
-                  )})}
+                    )
+                  })}
                 </div>
               </ScrollArea>
               {scanResults.options.length > 20 && (
@@ -992,9 +994,8 @@ export default function DashboardPage() {
 
       {/* Toast Notification */}
       {toast && (
-        <div className={`fixed top-4 right-4 z-50 p-4 rounded-lg shadow-lg ${
-          toast.type === 'success' ? 'bg-green-600' : 'bg-red-600'
-        } text-white`}>
+        <div className={`fixed top-4 right-4 z-50 p-4 rounded-lg shadow-lg ${toast.type === 'success' ? 'bg-green-600' : 'bg-red-600'
+          } text-white`}>
           {toast.message}
         </div>
       )}

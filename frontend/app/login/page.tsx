@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { TrendingUp, Loader2 } from 'lucide-react'
+import { Cpu, Loader2, ArrowLeft } from 'lucide-react'
 import { getApiUrl } from '@/lib/api'
 
 export default function LoginPage() {
@@ -97,15 +97,24 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-primary/20 via-background to-purple-900/20">
       <div className="w-full max-w-md">
+        {/* Back to Landing */}
+        <Link
+          href="/landing"
+          className="inline-flex items-center gap-2 text-purple-400 hover:text-purple-300 mb-6 transition-colors"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          Back to Home
+        </Link>
+
         {/* Logo/Header */}
         <div className="text-center mb-6 md:mb-8">
           <div className="flex items-center justify-center gap-2 mb-2">
-            <div className="w-10 h-10 md:w-12 md:h-12 bg-primary rounded-xl flex items-center justify-center">
-              <TrendingUp className="w-6 h-6 md:w-7 md:h-7 text-primary-foreground" />
+            <div className="w-10 h-10 md:w-12 md:h-12 bg-gradient-to-br from-purple-600 to-blue-600 rounded-xl flex items-center justify-center">
+              <Cpu className="w-6 h-6 md:w-7 md:h-7 text-white" />
             </div>
           </div>
-          <h1 className="text-2xl md:text-3xl font-bold">TradeWise</h1>
-          <p className="text-muted-foreground text-sm md:text-base">Stock Screener & Trading Signals</p>
+          <h1 className="text-2xl md:text-3xl font-bold">Stocxer AI</h1>
+          <p className="text-muted-foreground text-sm md:text-base">Powered by Watchman AI v3.5</p>
         </div>
 
         {/* Login/Register Card */}
@@ -206,11 +215,10 @@ export default function LoginPage() {
             {/* Message Display */}
             {message && (
               <div
-                className={`mt-4 p-3 rounded-lg text-sm ${
-                  message.isError
-                    ? 'bg-destructive/10 text-destructive border border-destructive/20'
-                    : 'bg-bullish/10 text-bullish border border-bullish/20'
-                }`}
+                className={`mt-4 p-3 rounded-lg text-sm ${message.isError
+                  ? 'bg-destructive/10 text-destructive border border-destructive/20'
+                  : 'bg-bullish/10 text-bullish border border-bullish/20'
+                  }`}
               >
                 {message.text}
               </div>
@@ -219,13 +227,13 @@ export default function LoginPage() {
             {/* Continue without login */}
             <div className="mt-6 text-center">
               <p className="text-xs md:text-sm text-muted-foreground mb-2">
-                Login required to access TradeWise dashboard
+                Login required to access Stocxer AI dashboard
               </p>
               <Link
-                href="/screener"
+                href="/landing"
                 className="text-xs md:text-sm text-primary hover:underline"
               >
-                Or use Stock Screener without login (results won't be saved)
+                Learn more about Stocxer AI
               </Link>
             </div>
           </CardContent>
@@ -233,9 +241,9 @@ export default function LoginPage() {
 
         {/* Features */}
         <div className="mt-6 md:mt-8 text-center space-y-2">
-          <p className="text-xs md:text-sm text-muted-foreground">✨ AI-Powered Stock Screening</p>
-          <p className="text-xs md:text-sm text-muted-foreground">📊 Technical Analysis Signals</p>
-          <p className="text-xs md:text-sm text-muted-foreground">💾 Save & Track Your Scans</p>
+          <p className="text-xs md:text-sm text-muted-foreground">🤖 Powered by Watchman AI v3.5</p>
+          <p className="text-xs md:text-sm text-muted-foreground">📊 Probability-Based Market Insights</p>
+          <p className="text-xs md:text-sm text-muted-foreground">🎯 Deep Analysis & Decision Support</p>
         </div>
       </div>
     </div>
