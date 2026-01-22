@@ -288,6 +288,8 @@ export default function DashboardPage() {
       // Step 1: Fetching spot price
       updateStep('1', 'loading', 10)
       
+      console.log(`🔍 Scanning ${selectedIndex} options...`)
+      
       const apiUrl = getApiUrl()
       
       // Step 1 complete, Step 2: Getting expiry dates
@@ -305,6 +307,9 @@ export default function DashboardPage() {
       updateStep('3', 'loading', 40)
       
       const url = `${apiUrl}/options/scan?index=${selectedIndex}&expiry=${expiry}&min_volume=1000&min_oi=10000&strategy=all&include_probability=true`
+      
+      console.log(`📡 Fetching scan data from: ${url}`)
+      console.log(`📈 Selected index: ${selectedIndex}`)
       
       // Step 3 complete, Step 4: Fetching option chain data
       updateStep('3', 'complete', 45)
@@ -343,8 +348,21 @@ export default function DashboardPage() {
       
       // Get actionable signal from backend (like old frontend does)
       // This returns the analyzed signal with exact strike, price, and calculated targets
-      const symbol = selectedIndex === 'NIFTY' ? 'NSE:NIFTY50-INDEX' : `NSE:${selectedIndex}-INDEX`
+      // Map frontend index names to backend symbol format
+      const symbolMapping: Record<string, string> = {
+        'NIFTY': 'NSE:NIFTY50-INDEX',
+        'BANKNIFTY': 'NSE:NIFTYBANK-INDEX',
+        'FINNIFTY': 'NSE:FINNIFTY-INDEX', 
+        'MIDCPNIFTY': 'NSE:MIDCPNIFTY-INDEX',
+        'SENSEX': 'BSE:SENSEX-INDEX',
+        'BANKEX': 'BSE:BANKEX-INDEX'
+      }
+      
+      const symbol = symbolMapping[selectedIndex] || `NSE:${selectedIndex}-INDEX`
       const signalUrl = `${apiUrl}/signals/${encodeURIComponent(symbol)}/actionable`
+      
+      console.log(`🎯 Fetching actionable signal for ${selectedIndex} -> ${symbol}`)
+      console.log(`📡 Signal URL: ${signalUrl}`)
       
       setLoadingMessage('Analyzing multi-timeframe trends...')
       
