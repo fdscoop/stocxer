@@ -83,48 +83,11 @@ interface ScanResults {
   data_source?: 'live' | 'demo'
 }
 
-// Mock data for demonstration
-const mockSignals: Signal[] = [
-  {
-    id: '1',
-    symbol: 'RELIANCE',
-    action: 'BUY',
-    price: 2456.50,
-    target: 2580.00,
-    stopLoss: 2400.00,
-    confidence: 85,
-    timestamp: new Date().toISOString(),
-    reasons: ['RSI Oversold', 'Support Level', 'Volume Breakout'],
-  },
-  {
-    id: '2',
-    symbol: 'TCS',
-    action: 'SELL',
-    price: 3890.00,
-    target: 3750.00,
-    stopLoss: 3950.00,
-    confidence: 72,
-    timestamp: new Date().toISOString(),
-    reasons: ['Resistance Level', 'Bearish Divergence'],
-  },
-  {
-    id: '3',
-    symbol: 'HDFCBANK',
-    action: 'BUY',
-    price: 1654.25,
-    target: 1720.00,
-    stopLoss: 1620.00,
-    confidence: 78,
-    timestamp: new Date().toISOString(),
-    reasons: ['Breakout', 'Bullish Momentum'],
-  },
-]
-
 export default function DashboardPage() {
   const router = useRouter()
   const [user, setUser] = React.useState<{ email: string } | null>(null)
   const [selectedIndex, setSelectedIndex] = React.useState('NIFTY')
-  const [signals, setSignals] = React.useState<Signal[]>(mockSignals)
+  const [signals, setSignals] = React.useState<Signal[]>([])
   const [loading, setLoading] = React.useState(false)
   const [loadingMessage, setLoadingMessage] = React.useState('Loading Data...')
   const [loadingProgress, setLoadingProgress] = React.useState(0)
@@ -142,69 +105,127 @@ export default function DashboardPage() {
   const [tradingSignal, setTradingSignal] = React.useState<TradingSignal | null>(null)
   const [toast, setToast] = React.useState<{ message: string; type: 'success' | 'error' } | null>(null)
 
-  // Calculate trading signal from scan results
+  // Calculate trading signal from scan results with improved entry analysis
   const calculateTradingSignal = (data: ScanResults): TradingSignal | null => {
     if (!data.probability_analysis || !data.options || data.options.length === 0) return null
 
     const prob = data.probability_analysis
     const recommendedType = data.recommended_option_type || 'CALL'
 
-    // Find the RECOMMENDED option (the one with probability_boost = true)
-    let bestOption = data.options.find(opt => opt.probability_boost === true)
+    // Find the BEST option considering entry quality
+    // Priority: probability_boost = true AND entry_grade is A or B
+    let bestOption = data.options.find(opt => {
+      const entryAnalysis = (opt as any).entry_analysis
+      const hasGoodEntry = entryAnalysis && ['A', 'B'].includes(entryAnalysis.entry_grade)
+      return opt.probability_boost === true && hasGoodEntry
+    })
 
-    // Fallback: Find the best option matching the recommendation type
+    // Fallback 1: Find any probability_boost option
+    if (!bestOption) {
+      bestOption = data.options.find(opt => opt.probability_boost === true)
+    }
+
+    // Fallback 2: Find the best option matching the recommendation type with good entry
     if (!bestOption) {
       const matchingOptions = data.options.filter(opt => {
         const optType = opt.type === 'CE' ? 'CALL' : opt.type === 'PE' ? 'PUT' : opt.type
         return optType === recommendedType
       })
 
-      bestOption = matchingOptions.length > 0
-        ? matchingOptions.sort((a, b) => (b.score || 0) - (a.score || 0))[0]
-        : data.options[0]
+      // Sort by entry grade first, then by score
+      bestOption = matchingOptions.sort((a, b) => {
+        const aEntry = (a as any).entry_analysis
+        const bEntry = (b as any).entry_analysis
+        const aGrade = aEntry?.entry_grade || 'D'
+        const bGrade = bEntry?.entry_grade || 'D'
+        const gradeOrder = { 'A': 4, 'B': 3, 'C': 2, 'D': 1, 'F': 0 }
+        const gradeDiff = (gradeOrder[bGrade as keyof typeof gradeOrder] || 0) - (gradeOrder[aGrade as keyof typeof gradeOrder] || 0)
+        if (gradeDiff !== 0) return gradeDiff
+        return (b.score || 0) - (a.score || 0)
+      })[0] || data.options[0]
     }
 
-    const entryPrice = bestOption.ltp
+    // Get entry analysis data
+    const entryAnalysis = (bestOption as any).entry_analysis || {}
+    const discountZone = (bestOption as any).discount_zone || {}
+    
+    // Use RECOMMENDED entry price, not just LTP
+    const rawLtp = bestOption.ltp
+    const recommendedEntry = entryAnalysis.recommended_entry || rawLtp
+    const limitOrderPrice = entryAnalysis.limit_order_price || rawLtp
+    const maxAcceptablePrice = entryAnalysis.max_acceptable_price || rawLtp * 1.02
+    const entryGrade = entryAnalysis.entry_grade || 'C'
+    const entryRecommendation = entryAnalysis.entry_recommendation || 'BUY'
+    const shouldWaitForPullback = entryAnalysis.wait_for_pullback || false
+    const supportsImmediateEntry = entryAnalysis.supports_immediate_entry !== false
+    const entryReasons: string[] = entryAnalysis.reasoning || []
+    
+    // Use limit order price if waiting for pullback, otherwise use LTP
+    const entryPrice = shouldWaitForPullback ? limitOrderPrice : rawLtp
     const optionType = bestOption.type === 'CE' ? 'CALL' : bestOption.type === 'PE' ? 'PUT' : bestOption.type
 
-    // Calculate realistic targets and stop loss based on option premium
-    // Lower premiums need higher % gains, higher premiums need lower % gains
-    let target1Multiplier = 1.30  // Default 30%
-    let target2Multiplier = 1.80  // Default 80%
-    let stopLossMultiplier = 0.75 // Default 25% loss
-
-    // Adjust multipliers based on option price
-    if (entryPrice < 50) {
-      // Deep OTM options: higher % targets
-      target1Multiplier = 1.50  // 50%
-      target2Multiplier = 2.00  // 100%
-      stopLossMultiplier = 0.60 // 40% loss
-    } else if (entryPrice > 150) {
-      // ITM or expensive options: lower % targets
-      target1Multiplier = 1.20  // 20%
-      target2Multiplier = 1.50  // 50%
-      stopLossMultiplier = 0.80 // 20% loss
+    // Calculate realistic targets using Greeks-based projections if available
+    const delta = bestOption.delta || 0.4
+    const dte = data.market_data?.days_to_expiry || 7
+    
+    // Target calculation based on expected underlying move and delta
+    // More sophisticated than arbitrary percentage multipliers
+    let target1Points: number
+    let target2Points: number
+    let stopLossPoints: number
+    
+    // For intraday, expect 0.5-1% index move = proportional option move via delta
+    const expectedIndexMovePct = prob.expected_move_pct || 0.5
+    const spotPrice = data.market_data?.spot_price || 24000
+    const expectedIndexPoints = spotPrice * expectedIndexMovePct / 100
+    
+    // Option price change ≈ Delta × Underlying price change
+    const expectedOptionMove = Math.abs(delta) * expectedIndexPoints
+    
+    // Set targets based on expected move
+    target1Points = Math.max(expectedOptionMove * 0.6, rawLtp * 0.20) // Min 20% or 60% of expected
+    target2Points = Math.max(expectedOptionMove * 1.2, rawLtp * 0.50) // Min 50% or 120% of expected
+    stopLossPoints = Math.min(rawLtp * 0.25, expectedOptionMove * 0.5) // Max 25% or 50% of expected
+    
+    // Adjust for time decay if close to expiry
+    if (dte <= 2) {
+      // Reduce targets due to theta decay
+      target1Points *= 0.8
+      target2Points *= 0.7
+      // Tighter stop loss to limit time decay damage
+      stopLossPoints *= 0.8
     }
-
-    const target1 = Math.round(entryPrice * target1Multiplier * 100) / 100
-    const target2 = Math.round(entryPrice * target2Multiplier * 100) / 100
-    const stopLoss = Math.round(entryPrice * stopLossMultiplier * 100) / 100
+    
+    const target1 = Math.round((entryPrice + target1Points) * 100) / 100
+    const target2 = Math.round((entryPrice + target2Points) * 100) / 100
+    const stopLoss = Math.round((entryPrice - stopLossPoints) * 100) / 100
 
     // Calculate risk-reward ratio
     const risk = entryPrice - stopLoss
     const reward1 = target1 - entryPrice
     const riskReward = risk > 0 ? `1:${(reward1 / risk).toFixed(1)}` : '1:2'
 
-    // Determine action and direction
-    const action = recommendedType === 'CALL' ? 'BUY CALL' : recommendedType === 'PUT' ? 'BUY PUT' : 'STRADDLE'
+    // Determine action based on entry recommendation
+    let action: string
+    if (!supportsImmediateEntry || entryRecommendation === 'AVOID') {
+      action = `AVOID ${optionType}`
+    } else if (shouldWaitForPullback || entryRecommendation === 'WAIT') {
+      action = `WAIT ${optionType}`
+    } else if (entryRecommendation === 'LIMIT_ORDER') {
+      action = `LIMIT ${optionType}`
+    } else {
+      action = recommendedType === 'CALL' ? 'BUY CALL' : recommendedType === 'PUT' ? 'BUY PUT' : 'STRADDLE'
+    }
+    
     const direction = prob.expected_direction
 
-    // Calculate confidence
-    const confidence = Math.round(prob.confidence * 100)
+    // Calculate confidence - factor in entry grade
+    const gradeBonus = { 'A': 15, 'B': 10, 'C': 0, 'D': -10, 'F': -20 }
+    let confidence = Math.round(prob.confidence * 100) + (gradeBonus[entryGrade as keyof typeof gradeBonus] || 0)
+    confidence = Math.max(0, Math.min(100, confidence))
 
     // Build trading symbol
     const indexSymbol = data.index || 'NIFTY'
-    const expiry = data.market_data?.expiry_date || data.expiry || ''
     const tradingSymbol = `${indexSymbol} ${bestOption.strike} ${optionType}`
 
     return {
@@ -218,8 +239,18 @@ export default function DashboardPage() {
       risk_reward: riskReward,
       confidence,
       direction,
-      trading_symbol: tradingSymbol
-    }
+      trading_symbol: tradingSymbol,
+      // Extended fields for UI
+      entry_grade: entryGrade,
+      raw_ltp: rawLtp,
+      limit_order_price: limitOrderPrice,
+      max_acceptable_price: maxAcceptablePrice,
+      wait_for_pullback: shouldWaitForPullback,
+      entry_reasons: entryReasons,
+      time_feasible: entryAnalysis.time_feasible !== false,
+      time_remaining_minutes: entryAnalysis.time_remaining_minutes || 0,
+      theta_per_hour: entryAnalysis.theta_impact_per_hour || 0,
+    } as any
   }
 
   React.useEffect(() => {
@@ -640,6 +671,19 @@ export default function DashboardPage() {
                   <Badge variant="outline" className="text-xs">
                     {scanResults.data_source === 'live' ? '🟢 Live' : '🟡 Demo'}
                   </Badge>
+                  {/* Entry Grade Badge */}
+                  <Badge 
+                    variant="outline" 
+                    className={`text-xs ${
+                      (tradingSignal as any).entry_grade === 'A' ? 'border-green-500 text-green-500' :
+                      (tradingSignal as any).entry_grade === 'B' ? 'border-lime-500 text-lime-500' :
+                      (tradingSignal as any).entry_grade === 'C' ? 'border-yellow-500 text-yellow-500' :
+                      (tradingSignal as any).entry_grade === 'D' ? 'border-orange-500 text-orange-500' :
+                      'border-red-500 text-red-500'
+                    }`}
+                  >
+                    Entry: {(tradingSignal as any).entry_grade || 'C'}
+                  </Badge>
                 </CardTitle>
                 <div className="text-xs text-muted-foreground">
                   {scanResults.index} | Expiry: {scanResults.market_data?.expiry_date || scanResults.expiry}
@@ -647,11 +691,41 @@ export default function DashboardPage() {
               </div>
             </CardHeader>
             <CardContent className="space-y-4">
+              {/* WAIT/AVOID Warning if applicable */}
+              {(tradingSignal.action.includes('WAIT') || tradingSignal.action.includes('AVOID')) && (
+                <div className={`p-3 rounded-lg border ${
+                  tradingSignal.action.includes('AVOID') 
+                    ? 'bg-red-500/10 border-red-500/30' 
+                    : 'bg-orange-500/10 border-orange-500/30'
+                }`}>
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="text-xl">{tradingSignal.action.includes('AVOID') ? '⛔' : '⏳'}</span>
+                    <span className={`font-semibold ${tradingSignal.action.includes('AVOID') ? 'text-red-500' : 'text-orange-500'}`}>
+                      {tradingSignal.action.includes('AVOID') ? 'Avoid Entry - Poor Conditions' : 'Wait for Better Entry'}
+                    </span>
+                  </div>
+                  <div className="text-xs text-muted-foreground space-y-1">
+                    {((tradingSignal as any).entry_reasons || []).slice(0, 3).map((reason: string, idx: number) => (
+                      <p key={idx}>{reason}</p>
+                    ))}
+                    {(tradingSignal as any).wait_for_pullback && (
+                      <p className="text-orange-400 font-medium">
+                        💡 Wait for pullback to ₹{(tradingSignal as any).limit_order_price?.toFixed(0) || tradingSignal.entry_price.toFixed(0)}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              )}
+              
               {/* Action & Strike */}
               <div className="grid grid-cols-2 gap-3">
                 <div className="p-3 bg-card rounded-lg border">
                   <div className="text-xs text-muted-foreground mb-1">What to Buy</div>
-                  <div className={`text-xl md:text-2xl font-bold ${tradingSignal.type === 'CALL' ? 'text-bullish' : 'text-bearish'}`}>
+                  <div className={`text-xl md:text-2xl font-bold ${
+                    tradingSignal.action.includes('AVOID') ? 'text-red-500' :
+                    tradingSignal.action.includes('WAIT') ? 'text-orange-500' :
+                    tradingSignal.type === 'CALL' ? 'text-bullish' : 'text-bearish'
+                  }`}>
                     {tradingSignal.action}
                   </div>
                   <div className="text-sm text-muted-foreground">
@@ -659,15 +733,45 @@ export default function DashboardPage() {
                   </div>
                 </div>
                 <div className="p-3 bg-card rounded-lg border">
-                  <div className="text-xs text-muted-foreground mb-1">Entry Price</div>
+                  <div className="text-xs text-muted-foreground mb-1">
+                    {(tradingSignal as any).wait_for_pullback ? 'Limit Order Price' : 'Entry Price'}
+                  </div>
                   <div className="text-xl md:text-2xl font-bold text-primary">
                     ₹{tradingSignal.entry_price.toFixed(2)}
                   </div>
+                  {/* Show current LTP if different from entry */}
+                  {(tradingSignal as any).raw_ltp && Math.abs((tradingSignal as any).raw_ltp - tradingSignal.entry_price) > 0.5 && (
+                    <div className="text-xs text-muted-foreground">
+                      Current LTP: ₹{(tradingSignal as any).raw_ltp?.toFixed(2)}
+                    </div>
+                  )}
                   <div className="text-sm text-muted-foreground">
                     Confidence: {tradingSignal.confidence}%
                   </div>
                 </div>
               </div>
+
+              {/* Time & Theta Warning for Intraday */}
+              {((tradingSignal as any).time_remaining_minutes < 120 || (tradingSignal as any).theta_per_hour > 2) && (
+                <div className="grid grid-cols-2 gap-2">
+                  {(tradingSignal as any).time_remaining_minutes < 120 && (
+                    <div className="p-2 bg-yellow-500/10 rounded-lg border border-yellow-500/30 text-center">
+                      <div className="text-yellow-500 text-xs font-medium">⏰ Time Left</div>
+                      <div className="text-sm font-bold text-yellow-500">
+                        {Math.floor((tradingSignal as any).time_remaining_minutes / 60)}h {(tradingSignal as any).time_remaining_minutes % 60}m
+                      </div>
+                    </div>
+                  )}
+                  {(tradingSignal as any).theta_per_hour > 2 && (
+                    <div className="p-2 bg-red-500/10 rounded-lg border border-red-500/30 text-center">
+                      <div className="text-red-500 text-xs font-medium">📉 Theta Decay</div>
+                      <div className="text-sm font-bold text-red-500">
+                        -₹{(tradingSignal as any).theta_per_hour?.toFixed(1)}/hr
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
 
               {/* Targets & Stop Loss - Easy to understand */}
               <div className="grid grid-cols-4 gap-2">
@@ -720,11 +824,25 @@ export default function DashboardPage() {
                     the market looks <span className={tradingSignal.direction === 'BULLISH' ? 'text-green-500 font-semibold' : 'text-red-500 font-semibold'}>{tradingSignal.direction}</span>
                   </p>
                   <p>
-                    • Buy <span className="text-primary font-semibold">{tradingSignal.trading_symbol}</span> at around ₹{tradingSignal.entry_price.toFixed(0)}
+                    • {(tradingSignal as any).wait_for_pullback 
+                      ? <>Place limit order for <span className="text-primary font-semibold">{tradingSignal.trading_symbol}</span> at ₹{tradingSignal.entry_price.toFixed(0)} (current: ₹{(tradingSignal as any).raw_ltp?.toFixed(0)})</>
+                      : <>Buy <span className="text-primary font-semibold">{tradingSignal.trading_symbol}</span> at around ₹{tradingSignal.entry_price.toFixed(0)}</>
+                    }
                   </p>
                   <p>
                     • Book profit at ₹{tradingSignal.target_1.toFixed(0)} or ₹{tradingSignal.target_2.toFixed(0)} • Exit if price drops to ₹{tradingSignal.stop_loss.toFixed(0)}
                   </p>
+                  {/* Entry Quality Note */}
+                  {(tradingSignal as any).entry_grade && (
+                    <p className={`font-medium ${
+                      ['A', 'B'].includes((tradingSignal as any).entry_grade) ? 'text-green-500' :
+                      (tradingSignal as any).entry_grade === 'C' ? 'text-yellow-500' : 'text-red-500'
+                    }`}>
+                      • Entry Quality: Grade {(tradingSignal as any).entry_grade} 
+                      {['A', 'B'].includes((tradingSignal as any).entry_grade) ? ' - Good conditions for entry' : 
+                       (tradingSignal as any).entry_grade === 'C' ? ' - Average, proceed with caution' : ' - Consider waiting'}
+                    </p>
+                  )}
                 </div>
               </div>
             </CardContent>

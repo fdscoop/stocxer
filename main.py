@@ -4560,6 +4560,20 @@ def process_options_scan(chain, min_volume: int, min_oi: int, strategy: str):
                 oi_analysis=getattr(strike_data, 'call_analysis', 'neutral') or 'neutral'
             )
             
+            # Calculate entry analysis metrics
+            entry_analysis = analyze_entry_quality(
+                option_ltp=strike_data.call_ltp,
+                spot_price=spot_price,
+                strike=strike,
+                option_type="CALL",
+                discount_zone=discount_zone,
+                delta=delta,
+                dte=dte,
+                iv=call_iv,
+                volume=strike_data.call_volume,
+                oi=strike_data.call_oi
+            )
+            
             options.append({
                 "strike": strike,
                 "type": "CALL",
@@ -4572,7 +4586,8 @@ def process_options_scan(chain, min_volume: int, min_oi: int, strategy: str):
                 "score": score,
                 "strategy_match": get_strategy_match(score, strategy),
                 "recommendation": get_option_recommendation(score, "CALL", spot_price / strike),
-                "discount_zone": discount_zone
+                "discount_zone": discount_zone,
+                "entry_analysis": entry_analysis
             })
         
         # Process PUT options
@@ -4602,6 +4617,20 @@ def process_options_scan(chain, min_volume: int, min_oi: int, strategy: str):
                 oi_analysis=getattr(strike_data, 'put_analysis', 'neutral') or 'neutral'
             )
             
+            # Calculate entry analysis metrics for PUT
+            entry_analysis = analyze_entry_quality(
+                option_ltp=strike_data.put_ltp,
+                spot_price=spot_price,
+                strike=strike,
+                option_type="PUT",
+                discount_zone=discount_zone,
+                delta=delta,
+                dte=dte,
+                iv=put_iv,
+                volume=strike_data.put_volume,
+                oi=strike_data.put_oi
+            )
+            
             options.append({
                 "strike": strike,
                 "type": "PUT",
@@ -4614,7 +4643,8 @@ def process_options_scan(chain, min_volume: int, min_oi: int, strategy: str):
                 "score": score,
                 "strategy_match": get_strategy_match(score, strategy),
                 "recommendation": get_option_recommendation(score, "PUT", spot_price / strike),
-                "discount_zone": discount_zone
+                "discount_zone": discount_zone,
+                "entry_analysis": entry_analysis
             })
     
     # Sort by score (highest first)
@@ -4717,6 +4747,235 @@ def get_option_recommendation(score: float, option_type: str, moneyness: float) 
     
     position = "ITM" if (option_type == "CALL" and moneyness > 1) or (option_type == "PUT" and moneyness < 1) else "OTM"
     return f"{action} - {position} {option_type}"
+
+
+def analyze_entry_quality(
+    option_ltp: float,
+    spot_price: float,
+    strike: float,
+    option_type: str,
+    discount_zone: dict,
+    delta: float,
+    dte: int,
+    iv: float,
+    volume: int,
+    oi: int
+) -> dict:
+    """
+    Comprehensive entry quality analysis to determine if current price is a good entry.
+    
+    This solves the problem of buying at short-term peaks by analyzing:
+    1. Is the option in a discount zone or overpriced?
+    2. Is there sufficient time to reach the target?
+    3. Is liquidity adequate for good fills?
+    4. What's the recommended entry price vs current LTP?
+    5. Is the trend exhausted or still has momentum?
+    
+    Returns:
+        dict with entry quality metrics and recommended actions
+    """
+    from src.utils.ist_utils import get_minutes_to_market_close, is_market_open, get_ist_time
+    
+    result = {
+        "entry_grade": "C",           # A, B, C, D, F grades
+        "entry_score": 50,            # 0-100 score
+        "recommended_entry": option_ltp,
+        "limit_order_price": option_ltp,
+        "max_acceptable_price": option_ltp * 1.02,
+        "wait_for_pullback": False,
+        "pullback_target_price": option_ltp,
+        "time_feasible": True,
+        "time_remaining_minutes": 375,
+        "estimated_minutes_to_target": 60,
+        "liquidity_grade": "B",
+        "theta_impact_per_hour": 0,
+        "supports_immediate_entry": True,
+        "entry_recommendation": "BUY",
+        "reasoning": []
+    }
+    
+    reasoning = []
+    entry_score = 50  # Start neutral
+    
+    # =====================================================
+    # 1. DISCOUNT ZONE ANALYSIS
+    # =====================================================
+    dz_status = discount_zone.get("status", "fair")
+    dz_supports_entry = discount_zone.get("supports_entry", True)
+    best_entry = discount_zone.get("best_entry_price", option_ltp)
+    max_entry = discount_zone.get("max_entry_price", option_ltp * 1.02)
+    iv_vs_avg = discount_zone.get("iv_vs_avg_pct", 0)
+    expected_pullback = discount_zone.get("expected_pullback_pct", 0)
+    
+    if dz_status == "deep_discount":
+        entry_score += 30
+        reasoning.append("✅ DEEP DISCOUNT: IV significantly below average - excellent entry")
+    elif dz_status == "discounted":
+        entry_score += 20
+        reasoning.append("✅ DISCOUNTED: IV below average - good entry zone")
+    elif dz_status == "fair":
+        entry_score += 5
+        reasoning.append("⚡ FAIR VALUE: Consider limit order for better fill")
+    elif dz_status == "premium":
+        entry_score -= 15
+        reasoning.append(f"🔶 PREMIUM: IV elevated +{iv_vs_avg:.0f}% - wait for pullback")
+    elif dz_status == "high_premium":
+        entry_score -= 30
+        reasoning.append(f"🔴 HIGH PREMIUM: IV very elevated +{iv_vs_avg:.0f}% - avoid or wait")
+    
+    # =====================================================
+    # 2. TIME FEASIBILITY CHECK
+    # =====================================================
+    market_open = is_market_open()
+    minutes_remaining = get_minutes_to_market_close() if market_open else 375
+    
+    # Estimate time to target based on delta and typical index movement
+    # Average intraday range for NIFTY/BANKNIFTY is ~1% 
+    # With delta of 0.4, option needs ~50-60 points index move for 20 points profit
+    avg_option_points_per_hour = abs(delta) * 15  # ~15 index points per hour average
+    target_profit_points = option_ltp * 0.25  # Target 25% profit
+    
+    if avg_option_points_per_hour > 0:
+        estimated_hours_to_target = target_profit_points / avg_option_points_per_hour
+        estimated_minutes_to_target = estimated_hours_to_target * 60
+    else:
+        estimated_minutes_to_target = 180  # Default 3 hours
+    
+    result["time_remaining_minutes"] = minutes_remaining
+    result["estimated_minutes_to_target"] = round(estimated_minutes_to_target)
+    
+    if market_open:
+        if minutes_remaining < 60:  # Less than 1 hour to close
+            if estimated_minutes_to_target > minutes_remaining:
+                entry_score -= 20
+                reasoning.append("⏰ TIME CONSTRAINT: Less than 1 hour - target may not be achievable today")
+                result["time_feasible"] = False
+            else:
+                reasoning.append("⏰ Limited time but target seems achievable")
+        elif minutes_remaining < 120:  # 1-2 hours
+            if estimated_minutes_to_target > minutes_remaining:
+                entry_score -= 10
+                reasoning.append("⏰ TIME TIGHT: 1-2 hours remaining - reduce position size")
+    
+    # =====================================================
+    # 3. THETA DECAY IMPACT
+    # =====================================================
+    # Calculate theta impact per hour (simplified)
+    # Theta accelerates dramatically as expiry approaches
+    if dte <= 0:
+        theta_pct_per_hour = 15  # Expiry day - extreme
+    elif dte <= 1:
+        theta_pct_per_hour = 5   # Last day
+    elif dte <= 2:
+        theta_pct_per_hour = 2.5  # 2 days
+    elif dte <= 5:
+        theta_pct_per_hour = 1    # 3-5 days
+    else:
+        theta_pct_per_hour = 0.3  # More than a week
+    
+    theta_points_per_hour = option_ltp * theta_pct_per_hour / 100
+    result["theta_impact_per_hour"] = round(theta_points_per_hour, 2)
+    
+    if dte <= 1:
+        entry_score -= 15
+        reasoning.append(f"⚠️ HIGH THETA: Losing ~₹{theta_points_per_hour:.1f}/hour to decay - quick trade only")
+    elif dte <= 2:
+        entry_score -= 5
+        reasoning.append(f"📉 THETA DECAY: ~₹{theta_points_per_hour:.1f}/hour - time sensitive")
+    
+    # =====================================================
+    # 4. LIQUIDITY ANALYSIS
+    # =====================================================
+    # Good liquidity = tight spreads, easy fills
+    liquidity_score = 0
+    
+    if volume >= 10000:
+        liquidity_score += 40
+    elif volume >= 5000:
+        liquidity_score += 30
+    elif volume >= 1000:
+        liquidity_score += 20
+    else:
+        liquidity_score += 10
+        reasoning.append("⚠️ LOW VOLUME: May have difficulty getting fills")
+    
+    if oi >= 50000:
+        liquidity_score += 40
+    elif oi >= 20000:
+        liquidity_score += 30
+    elif oi >= 10000:
+        liquidity_score += 20
+    else:
+        liquidity_score += 10
+    
+    if liquidity_score >= 70:
+        result["liquidity_grade"] = "A"
+    elif liquidity_score >= 50:
+        result["liquidity_grade"] = "B"
+    elif liquidity_score >= 30:
+        result["liquidity_grade"] = "C"
+        entry_score -= 5
+    else:
+        result["liquidity_grade"] = "D"
+        entry_score -= 10
+        reasoning.append("🔶 POOR LIQUIDITY: Wide spreads expected")
+    
+    # =====================================================
+    # 5. CALCULATE RECOMMENDED ENTRY PRICES
+    # =====================================================
+    
+    # If premium zone, recommend waiting for pullback
+    if dz_status in ["premium", "high_premium"]:
+        result["wait_for_pullback"] = True
+        result["pullback_target_price"] = round(best_entry, 2)
+        result["supports_immediate_entry"] = False
+        result["limit_order_price"] = round(best_entry, 2)
+        result["entry_recommendation"] = "WAIT"
+    elif expected_pullback > 3:
+        # Even at fair value, if pullback expected, suggest limit order
+        result["limit_order_price"] = round(option_ltp * (1 - expected_pullback/200), 2)  # Aim for half the pullback
+        result["entry_recommendation"] = "LIMIT_ORDER"
+        reasoning.append(f"💡 Consider limit order at ₹{result['limit_order_price']:.0f} (expecting {expected_pullback:.0f}% pullback)")
+    else:
+        result["limit_order_price"] = round(option_ltp * 0.99, 2)  # 1% below LTP
+        result["entry_recommendation"] = "BUY"
+    
+    result["recommended_entry"] = round(best_entry, 2)
+    result["max_acceptable_price"] = round(max_entry, 2)
+    
+    # =====================================================
+    # 6. FINAL SCORING AND GRADE
+    # =====================================================
+    
+    # Clamp score between 0-100
+    entry_score = max(0, min(100, entry_score))
+    result["entry_score"] = entry_score
+    
+    # Assign grade
+    if entry_score >= 80:
+        result["entry_grade"] = "A"
+        if not any("PREMIUM" in r or "AVOID" in r for r in reasoning):
+            reasoning.insert(0, "🟢 EXCELLENT ENTRY: Strong buy opportunity")
+    elif entry_score >= 65:
+        result["entry_grade"] = "B"
+        reasoning.insert(0, "🟡 GOOD ENTRY: Favorable conditions")
+    elif entry_score >= 50:
+        result["entry_grade"] = "C"
+        reasoning.insert(0, "🟠 AVERAGE ENTRY: Proceed with caution")
+    elif entry_score >= 35:
+        result["entry_grade"] = "D"
+        reasoning.insert(0, "🔴 POOR ENTRY: Consider waiting or smaller size")
+        result["entry_recommendation"] = "WAIT"
+        result["supports_immediate_entry"] = False
+    else:
+        result["entry_grade"] = "F"
+        reasoning.insert(0, "⛔ AVOID: Unfavorable conditions for entry")
+        result["entry_recommendation"] = "AVOID"
+        result["supports_immediate_entry"] = False
+    
+    result["reasoning"] = reasoning
+    
+    return result
 
 
 def calculate_discount_zone(
