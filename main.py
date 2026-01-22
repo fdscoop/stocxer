@@ -3909,7 +3909,8 @@ async def scan_stocks(
             "total_signals": len(signals),
             "buy_signals": len(buy_signals),
             "sell_signals": len(sell_signals),
-            "signals": {
+            "signals": signals,  # Flat array for frontend compatibility
+            "signals_by_type": {
                 "buy": buy_signals,
                 "sell": sell_signals
             },
