@@ -44,9 +44,48 @@ export default function LoginPage() {
       if (response.ok && data.access_token) {
         localStorage.setItem('token', data.access_token)
         localStorage.setItem('jwt_token', data.access_token)
+        localStorage.setItem('auth_token', data.access_token) // For compatibility with old frontend
         localStorage.setItem('userEmail', loginEmail)
-        setMessage({ text: 'Login successful! Redirecting...', isError: false })
-        setTimeout(() => router.push('/'), 1000)
+        
+        // Check if there's a pending Fyers auth code to process
+        const urlParams = new URLSearchParams(window.location.search)
+        const fyersAuthCode = urlParams.get('fyers_auth_code')
+        const state = urlParams.get('state')
+        
+        if (fyersAuthCode) {
+          setMessage({ text: 'Login successful! Processing Fyers authentication...', isError: false })
+          
+          try {
+            // Process the Fyers authentication
+            const fyersResponse = await fetch(`${apiUrl}/auth/callback`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${data.access_token}`
+              },
+              body: JSON.stringify({
+                auth_code: fyersAuthCode,
+                state: state
+              })
+            })
+            
+            const fyersData = await fyersResponse.json()
+            
+            if (fyersResponse.ok) {
+              setMessage({ text: 'Login and Fyers authentication successful! Redirecting...', isError: false })
+              setTimeout(() => router.push('/'), 2000)
+            } else {
+              setMessage({ text: 'Login successful, but Fyers auth failed. You can try connecting again from dashboard.', isError: false })
+              setTimeout(() => router.push('/'), 3000)
+            }
+          } catch (fyersError) {
+            setMessage({ text: 'Login successful, but Fyers auth failed. You can try connecting again from dashboard.', isError: false })
+            setTimeout(() => router.push('/'), 3000)
+          }
+        } else {
+          setMessage({ text: 'Login successful! Redirecting...', isError: false })
+          setTimeout(() => router.push('/'), 1000)
+        }
       } else {
         setMessage({ text: data.detail || 'Login failed', isError: true })
       }

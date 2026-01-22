@@ -431,14 +431,22 @@ async def fyers_callback_redirect(
 ):
     """Handle Fyers OAuth callback redirect (without auth token) and redirect to login"""
     try:
-        # Store the auth_code in session or redirect with it
-        redirect_url = f"/login.html?fyers_auth_code={auth_code}&state={state or ''}&message=Please login to complete Fyers authentication"
+        # Determine if we're on the new frontend (Vercel) or old frontend (static)
+        # Check if the request comes from Vercel or stocxer.in (new frontend)
+        origin = request.headers.get('origin', '') if request else ''
+        referer = request.headers.get('referer', '') if request else ''
+        
+        # Use /login for new frontend, /login.html for old frontend
+        if 'vercel' in origin or 'vercel' in referer or 'stocxer.in' in origin or 'stocxer.in' in referer:
+            redirect_url = f"/login?fyers_auth_code={auth_code}&state={state or ''}&message=Please login to complete Fyers authentication"
+        else:
+            redirect_url = f"/login.html?fyers_auth_code={auth_code}&state={state or ''}&message=Please login to complete Fyers authentication"
         return RedirectResponse(url=redirect_url, status_code=302)
         
     except Exception as e:
         logger.error(f"Fyers callback redirect error: {e}")
         # Redirect to login with error message
-        return RedirectResponse(url=f"/login.html?error=Authentication failed: {str(e)}", status_code=302)
+        return RedirectResponse(url=f"/login?error=Authentication failed: {str(e)}", status_code=302)
 
 @app.get("/auth/url")
 async def get_auth_url():

@@ -91,7 +91,14 @@
                 }
                 
                 if (!authToken) {
-                    throw new Error('No authentication token found. Please login first.');
+                    console.log('❌ No auth token found, redirecting to callback-redirect endpoint...');
+                    
+                    // Redirect to a special endpoint that will handle the callback with a fresh auth token
+                    // This is the same approach used in the old working frontend
+                    const callbackUrl = `${API_BASE}/auth/callback-redirect?auth_code=${authCode}&state=${state || ''}`;
+                    console.log('🔄 Redirecting to callback endpoint:', callbackUrl);
+                    window.location.href = callbackUrl;
+                    return;
                 }
                 
                 // Send auth code to backend
@@ -164,14 +171,61 @@
             } catch (error) {
                 console.error('❌ Fyers callback error:', error);
                 
-                message.innerHTML = `
-                    <div class="text-red-400 text-4xl mb-4">❌</div>
-                    <p class="text-red-400 font-semibold mb-2">Authentication Failed</p>
-                    <p class="text-gray-400 text-sm">${error.message}</p>
-                    <button onclick="location.href='/login'" class="mt-4 px-4 py-2 bg-cyan-600 hover:bg-cyan-700 rounded">
-                        Back to Login
-                    </button>
-                `;
+                let errorHtml;
+                
+                if (error.message.includes('session has expired') || error.message.includes('Invalid token') || error.message.includes('login again') || error.message.includes('401')) {
+                    // TradeWise session expired - clear local storage and show login option
+                    localStorage.removeItem('auth_token');
+                    localStorage.removeItem('token');
+                    localStorage.removeItem('jwt_token');
+                    localStorage.removeItem('user');
+                    localStorage.removeItem('userEmail');
+                    errorHtml = `
+                        <div class="text-yellow-400 text-4xl mb-4">🔄</div>
+                        <h2 class="text-xl font-bold text-yellow-400 mb-2">Session Expired</h2>
+                        <p class="text-gray-300 mb-2">Your TradeWise session has expired.</p>
+                        <p class="text-gray-400 text-sm mb-4">Please login again to continue with Fyers authentication.</p>
+                        <div class="flex gap-3 justify-center">
+                            <a href="/login" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded">
+                                Login to TradeWise
+                            </a>
+                            <button onclick="window.close()" class="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded">
+                                Close Window
+                            </button>
+                        </div>
+                    `;
+                } else if (error.message.includes('Timeout') || error.message.includes('Cross-origin')) {
+                    errorHtml = `
+                        <div class="text-yellow-400 text-4xl mb-4">⚠️</div>
+                        <h2 class="text-xl font-bold text-yellow-400 mb-2">Cross-Origin Issue</h2>
+                        <p class="text-gray-300 mb-2">Authentication popup cannot communicate with parent window.</p>
+                        <p class="text-gray-400 text-sm mb-4">Please try authenticating directly in the main window instead.</p>
+                        <div class="flex gap-3 justify-center">
+                            <a href="/" class="px-4 py-2 bg-cyan-600 hover:bg-cyan-700 text-white rounded">
+                                Go to Dashboard
+                            </a>
+                            <button onclick="window.close()" class="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded">
+                                Close Window
+                            </button>
+                        </div>
+                    `;
+                } else {
+                    errorHtml = `
+                        <div class="text-red-400 text-4xl mb-4">❌</div>
+                        <p class="text-red-400 font-semibold mb-2">Authentication Failed</p>
+                        <p class="text-gray-400 text-sm mb-4">${error.message}</p>
+                        <div class="flex gap-3 justify-center">
+                            <a href="/login" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded">
+                                Login
+                            </a>
+                            <button onclick="window.close()" class="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded">
+                                Close
+                            </button>
+                        </div>
+                    `;
+                }
+                
+                message.innerHTML = errorHtml;
                 
                 // Notify parent window of error if this is a popup
                 const isPopup = window.opener && window.opener !== window;
