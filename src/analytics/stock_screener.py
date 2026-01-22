@@ -385,9 +385,12 @@ class StockScreener:
             return {
                 "symbol": symbol,
                 "name": symbol.replace("NSE:", "").replace("-EQ", ""),
+                "price": round(current_price, 2),
                 "current_price": round(current_price, 2),
                 "action": action,
                 "confidence": round(confidence, 1),
+                "target": round(target_1, 2),
+                "stop_loss": round(stop_loss, 2),
                 "targets": {
                     "target_1": round(target_1, 2),
                     "target_2": round(target_2, 2),
