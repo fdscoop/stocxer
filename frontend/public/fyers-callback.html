@@ -19,7 +19,13 @@
     <script>
         // API Base URL - auto-detect based on environment
         const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-        const API_BASE = isLocalhost ? 'http://localhost:8000' : window.location.origin;
+        // For localhost, always use port 8000 for backend
+        // For production, use the deployed backend URL
+        const API_BASE = isLocalhost 
+            ? 'http://localhost:8000' 
+            : (window.location.hostname.includes('vercel.app') || window.location.hostname.includes('stocxer'))
+                ? 'https://stocxer-ai.onrender.com'
+                : window.location.origin;
 
         async function handleCallback() {
             const message = document.getElementById('message');
@@ -92,7 +98,10 @@
                 message.innerHTML = `
                     <div class="text-cyan-400 text-4xl mb-4">⏳</div>
                     <p class="text-gray-300">Exchanging authorization code...</p>
+                    <p class="text-xs text-gray-500 mt-2">API: ${API_BASE}</p>
                 `;
+                
+                console.log('📡 Sending auth code to:', `${API_BASE}/auth/callback`);
                 
                 const response = await fetch(`${API_BASE}/auth/callback`, {
                     method: 'POST',
@@ -106,7 +115,17 @@
                     })
                 });
                 
-                const data = await response.json();
+                console.log('📥 Response status:', response.status);
+                
+                let data;
+                const contentType = response.headers.get('content-type');
+                if (contentType && contentType.includes('application/json')) {
+                    data = await response.json();
+                } else {
+                    const text = await response.text();
+                    console.error('Non-JSON response:', text.substring(0, 200));
+                    throw new Error('Backend returned non-JSON response. Check if backend is running.');
+                }
                 
                 if (response.ok) {
                     console.log('✅ Fyers authentication successful:', data);
