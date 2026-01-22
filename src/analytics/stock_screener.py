@@ -6,6 +6,7 @@ Uses ICT analysis + ML predictions for signal generation
 import pandas as pd
 import numpy as np
 import random
+import time
 from typing import List, Dict, Optional
 from datetime import datetime, timedelta
 import logging
@@ -435,13 +436,18 @@ class StockScreener:
         stocks = self.get_nse_stocks_list(limit=limit, randomize=randomize)
         signals = []
         
-        for symbol in stocks:
-            logger.info(f"Analyzing {symbol}...")
+        for idx, symbol in enumerate(stocks):
+            logger.info(f"Analyzing {symbol}... ({idx+1}/{len(stocks)})")
             signal = self.analyze_stock(symbol)
             
             if signal and signal["confidence"] >= min_confidence:
                 signals.append(signal)
                 logger.info(f"✅ Signal found: {symbol} - {signal['action']} ({signal['confidence']}%)")
+            
+            # Rate limit protection: Add delay between API calls to avoid 429 errors
+            # Fyers API has strict rate limits, so we add 0.6s delay between each stock
+            if idx < len(stocks) - 1:  # Don't delay after the last stock
+                time.sleep(0.6)  # 600ms delay = max ~100 stocks/minute
         
         # Sort by confidence (highest first)
         signals.sort(key=lambda x: x["confidence"], reverse=True)

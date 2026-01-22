@@ -29,6 +29,13 @@ from src.models.auth_models import UserRegister, UserLogin, FyersTokenStore
 # IST timezone utilities for consistent time handling across geographies
 from src.utils.ist_utils import now_ist, get_ist_time, ist_timestamp, is_market_open, get_session_info as get_ist_session_info
 
+# Configure logging (must be before ML imports)
+logging.basicConfig(
+    level=settings.log_level,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
+
 # Optional ML imports (not required for production API)
 try:
     from src.ml.price_prediction import price_predictor
@@ -40,13 +47,6 @@ except ImportError as e:
     ensemble_predictor = None
     get_ml_signal = None
     ML_AVAILABLE = False
-
-# Configure logging
-logging.basicConfig(
-    level=settings.log_level,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
-logger = logging.getLogger(__name__)
 
 # Create FastAPI app
 app = FastAPI(
@@ -3672,7 +3672,7 @@ async def get_signal_reasoning(index: str):
         mtf_analysis = await get_mtf_analysis(symbol, "M,W,D,240,60,15")
         
         # Get current session info
-        session_response = await get_options_session_info()
+        session_info = options_time_analyzer.get_current_session()
         
         # Get option chain for context
         try:
@@ -3688,7 +3688,7 @@ async def get_signal_reasoning(index: str):
             "timeframe_analysis": {},
             "risk_factors": [],
             "confluence_factors": [],
-            "session_context": session_response.get("current_session", "UNKNOWN"),
+            "session_context": session_info.get("current_session", "UNKNOWN"),
             "market_structure": "Unknown"
         }
         
@@ -3724,11 +3724,11 @@ async def get_signal_reasoning(index: str):
                 })
         
         # Add risk factors
-        current_session = session_response.get("current_session", "")
+        current_session = session_info.get("current_session", "")
         if current_session in ["OPENING_VOLATILITY", "CLOSING_HOUR"]:
             reasoning["risk_factors"].append("High volatility session - increased risk")
             
-        if session_response.get("time_to_expiry", {}).get("days", 7) <= 2:
+        if session_info.get("time_to_expiry", {}).get("days", 7) <= 2:
             reasoning["risk_factors"].append("Weekly expiry - high gamma risk")
         
         # Market structure assessment
