@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TradeWise - Fyers Authentication</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-900 text-gray-100 min-h-screen flex items-center justify-center">
+    <div class="max-w-md mx-auto p-6 bg-gray-800 rounded-lg shadow-xl">
+        <div class="text-center">
+            <div id="message">
+                <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-cyan-400 mx-auto"></div>
+                <p class="mt-4 text-gray-300">Processing Fyers authentication...</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // API Base URL - auto-detect based on environment
+        const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+        const API_BASE = isLocalhost ? 'http://localhost:8000' : window.location.origin;
+
+        async function handleCallback() {
+            const message = document.getElementById('message');
+            
+            try {
+                // Get auth code from URL
+                const urlParams = new URLSearchParams(window.location.search);
+                const authCode = urlParams.get('auth_code');
+                const state = urlParams.get('state');
+                
+                if (!authCode) {
+                    throw new Error('No authorization code received from Fyers');
+                }
+                
+                console.log('🔄 Processing Fyers callback with auth_code:', authCode.substring(0, 20) + '...');
+                
+                // Check if this is a popup window
+                const isPopup = window.opener && window.opener !== window;
+                let authToken = null;
+                
+                // Try to get auth token from localStorage
+                authToken = localStorage.getItem('auth_token') || localStorage.getItem('token') || localStorage.getItem('jwt_token');
+                console.log('📨 Trying localStorage for auth token:', authToken ? 'Found' : 'Not found');
+                
+                // If popup, try to get from opener
+                if (!authToken && isPopup) {
+                    console.log('🪟 Running in popup, requesting from parent...');
+                    
+                    try {
+                        // Try direct access first (same origin)
+                        if (window.opener.localStorage) {
+                            authToken = window.opener.localStorage.getItem('token') || 
+                                       window.opener.localStorage.getItem('jwt_token') ||
+                                       window.opener.localStorage.getItem('auth_token');
+                            console.log('📨 Got token from opener localStorage:', authToken ? 'Found' : 'Not found');
+                        }
+                    } catch (e) {
+                        console.log('Cannot access opener localStorage (cross-origin):', e.message);
+                    }
+                    
+                    // If still no token, use postMessage
+                    if (!authToken) {
+                        window.opener.postMessage({ type: 'get_auth_token' }, '*');
+                        
+                        // Wait for response from parent window
+                        authToken = await new Promise((resolve, reject) => {
+                            const timeout = setTimeout(() => {
+                                reject(new Error('Timeout waiting for auth token'));
+                            }, 5000);
+                            
+                            const messageHandler = (event) => {
+                                if (event.data.type === 'auth_token_response') {
+                                    clearTimeout(timeout);
+                                    window.removeEventListener('message', messageHandler);
+                                    console.log('📨 Received auth token from parent window');
+                                    resolve(event.data.token);
+                                }
+                            };
+                            
+                            window.addEventListener('message', messageHandler);
+                        });
+                    }
+                }
+                
+                if (!authToken) {
+                    throw new Error('No authentication token found. Please login first.');
+                }
+                
+                // Send auth code to backend
+                message.innerHTML = `
+                    <div class="text-cyan-400 text-4xl mb-4">⏳</div>
+                    <p class="text-gray-300">Exchanging authorization code...</p>
+                `;
+                
+                const response = await fetch(`${API_BASE}/auth/callback`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${authToken}`
+                    },
+                    body: JSON.stringify({
+                        auth_code: authCode,
+                        state: state
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    console.log('✅ Fyers authentication successful:', data);
+                    
+                    message.innerHTML = `
+                        <div class="text-green-400 text-4xl mb-4">✅</div>
+                        <p class="text-green-400 font-semibold mb-2">Authentication Successful!</p>
+                        <p class="text-gray-400 text-sm">Fyers account connected</p>
+                        <p class="text-gray-500 text-xs mt-4">You can close this window</p>
+                    `;
+                    
+                    // Notify parent window if this is a popup
+                    if (isPopup && window.opener) {
+                        window.opener.postMessage({ 
+                            type: 'fyers_auth_complete', 
+                            success: true,
+                            message: data.message 
+                        }, '*');
+                        
+                        // Auto-close after 2 seconds
+                        setTimeout(() => {
+                            window.close();
+                        }, 2000);
+                    } else {
+                        // If not a popup, redirect to dashboard after 2 seconds
+                        setTimeout(() => {
+                            window.location.href = '/';
+                        }, 2000);
+                    }
+                } else {
+                    throw new Error(data.detail || 'Failed to process authentication');
+                }
+                
+            } catch (error) {
+                console.error('❌ Fyers callback error:', error);
+                
+                message.innerHTML = `
+                    <div class="text-red-400 text-4xl mb-4">❌</div>
+                    <p class="text-red-400 font-semibold mb-2">Authentication Failed</p>
+                    <p class="text-gray-400 text-sm">${error.message}</p>
+                    <button onclick="location.href='/login'" class="mt-4 px-4 py-2 bg-cyan-600 hover:bg-cyan-700 rounded">
+                        Back to Login
+                    </button>
+                `;
+                
+                // Notify parent window of error if this is a popup
+                const isPopup = window.opener && window.opener !== window;
+                if (isPopup && window.opener) {
+                    window.opener.postMessage({ 
+                        type: 'fyers_auth_complete', 
+                        success: false,
+                        error: error.message 
+                    }, '*');
+                }
+            }
+        }
+        
+        // Listen for auth token requests from popup
+        window.addEventListener('message', (event) => {
+            if (event.data.type === 'get_auth_token') {
+                const token = localStorage.getItem('token') || 
+                             localStorage.getItem('jwt_token') ||
+                             localStorage.getItem('auth_token');
+                event.source.postMessage({ 
+                    type: 'auth_token_response', 
+                    token: token 
+                }, '*');
+            }
+        });
+        
+        // Start processing
+        handleCallback();
+    </script>
+</body>
+</html>

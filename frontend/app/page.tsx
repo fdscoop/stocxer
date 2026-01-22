@@ -244,7 +244,40 @@ export default function DashboardPage() {
       router.push('/landing')
     }
 
-    return () => clearInterval(timer)
+    // Listen for messages from Fyers callback popup
+    const handleMessage = (event: MessageEvent) => {
+      // Handle auth token requests from popup
+      if (event.data.type === 'get_auth_token') {
+        const authToken = localStorage.getItem('token') || localStorage.getItem('jwt_token')
+        event.source?.postMessage({ 
+          type: 'auth_token_response', 
+          token: authToken 
+        }, event.origin as any)
+      }
+      
+      // Handle Fyers auth completion
+      if (event.data.type === 'fyers_auth_complete') {
+        if (event.data.success) {
+          setToast({ message: '✅ Fyers authentication successful!', type: 'success' })
+          setTimeout(() => setToast(null), 3000)
+          // Refresh auth status
+          const authToken = localStorage.getItem('token') || localStorage.getItem('jwt_token')
+          if (authToken) {
+            checkFyersAuth(authToken)
+          }
+        } else {
+          setToast({ message: `❌ Fyers auth failed: ${event.data.error}`, type: 'error' })
+          setTimeout(() => setToast(null), 5000)
+        }
+      }
+    }
+    
+    window.addEventListener('message', handleMessage)
+
+    return () => {
+      clearInterval(timer)
+      window.removeEventListener('message', handleMessage)
+    }
   }, [router])
 
   // Check Fyers authentication status
