@@ -3939,6 +3939,34 @@ async def scan_stocks(
         raise HTTPException(status_code=500, detail=str(e))
 
 
+# Also support POST with /api/ prefix for frontend compatibility
+@app.post("/api/screener/scan")
+async def scan_stocks_post(
+    request: Request,
+    authorization: str = Header(None, description="Bearer token (required)"),
+):
+    """
+    POST endpoint for stock screener (frontend compatibility)
+    """
+    try:
+        body = await request.json()
+        limit = body.get("limit", 50)
+        min_confidence = body.get("min_confidence", 60.0)
+        action = body.get("action", "BUY")
+        randomize = body.get("randomize", True)
+        
+        # Re-use the GET endpoint logic
+        return await scan_stocks(
+            limit=limit,
+            min_confidence=min_confidence,
+            randomize=randomize,
+            authorization=authorization
+        )
+    except Exception as e:
+        logger.error(f"Error in POST screener scan: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @app.get("/screener/stock/{symbol}")
 async def analyze_single_stock(symbol: str, debug: bool = False):
     """
