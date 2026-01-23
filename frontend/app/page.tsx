@@ -12,7 +12,7 @@ import { ProbabilityBar, SentimentGauge } from '@/components/trading/probability
 import { LoadingModal } from '@/components/trading/loading-modal'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { ScrollArea } from '@/components/ui/scroll-area'
-import { RefreshCw, TrendingUp, TrendingDown, BarChart3, Target, Users, Zap, ArrowUp, ArrowDown, Minus } from 'lucide-react'
+import { RefreshCw, TrendingUp, TrendingDown, BarChart3, Target, Users, Zap, ArrowUp, ArrowDown, Minus, Loader2 } from 'lucide-react'
 import Link from 'next/link'
 import { getApiUrl, clearAuthData } from '@/lib/api'
 
@@ -702,41 +702,44 @@ export default function DashboardPage() {
         </Card>
 
         {/* Quick Actions */}
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-2 md:gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
           <Link href="/screener" className="block">
-            <Button variant="outline" className="w-full h-auto py-4 flex flex-col gap-2">
-              <BarChart3 className="w-5 h-5 md:w-6 md:h-6" />
-              <span className="text-xs md:text-sm">Stock Screener</span>
+            <Button variant="outline" className="w-full h-auto py-3 px-4 flex items-center justify-start gap-3 hover:bg-accent">
+              <BarChart3 className="w-5 h-5" />
+              <span className="text-sm font-medium">Stock Screener</span>
             </Button>
           </Link>
           <Link href="/options" className="block">
-            <Button variant="outline" className="w-full h-auto py-4 flex flex-col gap-2">
-              <Target className="w-5 h-5 md:w-6 md:h-6" />
-              <span className="text-xs md:text-sm">Options Scanner</span>
+            <Button variant="outline" className="w-full h-auto py-3 px-4 flex items-center justify-start gap-3 hover:bg-accent">
+              <Target className="w-5 h-5" />
+              <span className="text-sm font-medium">Options Scanner</span>
             </Button>
           </Link>
           <Link href="/analyzer" className="block">
-            <Button variant="outline" className="w-full h-auto py-4 flex flex-col gap-2">
-              <TrendingUp className="w-5 h-5 md:w-6 md:h-6" />
-              <span className="text-xs md:text-sm">Index Analyzer</span>
+            <Button variant="outline" className="w-full h-auto py-3 px-4 flex items-center justify-start gap-3 hover:bg-accent">
+              <TrendingUp className="w-5 h-5" />
+              <span className="text-sm font-medium">Index Analyzer</span>
             </Button>
           </Link>
           <Button
             variant="outline"
-            className="w-full h-auto py-4 flex flex-col gap-2 border-orange-500/50 hover:border-orange-500 hover:bg-orange-500/10"
+            className="w-full h-auto py-3 px-4 flex items-center justify-start gap-3 hover:bg-accent"
             onClick={openFyersAuthPopup}
           >
-            <span className="text-lg">🔑</span>
-            <span className="text-xs md:text-sm">Fyers Auth</span>
+            <span className="text-xl">🔑</span>
+            <span className="text-sm font-medium">Connect Broker</span>
           </Button>
           <Button
-            variant="default"
-            className="w-full h-auto py-4 flex flex-col gap-2 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700"
+            className="w-full h-auto py-3 px-4 flex items-center justify-center gap-2 bg-primary hover:bg-primary/90"
             onClick={handleQuickScan}
             disabled={loading}
           >
-            <Zap className="w-5 h-5 md:w-6 md:h-6" />
-            <span className="text-xs md:text-sm font-semibold">Scan {selectedIndex}</span>
+            {loading ? (
+              <Loader2 className="w-5 h-5 animate-spin" />
+            ) : (
+              <Zap className="w-5 h-5" />
+            )}
+            <span className="text-sm font-semibold">Scan {selectedIndex}</span>
           </Button>
         </div>
 
@@ -1367,10 +1370,10 @@ export default function DashboardPage() {
                 </div>
               </ScrollArea>
               {scanResults.options.length > 20 && (
-                <div className="mt-3 text-center">
+                <div className="mt-4 text-center">
                   <Link href={`/options?index=${selectedIndex}`}>
-                    <Button variant="outline" size="sm">
-                      View all {scanResults.options.length} options
+                    <Button variant="outline" size="sm" className="text-sm">
+                      View All {scanResults.options.length} Options
                     </Button>
                   </Link>
                 </div>
@@ -1389,19 +1392,18 @@ export default function DashboardPage() {
                 <Badge variant="secondary" className="text-xs">Last 7 Days</Badge>
                 <Badge className="text-xs">PERSONAL</Badge>
               </CardTitle>
-              <div className="flex gap-2 flex-wrap">
-                <select className="h-9 rounded-md border border-input bg-background px-3 text-xs md:text-sm">
+              <div className="flex gap-2">
+                <select className="h-9 rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20">
                   <option value="all">All Signals</option>
                   <option value="buy">BUY Only</option>
                   <option value="sell">SELL Only</option>
-                  <option value="high">High Confidence (≥80%)</option>
+                  <option value="high">High Confidence</option>
                 </select>
                 <Link href="/screener">
-                  <Button size="sm" className="text-xs md:text-sm">New Scan</Button>
+                  <Button size="sm" className="text-sm">New Scan</Button>
                 </Link>
-                <Button variant="outline" size="sm" className="text-xs md:text-sm">
-                  <RefreshCw className="w-4 h-4 mr-1" />
-                  Refresh
+                <Button variant="outline" size="sm">
+                  <RefreshCw className="w-4 h-4" />
                 </Button>
               </div>
             </div>
