@@ -14,7 +14,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { RefreshCw, TrendingUp, TrendingDown, BarChart3, Target, Users, Zap, ArrowUp, ArrowDown, Minus } from 'lucide-react'
 import Link from 'next/link'
-import { getApiUrl } from '@/lib/config'
+import { getApiUrl, clearAuthData } from '@/lib/api'
 
 // Types for scan results
 interface ProbabilityAnalysis {
