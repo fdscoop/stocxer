@@ -108,6 +108,16 @@ interface ScanResults {
     days_to_expiry: number
   }
   data_source?: 'live' | 'demo'
+  mtf_ict_analysis?: {
+    overall_bias: string
+    timeframes: {
+      [key: string]: {
+        bias: string
+        structure: string
+        candles?: number
+      }
+    }
+  }
 }
 
 export default function DashboardPage() {
