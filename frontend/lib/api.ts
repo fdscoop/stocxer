@@ -1,9 +1,42 @@
 import { getApiUrl } from './config'
 
+// Helper to get token from any possible key (for backward compatibility)
+function getAuthToken(): string | null {
+  if (typeof window === 'undefined') return null
+
+  // Try all possible keys (for backward compatibility)
+  return localStorage.getItem('auth_token') ||
+    localStorage.getItem('token') ||
+    localStorage.getItem('jwt_token')
+}
+
+// Helper to set token consistently
+export function setAuthToken(token: string) {
+  if (typeof window === 'undefined') return
+
+  // Store in primary key
+  localStorage.setItem('auth_token', token)
+
+  // Remove old keys for consistency
+  localStorage.removeItem('token')
+  localStorage.removeItem('jwt_token')
+}
+
+// Helper to clear all auth data
+export function clearAuthData() {
+  if (typeof window === 'undefined') return
+
+  localStorage.removeItem('auth_token')
+  localStorage.removeItem('token')
+  localStorage.removeItem('jwt_token')
+  localStorage.removeItem('user')
+  localStorage.removeItem('userEmail')
+}
+
 async function fetchWithAuth(endpoint: string, options: RequestInit = {}) {
-  const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null
+  const token = getAuthToken()
   const apiBase = getApiUrl()
-  
+
   const headers: HeadersInit = {
     'Content-Type': 'application/json',
     ...(token && { Authorization: `Bearer ${token}` }),
@@ -14,6 +47,21 @@ async function fetchWithAuth(endpoint: string, options: RequestInit = {}) {
     ...options,
     headers,
   })
+
+  // ✅ Handle 401 errors - token expired or invalid
+  if (response.status === 401) {
+    console.warn('⚠️ Session expired (401) - clearing auth data and redirecting to login')
+
+    // Clear invalid token
+    clearAuthData()
+
+    // Redirect to login (avoid infinite loop)
+    if (typeof window !== 'undefined' && !window.location.pathname.includes('/login')) {
+      window.location.href = '/login?expired=true'
+    }
+
+    throw new Error('Session expired. Please login again.')
+  }
 
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}))
