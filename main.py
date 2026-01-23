@@ -4319,12 +4319,15 @@ async def scan_stocks(
         buy_signals = [s for s in signals if s["action"] == "BUY"]
         sell_signals = [s for s in signals if s["action"] == "SELL"]
         
+        # Calculate actual stocks scanned
+        actual_stocks_scanned = len(stocks_list) if stocks_list else limit
+        
         result = {
             "status": "success",
             "scan_time": datetime.now().isoformat(),
-            "stocks_scanned": limit,
+            "stocks_scanned": actual_stocks_scanned,
             "min_confidence": min_confidence,
-            "randomized": randomize,
+            "randomized": randomize and not stocks_list,  # Not randomized if specific stocks provided
             "total_signals": len(signals),
             "buy_signals": len(buy_signals),
             "sell_signals": len(sell_signals),
@@ -4379,13 +4382,28 @@ async def scan_stocks_post(
         symbols = body.get("symbols", None)  # Comma-separated or None
         
         # Re-use the GET endpoint logic
-        return await scan_stocks(
+        result = await scan_stocks(
             limit=limit,
             min_confidence=min_confidence,
             randomize=randomize,
             symbols=symbols,
             authorization=authorization
         )
+        
+        # Apply action filter if specified (after scan)
+        if action and action != 'all':
+            filtered_signals = [s for s in result.get('signals', []) if s.get('action') == action]
+            result['signals'] = filtered_signals
+            result['total_signals'] = len(filtered_signals)
+            result['buy_signals'] = len([s for s in filtered_signals if s.get('action') == 'BUY'])
+            result['sell_signals'] = len([s for s in filtered_signals if s.get('action') == 'SELL'])
+            result['signals_by_type'] = {
+                'buy': [s for s in filtered_signals if s.get('action') == 'BUY'],
+                'sell': [s for s in filtered_signals if s.get('action') == 'SELL']
+            }
+            result['top_picks'] = filtered_signals[:5]
+        
+        return result
     except Exception as e:
         logger.error(f"Error in POST screener scan: {e}")
         raise HTTPException(status_code=500, detail=str(e))

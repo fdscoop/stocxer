@@ -47,6 +47,8 @@ export default function ScreenerPage() {
   const [showStockPicker, setShowStockPicker] = React.useState(false)
   const [loadingStocks, setLoadingStocks] = React.useState(false)
   const [scanMode, setScanMode] = React.useState<'random' | 'custom'>('random')
+  const [scanStatus, setScanStatus] = React.useState<string>('')
+  const [scanError, setScanError] = React.useState<string | null>(null)
 
   React.useEffect(() => {
     const token = localStorage.getItem('auth_token') || localStorage.getItem('token')
@@ -135,11 +137,28 @@ export default function ScreenerPage() {
     setLoading(true)
     setProgress(0)
     setSignals([])
+    setScanError(null)
+    
+    // Set initial status message
+    const stockCount = scanMode === 'custom' ? selectedStocks.length : parseInt(limit)
+    setScanStatus(`Scanning ${stockCount} stock${stockCount !== 1 ? 's' : ''}...`)
 
     try {
-      // Simulate progress updates
+      // Progress simulation with status updates
+      let progressStep = 0
       const progressInterval = setInterval(() => {
-        setProgress((prev) => Math.min(prev + 10, 90))
+        progressStep++
+        const newProgress = Math.min(progressStep * 10, 90)
+        setProgress(newProgress)
+        
+        // Update status message based on progress
+        if (newProgress < 30) {
+          setScanStatus(`Fetching market data for ${stockCount} stocks...`)
+        } else if (newProgress < 60) {
+          setScanStatus('Running technical analysis...')
+        } else if (newProgress < 90) {
+          setScanStatus('Generating trading signals...')
+        }
       }, 500)
 
       const apiUrl = getApiUrl()
@@ -155,11 +174,16 @@ export default function ScreenerPage() {
       if (scanMode === 'custom' && selectedStocks.length > 0) {
         requestBody.symbols = selectedStocks.join(',')
         requestBody.limit = selectedStocks.length
+        requestBody.randomize = false  // Don't randomize custom selections
+        console.log(`[Screener] Custom scan: ${selectedStocks.length} stocks`, selectedStocks)
       } else {
         // Random mode - use limit
         requestBody.limit = parseInt(limit)
         requestBody.randomize = true
+        console.log(`[Screener] Random scan: ${limit} stocks`)
       }
+      
+      console.log('[Screener] Request body:', requestBody)
       
       const response = await fetch(`${apiUrl}/api/screener/scan`, {
         method: 'POST',
@@ -172,23 +196,36 @@ export default function ScreenerPage() {
 
       clearInterval(progressInterval)
       setProgress(100)
+      
+      console.log('[Screener] Response status:', response.status)
 
       if (response.ok) {
         const data = await response.json()
-        setScanned(data.stocks_scanned || selectedStocks.length || parseInt(limit))
-        setSignals(
-          (data.signals || []).map((s: any) => ({
-            id: s.id || Math.random().toString(),
-            symbol: s.symbol,
-            action: s.action,
-            price: s.price || s.entry_price,
-            target: s.target || s.target_price,
-            stopLoss: s.stop_loss,
-            confidence: s.confidence,
-            timestamp: s.timestamp || new Date().toISOString(),
-            reasons: s.reasons || [],
-          }))
-        )
+        console.log('[Screener] Response data:', data)
+        
+        const stocksScannedCount = data.stocks_scanned || selectedStocks.length || parseInt(limit)
+        setScanned(stocksScannedCount)
+        
+        const mappedSignals = (data.signals || []).map((s: any) => ({
+          id: s.id || Math.random().toString(),
+          symbol: s.symbol,
+          action: s.action,
+          price: s.price || s.entry_price,
+          target: s.target || s.target_price,
+          stopLoss: s.stop_loss,
+          confidence: s.confidence,
+          timestamp: s.timestamp || new Date().toISOString(),
+          reasons: s.reasons || [],
+        }))
+        
+        setSignals(mappedSignals)
+        
+        // Set success status message
+        if (mappedSignals.length > 0) {
+          setScanStatus(`✅ Scan complete! Found ${mappedSignals.length} signal${mappedSignals.length !== 1 ? 's' : ''} from ${stocksScannedCount} stocks.`)
+        } else {
+          setScanStatus(`✅ Scan complete. No signals found matching your criteria from ${stocksScannedCount} stocks.`)
+        }
       } else if (response.status === 401) {
         // Handle 401 - check if it's Fyers auth or session issue
         const errorData = await response.json().catch(() => ({}))
@@ -219,17 +256,22 @@ export default function ScreenerPage() {
         alert('Your session has expired. Please login again.')
         window.location.href = '/login'
       } else {
-        console.error('Scan failed:', response.statusText)
-        alert('Scan failed. Please try again.')
+        const errorText = await response.text().catch(() => response.statusText)
+        console.error('[Screener] Scan failed:', response.status, errorText)
+        setScanError(`Scan failed: ${response.statusText}`)
+        setScanStatus('❌ Scan failed. Please try again.')
       }
     } catch (error: any) {
-      console.error('Scan error:', error)
+      console.error('[Screener] Scan error:', error)
       
       // Check if it's a Fyers auth error
       if (error.isFyersAuth) {
         const message = error.code === 'fyers_token_expired'
           ? 'Your broker authentication has expired. Please reconnect to continue scanning.'
           : 'You need to connect your broker account to use the scanner.'
+        
+        setScanError(message)
+        setScanStatus('❌ Authentication required')
         
         if (confirm(message + '\n\nClick OK to authenticate now.')) {
           if (error.auth_url) {
@@ -239,7 +281,8 @@ export default function ScreenerPage() {
           }
         }
       } else {
-        alert('An error occurred while scanning. Please try again.')
+        setScanError(error.message || 'An error occurred while scanning')
+        setScanStatus('❌ Scan error. Please try again.')
       }
     } finally {
       setLoading(false)
@@ -577,6 +620,35 @@ export default function ScreenerPage() {
           />
         )}
 
+        {/* Scan Status Feedback */}
+        {(scanStatus || scanError) && !loading && (
+          <Card className={`${scanError ? 'border-red-500 bg-red-50 dark:bg-red-950/20' : 'border-green-500 bg-green-50 dark:bg-green-950/20'}`}>
+            <CardContent className="p-3 md:p-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="text-lg">{scanError ? '⚠️' : '📊'}</span>
+                  <span className={`font-medium ${scanError ? 'text-red-700 dark:text-red-400' : 'text-green-700 dark:text-green-400'}`}>
+                    {scanStatus}
+                  </span>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setScanStatus('')
+                    setScanError(null)
+                  }}
+                >
+                  <X className="w-4 h-4" />
+                </Button>
+              </div>
+              {scanError && (
+                <p className="mt-2 text-sm text-red-600 dark:text-red-400">{scanError}</p>
+              )}
+            </CardContent>
+          </Card>
+        )}
+
         {/* Status Bar */}
         {signals.length > 0 && (
           <Card>
@@ -631,12 +703,16 @@ export default function ScreenerPage() {
       {/* Loading Modal */}
       <LoadingModal
         open={loading}
-        title="Scanning Stocks..."
+        title={scanMode === 'custom' 
+          ? `Scanning ${selectedStocks.length} Selected Stock${selectedStocks.length !== 1 ? 's' : ''}...` 
+          : `Scanning ${limit} Stocks...`}
         progress={progress}
         steps={[
           {
             id: '1',
-            label: 'Fetching stock data...',
+            label: scanMode === 'custom' 
+              ? `Fetching data for ${selectedStocks.length} stocks...`
+              : 'Fetching stock data...',
             status: progress < 30 ? 'loading' : 'complete',
           },
           {
@@ -646,7 +722,7 @@ export default function ScreenerPage() {
           },
           {
             id: '3',
-            label: 'Generating signals...',
+            label: 'Generating trading signals...',
             status: progress < 70 ? 'pending' : progress < 100 ? 'loading' : 'complete',
           },
         ]}
