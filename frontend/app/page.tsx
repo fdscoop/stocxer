@@ -803,6 +803,7 @@ export default function DashboardPage() {
                   <div className="text-xs text-muted-foreground mb-1">What to Buy</div>
                   <div className={`text-xl md:text-2xl font-bold ${tradingSignal.action.includes('AVOID') ? 'text-red-500' :
                     tradingSignal.action.includes('WAIT') ? 'text-orange-500' :
+                      tradingSignal.action.includes('BUY CALL') || (tradingSignal.type === 'CALL' && tradingSignal.action.includes('BUY')) ? 'text-green-500' : 
                       tradingSignal.type === 'CALL' ? 'text-bullish' : 'text-bearish'
                     }`}>
                     {tradingSignal.action}
