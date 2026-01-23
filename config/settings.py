@@ -54,6 +54,13 @@ class Settings(BaseSettings):
     log_level: str = "INFO"
     log_file: str = "logs/tradewise.log"
     
+    # News & Sentiment (Marketaux API)
+    # Rate limits: 100 requests/day, 3 articles per request
+    # Get API key from: https://www.marketaux.com/
+    marketaux_api_key: Optional[str] = None
+    news_fetch_interval_minutes: int = 15  # How often to fetch news
+    news_retention_days: int = 7  # How long to keep news in database
+    
     @property
     def database_url(self) -> str:
         """Generate database URL"""

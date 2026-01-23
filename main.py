@@ -26,6 +26,15 @@ from src.services.auth_service import auth_service
 from src.services.screener_service import screener_service
 from src.models.auth_models import UserRegister, UserLogin, FyersTokenStore
 
+# News sentiment service for market analysis
+try:
+    from src.services.news_service import news_service, MarketauxNewsService
+    NEWS_SERVICE_AVAILABLE = True
+except ImportError as e:
+    NEWS_SERVICE_AVAILABLE = False
+    news_service = None
+    logging.warning(f"News service not available: {e}")
+
 # IST timezone utilities for consistent time handling across geographies
 from src.utils.ist_utils import now_ist, get_ist_time, ist_timestamp, is_market_open, get_session_info as get_ist_session_info
 
@@ -145,6 +154,40 @@ async def auto_scan_options():
         logger.error(f"❌ Auto-scan: Critical error: {e}")
 
 
+async def fetch_market_news():
+    """
+    Background task to fetch news from Marketaux API every 15 minutes.
+    Stores news in Supabase for sentiment analysis.
+    
+    Rate limits:
+    - 100 requests/day
+    - 3 articles per request
+    - Fetch every 15 minutes = ~96 requests/day (safe margin)
+    """
+    if not NEWS_SERVICE_AVAILABLE or not news_service:
+        logger.warning("⚠️ News service not available, skipping news fetch")
+        return
+    
+    try:
+        logger.info("📰 Starting scheduled news fetch from Marketaux...")
+        
+        # Check if market hours (only fetch during trading hours to save API quota)
+        # Indian market: 9:15 AM - 3:30 PM IST
+        current_hour = now_ist().hour
+        
+        # Fetch during extended hours: 8 AM - 6 PM IST
+        if 8 <= current_hour <= 18:
+            articles_stored = await news_service.fetch_and_store_news()
+            logger.info(f"✅ News fetch complete: {articles_stored} articles stored")
+        else:
+            logger.info("💤 Outside market hours, skipping news fetch to save API quota")
+        
+    except Exception as e:
+        logger.error(f"❌ News fetch error: {e}")
+        import traceback
+        logger.error(traceback.format_exc())
+
+
 # Startup event to load Fyers token from Supabase and start scheduler
 @app.on_event("startup")
 async def load_fyers_token_from_db():
@@ -236,8 +279,34 @@ async def load_fyers_token_from_db():
     # Auto options scanner has been disabled
     # The scan is now only triggered on-demand from the frontend
     logger.info("ℹ️ Auto options scanner disabled - scans are on-demand only")
-
-
+    
+    # Start news fetch scheduler (every 15 minutes)
+    if NEWS_SERVICE_AVAILABLE and news_service:
+        try:
+            # Add news fetch job - runs every 15 minutes
+            scheduler.add_job(
+                fetch_market_news,
+                IntervalTrigger(minutes=15),
+                id="news_fetch_job",
+                name="Fetch Market News from Marketaux",
+                replace_existing=True
+            )
+            
+            # Start the scheduler if not already running
+            if not scheduler.running:
+                scheduler.start()
+                logger.info("✅ Background scheduler started")
+            
+            logger.info("📰 News fetch scheduler configured - will fetch every 15 minutes")
+            
+            # Fetch news immediately on startup
+            logger.info("📰 Fetching initial news on startup...")
+            await fetch_market_news()
+            
+        except Exception as sched_error:
+            logger.error(f"❌ Error setting up news scheduler: {sched_error}")
+    else:
+        logger.warning("⚠️ News service not available - MARKETAUX_API_KEY may not be set")
 
 
 @app.on_event("shutdown")
@@ -580,6 +649,232 @@ async def refresh_fyers_token_from_db():
     except Exception as e:
         logger.error(f"Error refreshing token: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+
+# ============================================
+# News & Sentiment Analysis Endpoints
+# ============================================
+
+@app.get("/api/news")
+async def get_market_news(
+    hours: int = Query(4, description="Hours of news to fetch (1-24)"),
+    indices: Optional[str] = Query(None, description="Comma-separated indices (NIFTY,BANKNIFTY,FINNIFTY)"),
+    sectors: Optional[str] = Query(None, description="Comma-separated sectors"),
+    limit: int = Query(20, description="Maximum articles to return")
+):
+    """
+    Get recent market news from database.
+    News is fetched from Marketaux API every 15 minutes and stored in Supabase.
+    """
+    if not NEWS_SERVICE_AVAILABLE or not news_service:
+        raise HTTPException(status_code=503, detail="News service not available. MARKETAUX_API_KEY may not be set.")
+    
+    try:
+        # Parse filters
+        index_list = [i.strip().upper() for i in indices.split(",")] if indices else None
+        sector_list = [s.strip().lower() for s in sectors.split(",")] if sectors else None
+        
+        # Fetch from database
+        articles = await news_service.get_recent_news(
+            hours=min(hours, 24),
+            indices=index_list,
+            sectors=sector_list,
+            min_relevance=0.1,
+            limit=limit
+        )
+        
+        return {
+            "success": True,
+            "count": len(articles),
+            "hours": hours,
+            "filters": {
+                "indices": index_list,
+                "sectors": sector_list
+            },
+            "articles": articles
+        }
+        
+    except Exception as e:
+        logger.error(f"Error fetching news: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/sentiment")
+async def get_market_sentiment(
+    time_window: str = Query("1hr", description="Time window: 15min, 1hr, 4hr, 1day")
+):
+    """
+    Get aggregated market sentiment from cached analysis.
+    Sentiment is computed from recent news articles.
+    """
+    if not NEWS_SERVICE_AVAILABLE or not news_service:
+        # Fall back to simulated sentiment
+        from src.analytics.news_sentiment import news_analyzer
+        sentiment = news_analyzer.analyze_market_sentiment()
+        return {
+            "success": True,
+            "data_source": "simulated",
+            "time_window": time_window,
+            "overall_sentiment": sentiment.overall_sentiment,
+            "sentiment_score": sentiment.sentiment_score,
+            "market_mood": sentiment.market_mood,
+            "trading_implication": sentiment.trading_implication,
+            "bullish_count": sentiment.bullish_count,
+            "bearish_count": sentiment.bearish_count,
+            "neutral_count": sentiment.neutral_count,
+            "key_themes": sentiment.key_themes
+        }
+    
+    try:
+        valid_windows = ["15min", "1hr", "4hr", "1day"]
+        if time_window not in valid_windows:
+            raise HTTPException(status_code=400, detail=f"Invalid time_window. Must be one of: {valid_windows}")
+        
+        cached = await news_service.get_market_sentiment(time_window)
+        
+        if not cached:
+            return {
+                "success": True,
+                "data_source": "none",
+                "message": "No sentiment data available for this time window. News fetch may be pending.",
+                "time_window": time_window
+            }
+        
+        return {
+            "success": True,
+            "data_source": "real",
+            "time_window": time_window,
+            "overall_sentiment": cached.get("overall_sentiment"),
+            "sentiment_score": cached.get("sentiment_score"),
+            "market_mood": cached.get("market_mood"),
+            "trading_implication": cached.get("trading_implication"),
+            "total_articles": cached.get("total_articles"),
+            "positive_count": cached.get("positive_count"),
+            "negative_count": cached.get("negative_count"),
+            "neutral_count": cached.get("neutral_count"),
+            "key_themes": cached.get("key_themes"),
+            "sector_sentiment": cached.get("sector_sentiment"),
+            "computed_at": cached.get("computed_at"),
+            "window_start": cached.get("window_start"),
+            "window_end": cached.get("window_end")
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error getting sentiment: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/sentiment/for-signal")
+async def get_sentiment_for_signal(
+    symbol: str = Query("NIFTY", description="Trading symbol"),
+    signal_type: Optional[str] = Query(None, description="Signal type: BUY, SELL, HOLD")
+):
+    """
+    Get sentiment data specifically for signal enhancement.
+    Returns confidence adjustments and signal modifications based on news sentiment.
+    """
+    from src.analytics.news_sentiment import news_analyzer
+    
+    try:
+        sentiment_data = await news_analyzer.get_sentiment_for_signal(
+            symbol=symbol,
+            signal_type=signal_type.upper() if signal_type else None
+        )
+        
+        return {
+            "success": True,
+            "symbol": symbol,
+            "signal_type": signal_type,
+            **sentiment_data
+        }
+        
+    except Exception as e:
+        logger.error(f"Error getting sentiment for signal: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/news/fetch")
+async def trigger_news_fetch():
+    """
+    Manually trigger a news fetch (for testing/admin).
+    Use sparingly due to API rate limits (100/day).
+    """
+    if not NEWS_SERVICE_AVAILABLE or not news_service:
+        raise HTTPException(status_code=503, detail="News service not available")
+    
+    try:
+        articles_stored = await news_service.fetch_and_store_news()
+        return {
+            "success": True,
+            "message": f"News fetch completed. {articles_stored} articles stored.",
+            "articles_stored": articles_stored
+        }
+    except Exception as e:
+        logger.error(f"Error in manual news fetch: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/news/status")
+async def get_news_service_status():
+    """Get status of news service and API usage"""
+    if not NEWS_SERVICE_AVAILABLE or not news_service:
+        return {
+            "success": False,
+            "available": False,
+            "reason": "News service not available. MARKETAUX_API_KEY may not be set."
+        }
+    
+    try:
+        # Get latest fetch log
+        from config.supabase_config import get_supabase_admin_client
+        supabase = get_supabase_admin_client()
+        
+        response = supabase.table("news_fetch_log").select("*").order(
+            "fetch_time", desc=True
+        ).limit(5).execute()
+        
+        fetch_logs = response.data or []
+        
+        # Count today's requests
+        today_start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
+        today_response = supabase.table("news_fetch_log").select("id").gte(
+            "fetch_time", today_start.isoformat()
+        ).execute()
+        
+        requests_today = len(today_response.data) if today_response.data else 0
+        
+        # Get article count
+        articles_response = supabase.table("market_news").select("id", count="exact").execute()
+        total_articles = articles_response.count if hasattr(articles_response, 'count') else len(articles_response.data or [])
+        
+        return {
+            "success": True,
+            "available": True,
+            "requests_today": requests_today,
+            "daily_limit": 100,
+            "requests_remaining": max(0, 100 - requests_today),
+            "total_articles_stored": total_articles,
+            "scheduler_running": scheduler.running if scheduler else False,
+            "recent_fetches": [
+                {
+                    "time": log.get("fetch_time"),
+                    "articles": log.get("articles_fetched"),
+                    "status": log.get("api_response_code"),
+                    "error": log.get("error_message")
+                }
+                for log in fetch_logs
+            ]
+        }
+        
+    except Exception as e:
+        logger.error(f"Error getting news status: {e}")
+        return {
+            "success": False,
+            "available": True,
+            "error": str(e)
+        }
 
 
 # Market data endpoints
@@ -3896,6 +4191,59 @@ async def scan_stocks(
         # Run scan
         signals = screener.scan_stocks(limit=limit, min_confidence=min_confidence, randomize=randomize)
         
+        # Integrate news sentiment into signals
+        sentiment_data = None
+        try:
+            from src.analytics.news_sentiment import news_analyzer, get_sentiment_enhanced_signal
+            
+            # Get overall market sentiment for NIFTY (general market)
+            sentiment_data = await news_analyzer.get_sentiment_for_signal(
+                symbol="NIFTY",
+                signal_type="BUY"  # Just to get market direction
+            )
+            
+            # Apply sentiment adjustments to each signal
+            if sentiment_data and sentiment_data.get("sentiment_score", 0) != 0:
+                sentiment_score = sentiment_data.get("sentiment_score", 0)
+                sentiment_overall = sentiment_data.get("sentiment", "neutral")
+                
+                for signal in signals:
+                    signal_action = signal.get("action", "HOLD")
+                    
+                    # Adjust confidence based on sentiment alignment
+                    if signal_action == "BUY" and sentiment_overall == "bullish":
+                        # Bullish sentiment supports buy signal
+                        boost = abs(sentiment_score) * 10  # Up to 10% confidence boost
+                        signal["confidence"] = min(100, signal.get("confidence", 50) + boost)
+                        signal["sentiment_support"] = True
+                    elif signal_action == "SELL" and sentiment_overall == "bearish":
+                        # Bearish sentiment supports sell signal
+                        boost = abs(sentiment_score) * 10
+                        signal["confidence"] = min(100, signal.get("confidence", 50) + boost)
+                        signal["sentiment_support"] = True
+                    elif signal_action == "BUY" and sentiment_overall == "bearish":
+                        # Bearish sentiment conflicts with buy signal
+                        reduction = abs(sentiment_score) * 5  # Up to 5% confidence reduction
+                        signal["confidence"] = max(0, signal.get("confidence", 50) - reduction)
+                        signal["sentiment_conflict"] = True
+                    elif signal_action == "SELL" and sentiment_overall == "bullish":
+                        # Bullish sentiment conflicts with sell signal
+                        reduction = abs(sentiment_score) * 5
+                        signal["confidence"] = max(0, signal.get("confidence", 50) - reduction)
+                        signal["sentiment_conflict"] = True
+                    
+                    # Add sentiment reason to signal
+                    if "reasons" in signal and isinstance(signal["reasons"], list):
+                        if sentiment_overall != "neutral":
+                            mood = sentiment_data.get("market_mood", "")
+                            signal["reasons"].append(f"Market Sentiment: {sentiment_overall.capitalize()} ({mood})")
+                
+                # Re-sort by adjusted confidence
+                signals = sorted(signals, key=lambda x: x.get("confidence", 0), reverse=True)
+                
+        except Exception as sentiment_error:
+            logger.warning(f"Could not integrate sentiment into screener: {sentiment_error}")
+        
         # Separate buy and sell signals
         buy_signals = [s for s in signals if s["action"] == "BUY"]
         sell_signals = [s for s in signals if s["action"] == "SELL"]
@@ -3909,6 +4257,7 @@ async def scan_stocks(
             "total_signals": len(signals),
             "buy_signals": len(buy_signals),
             "sell_signals": len(sell_signals),
+            "sentiment_analysis": sentiment_data,  # Include market sentiment
             "signals": signals,  # Flat array for frontend compatibility
             "signals_by_type": {
                 "buy": buy_signals,
@@ -4431,6 +4780,45 @@ async def scan_options(
             # Re-sort after boosting
             scanned_options = sorted(scanned_options, key=lambda x: x["score"], reverse=True)
         
+        # Integrate news sentiment into signals
+        sentiment_data = None
+        try:
+            from src.analytics.news_sentiment import news_analyzer
+            sentiment_data = await news_analyzer.get_sentiment_for_signal(
+                symbol=index.upper(),
+                signal_type=recommended_option_type  # Use recommended type as signal direction
+            )
+            
+            # Apply sentiment-based adjustments to option scores
+            if sentiment_data and sentiment_data.get("sentiment_score", 0) != 0:
+                sentiment_score = sentiment_data.get("sentiment_score", 0)
+                sentiment_overall = sentiment_data.get("sentiment", "neutral")
+                
+                for opt in scanned_options:
+                    # Boost CALL options if bullish, PUT options if bearish
+                    if opt["type"] == "CALL" and sentiment_overall == "bullish":
+                        opt["sentiment_boost"] = True
+                        opt["score"] = opt["score"] * (1 + abs(sentiment_score) * 0.15)  # Up to 15% boost
+                    elif opt["type"] == "PUT" and sentiment_overall == "bearish":
+                        opt["sentiment_boost"] = True
+                        opt["score"] = opt["score"] * (1 + abs(sentiment_score) * 0.15)
+                    # Reduce confidence for conflicting sentiment
+                    elif opt["type"] == "CALL" and sentiment_overall == "bearish":
+                        opt["sentiment_conflict"] = True
+                        opt["score"] = opt["score"] * (1 - abs(sentiment_score) * 0.1)  # Up to 10% reduction
+                    elif opt["type"] == "PUT" and sentiment_overall == "bullish":
+                        opt["sentiment_conflict"] = True
+                        opt["score"] = opt["score"] * (1 - abs(sentiment_score) * 0.1)
+                    else:
+                        opt["sentiment_boost"] = False
+                        opt["sentiment_conflict"] = False
+                
+                # Re-sort after sentiment adjustments
+                scanned_options = sorted(scanned_options, key=lambda x: x["score"], reverse=True)
+                
+        except Exception as sentiment_error:
+            logger.warning(f"Could not integrate sentiment: {sentiment_error}")
+        
         result = {
             "status": "success",
             "scan_time": datetime.now().isoformat(),
@@ -4450,6 +4838,7 @@ async def scan_options(
             },
             "probability_analysis": probability_analysis,
             "recommended_option_type": recommended_option_type,
+            "sentiment_analysis": sentiment_data,  # Include sentiment in response
             "total_options": len(scanned_options),
             "options": scanned_options[:50],  # Top 50 results
             "user_email": user.email,
