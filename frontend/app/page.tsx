@@ -64,6 +64,33 @@ interface TradingSignal {
   confidence: number
   direction: string
   trading_symbol: string
+  // Enhanced fields
+  discount_zone?: {
+    best_entry?: number
+    status?: string
+    current_price?: number
+    iv_comparison?: string
+    analysis?: string
+  }
+  liquidity_score?: number
+  liquidity_grade?: string
+  sentiment_score?: number
+  sentiment_direction?: string
+  market_mood?: string
+  news_articles?: number
+  reversal_detected?: boolean
+  reversal_type?: string
+  reversal_description?: string
+  mtf_bias?: string
+  confidence_adjustments?: {
+    base_probability?: number
+    constituent_boost?: number
+    futures_conflict?: number
+    ml_neutral_penalty?: number
+    final_probability?: number
+  }
+  entry_analysis?: any
+  raw_ltp?: number
 }
 
 interface ScanResults {
@@ -546,8 +573,23 @@ export default function DashboardPage() {
           risk_reward: backendSignal.risk_reward?.ratio_1 ? `1:${typeof backendSignal.risk_reward.ratio_1 === 'number' ? backendSignal.risk_reward.ratio_1.toFixed(1) : backendSignal.risk_reward.ratio_1}` : '1:2',
           confidence: numericConfidence,
           direction: backendSignal.signal_type || 'NEUTRAL',
-          trading_symbol: backendSignal.option.symbol
-        }
+          trading_symbol: backendSignal.option.symbol,
+          // Enhanced fields from backend
+          discount_zone: backendSignal.discount_zone || {},
+          liquidity_score: backendSignal.liquidity?.liquidity_score,
+          liquidity_grade: backendSignal.liquidity?.liquidity_grade,
+          sentiment_score: backendSignal.sentiment_analysis?.sentiment_score,
+          sentiment_direction: backendSignal.sentiment_analysis?.sentiment_direction,
+          market_mood: backendSignal.sentiment_analysis?.market_mood,
+          news_articles: backendSignal.sentiment_analysis?.news_articles_retrieved,
+          reversal_detected: backendSignal.reversal_detection?.detected,
+          reversal_type: backendSignal.reversal_detection?.type,
+          reversal_description: backendSignal.reversal_detection?.description,
+          mtf_bias: backendSignal.mtf_ict_analysis?.overall_bias,
+          confidence_adjustments: backendSignal.confidence_adjustments,
+          entry_analysis: backendSignal.entry_analysis,
+          raw_ltp: backendSignal.pricing?.ltp
+        } as TradingSignal
 
         setTradingSignal(tradingSignal)
 
@@ -803,15 +845,84 @@ export default function DashboardPage() {
                 </div>
               </div>
 
-              {/* Trading Symbol & Simple Instructions */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              {/* Enhanced Entry Analysis & Liquidity */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                 <div className="p-3 bg-blue-500/10 rounded-lg border border-blue-500/30">
                   <div className="text-xs text-muted-foreground mb-1">Trading Symbol</div>
                   <div className="text-sm font-mono text-blue-400">{tradingSignal.trading_symbol}</div>
                 </div>
-                <div className="p-3 bg-orange-500/10 rounded-lg border border-orange-500/30">
-                  <div className="text-xs text-muted-foreground mb-1">⏰ Day Trading Tip</div>
-                  <div className="text-xs text-orange-300">Exit by 3:15 PM • Best entry: 9:30 AM - 2:00 PM</div>
+                
+                {/* Best Entry Price from Discount Zone */}
+                {(tradingSignal as any).discount_zone?.best_entry && (
+                  <div className="p-3 bg-green-500/10 rounded-lg border border-green-500/30">
+                    <div className="text-xs text-muted-foreground mb-1">💎 Best Entry Price</div>
+                    <div className="text-lg font-bold text-green-400">
+                      ₹{(tradingSignal as any).discount_zone.best_entry.toFixed(2)}
+                    </div>
+                    <div className="text-xs text-green-300">
+                      {(tradingSignal as any).discount_zone.status || 'OPTIMAL'}
+                    </div>
+                  </div>
+                )}
+                
+                {/* Liquidity Score */}
+                {(tradingSignal as any).liquidity_score !== undefined && (
+                  <div className="p-3 bg-purple-500/10 rounded-lg border border-purple-500/30">
+                    <div className="text-xs text-muted-foreground mb-1">💧 Liquidity</div>
+                    <div className="text-lg font-bold text-purple-400">
+                      {(tradingSignal as any).liquidity_score}/100
+                    </div>
+                    <div className="text-xs text-purple-300">
+                      {(tradingSignal as any).liquidity_grade || 'EXCELLENT'}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Sentiment & Reversal Detection */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {/* Sentiment Analysis */}
+                {(tradingSignal as any).sentiment_score !== undefined && (
+                  <div className="p-3 bg-cyan-500/10 rounded-lg border border-cyan-500/30">
+                    <div className="text-xs text-muted-foreground mb-1 flex items-center gap-2">
+                      📰 Market Sentiment
+                      {(tradingSignal as any).news_articles && (
+                        <span className="text-xs bg-cyan-600/30 px-1 rounded">
+                          {(tradingSignal as any).news_articles} articles
+                        </span>
+                      )}
+                    </div>
+                    <div className="text-sm font-semibold text-cyan-400">
+                      {(tradingSignal as any).sentiment_direction?.toUpperCase() || 'NEUTRAL'}
+                    </div>
+                    <div className="text-xs text-cyan-300 mt-1">
+                      {(tradingSignal as any).market_mood || 'Analyzing market mood...'}
+                    </div>
+                  </div>
+                )}
+                
+                {/* Reversal Detection */}
+                {(tradingSignal as any).reversal_detected && (
+                  <div className="p-3 bg-orange-500/10 rounded-lg border border-orange-500/30">
+                    <div className="text-xs text-muted-foreground mb-1">🔄 Reversal Signal</div>
+                    <div className="text-sm font-semibold text-orange-400">
+                      {(tradingSignal as any).reversal_type?.replace('_', ' ') || 'DETECTED'}
+                    </div>
+                    <div className="text-xs text-orange-300 mt-1 line-clamp-2">
+                      {(tradingSignal as any).reversal_description || 'Potential trend reversal'}
+                    </div>
+                  </div>
+                )}
+              </div>
+              
+              {/* Day Trading Tips */}
+              <div className="p-3 bg-orange-500/10 rounded-lg border border-orange-500/30">
+                <div className="text-xs text-muted-foreground mb-1">⏰ Day Trading Tips</div>
+                <div className="text-xs text-orange-300 space-y-1">
+                  <p>• Exit by 3:15 PM • Best entry: 9:30 AM - 2:00 PM</p>
+                  {(tradingSignal as any).discount_zone?.analysis && (
+                    <p>• {(tradingSignal as any).discount_zone.analysis}</p>
+                  )}
                 </div>
               </div>
 
@@ -844,6 +955,97 @@ export default function DashboardPage() {
                     </p>
                   )}
                 </div>
+              </div>
+              
+              {/* Confidence Breakdown - Show how probability was calculated */}
+              {(tradingSignal as any).confidence_adjustments && (
+                <div className="p-3 bg-slate-500/10 rounded-lg border border-slate-500/30">
+                  <div className="text-sm font-medium text-slate-300 mb-2">📊 Confidence Breakdown</div>
+                  <div className="space-y-2">
+                    <div className="flex justify-between items-center text-xs">
+                      <span className="text-muted-foreground">Base Probability:</span>
+                      <span className="font-semibold text-slate-300">
+                        {(tradingSignal as any).confidence_adjustments.base_probability?.toFixed(1)}%
+                      </span>
+                    </div>
+                    {(tradingSignal as any).confidence_adjustments.constituent_boost !== 0 && (
+                      <div className="flex justify-between items-center text-xs">
+                        <span className="text-muted-foreground">Constituent Alignment:</span>
+                        <span className={`font-semibold ${(tradingSignal as any).confidence_adjustments.constituent_boost > 0 ? 'text-green-400' : 'text-red-400'}`}>
+                          {(tradingSignal as any).confidence_adjustments.constituent_boost > 0 ? '+' : ''}
+                          {(tradingSignal as any).confidence_adjustments.constituent_boost?.toFixed(1)}%
+                        </span>
+                      </div>
+                    )}
+                    {(tradingSignal as any).confidence_adjustments.futures_conflict !== 0 && (
+                      <div className="flex justify-between items-center text-xs">
+                        <span className="text-muted-foreground">Futures Analysis:</span>
+                        <span className={`font-semibold ${(tradingSignal as any).confidence_adjustments.futures_conflict > 0 ? 'text-green-400' : 'text-red-400'}`}>
+                          {(tradingSignal as any).confidence_adjustments.futures_conflict > 0 ? '+' : ''}
+                          {(tradingSignal as any).confidence_adjustments.futures_conflict?.toFixed(1)}%
+                        </span>
+                      </div>
+                    )}
+                    {(tradingSignal as any).confidence_adjustments.ml_neutral_penalty !== 0 && (
+                      <div className="flex justify-between items-center text-xs">
+                        <span className="text-muted-foreground">ML Adjustment:</span>
+                        <span className={`font-semibold ${(tradingSignal as any).confidence_adjustments.ml_neutral_penalty > 0 ? 'text-green-400' : 'text-orange-400'}`}>
+                          {(tradingSignal as any).confidence_adjustments.ml_neutral_penalty > 0 ? '+' : ''}
+                          {(tradingSignal as any).confidence_adjustments.ml_neutral_penalty?.toFixed(1)}%
+                        </span>
+                      </div>
+                    )}
+                    <div className="h-px bg-slate-500/30 my-2"></div>
+                    <div className="flex justify-between items-center text-xs">
+                      <span className="text-slate-300 font-semibold">Final Confidence:</span>
+                      <span className="font-bold text-primary text-base">
+                        {(tradingSignal as any).confidence_adjustments.final_probability?.toFixed(1)}%
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
+        
+        {/* Multi-Timeframe Analysis Summary */}
+        {(tradingSignal as any)?.mtf_bias && scanResults?.mtf_ict_analysis && (
+          <Card className="border-slate-500/30">
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-base md:text-lg">
+                📈 Multi-Timeframe Analysis
+                <Badge variant="outline" className={`text-xs ${
+                  (tradingSignal as any).mtf_bias === 'bullish' ? 'border-green-500 text-green-500' :
+                  (tradingSignal as any).mtf_bias === 'bearish' ? 'border-red-500 text-red-500' :
+                  'border-yellow-500 text-yellow-500'
+                }`}>
+                  Overall: {(tradingSignal as any).mtf_bias?.toUpperCase()}
+                </Badge>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-2 md:grid-cols-6 gap-2">
+                {Object.entries(scanResults.mtf_ict_analysis.timeframes || {}).map(([tf, data]: [string, any]) => (
+                  <div key={tf} className={`p-2 rounded-lg border text-center ${
+                    data.bias === 'bullish' ? 'bg-green-500/10 border-green-500/30' :
+                    data.bias === 'bearish' ? 'bg-red-500/10 border-red-500/30' :
+                    'bg-yellow-500/10 border-yellow-500/30'
+                  }`}>
+                    <div className="text-xs text-muted-foreground mb-1">{tf}</div>
+                    <div className={`text-sm font-bold ${
+                      data.bias === 'bullish' ? 'text-green-400' :
+                      data.bias === 'bearish' ? 'text-red-400' :
+                      'text-yellow-400'
+                    }`}>
+                      {data.bias === 'bullish' ? '📈' : data.bias === 'bearish' ? '📉' : '➡️'}
+                    </div>
+                    <div className="text-xs text-muted-foreground capitalize">{data.structure}</div>
+                  </div>
+                ))}
+              </div>
+              <div className="mt-3 text-xs text-muted-foreground text-center">
+                💡 MTF analysis shows trend alignment across {Object.keys(scanResults.mtf_ict_analysis.timeframes || {}).length} timeframes
               </div>
             </CardContent>
           </Card>

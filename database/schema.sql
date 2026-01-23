@@ -82,7 +82,14 @@ CREATE TABLE IF NOT EXISTS public.screener_results (
     scan_params JSONB,
     scanned_at TIMESTAMPTZ DEFAULT NOW(),
     created_at TIMESTAMPTZ DEFAULT NOW(),
-    updated_at TIMESTAMPTZ DEFAULT NOW()
+    updated_at TIMESTAMPTZ DEFAULT NOW(),
+    -- Options trading columns (added for options scanner integration)
+    signal_type TEXT DEFAULT 'STOCK',
+    strike DECIMAL(10, 2),
+    option_type TEXT,
+    expiry_date DATE,
+    entry_price DECIMAL(10, 2),
+    reversal_probability DECIMAL(5, 2)
 );
 
 -- Create index for faster queries
@@ -91,6 +98,8 @@ CREATE INDEX IF NOT EXISTS idx_screener_scan_id ON public.screener_results(scan_
 CREATE INDEX IF NOT EXISTS idx_screener_symbol ON public.screener_results(symbol);
 CREATE INDEX IF NOT EXISTS idx_screener_action ON public.screener_results(action);
 CREATE INDEX IF NOT EXISTS idx_screener_scanned_at ON public.screener_results(scanned_at DESC);
+CREATE INDEX IF NOT EXISTS idx_screener_signal_type ON public.screener_results(signal_type);
+CREATE INDEX IF NOT EXISTS idx_screener_expiry ON public.screener_results(expiry_date);
 
 -- Enable Row Level Security
 ALTER TABLE public.screener_results ENABLE ROW LEVEL SECURITY;
