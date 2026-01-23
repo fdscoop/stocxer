@@ -66,7 +66,7 @@ CREATE TABLE IF NOT EXISTS public.screener_results (
     symbol TEXT NOT NULL,
     name TEXT NOT NULL,
     current_price DECIMAL(10, 2) NOT NULL,
-    action TEXT NOT NULL CHECK (action IN ('BUY', 'SELL')),
+    action TEXT NOT NULL CHECK (action IN ('BUY', 'SELL', 'BUY CALL', 'BUY PUT', 'SELL CALL', 'SELL PUT')),
     confidence DECIMAL(5, 2) NOT NULL,
     target_1 DECIMAL(10, 2),
     target_2 DECIMAL(10, 2),
