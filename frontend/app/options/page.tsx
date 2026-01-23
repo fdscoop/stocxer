@@ -52,7 +52,7 @@ export default function OptionsPage() {
   })
 
   React.useEffect(() => {
-    const token = localStorage.getItem('token')
+    const token = localStorage.getItem('auth_token') || localStorage.getItem('token')
     const email = localStorage.getItem('userEmail')
     if (token && email) {
       setUser({ email })
@@ -61,8 +61,11 @@ export default function OptionsPage() {
 
   const handleLogout = () => {
     localStorage.removeItem('token')
+    localStorage.removeItem('auth_token')
     localStorage.removeItem('userEmail')
+    localStorage.removeItem('user')
     setUser(null)
+    window.location.href = '/login'
   }
 
   const scanOptions = async () => {

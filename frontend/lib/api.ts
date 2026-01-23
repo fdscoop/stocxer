@@ -48,8 +48,28 @@ async function fetchWithAuth(endpoint: string, options: RequestInit = {}) {
     headers,
   })
 
-  // ✅ Handle 401 errors - token expired or invalid
+  // ✅ Handle 401 errors - distinguish between user session and Fyers auth
   if (response.status === 401) {
+    // Try to get detailed error information
+    const errorData = await response.json().catch(() => ({}))
+    
+    // Check if this is a Fyers auth issue (not user session)
+    if (errorData.detail && typeof errorData.detail === 'object') {
+      const detail = errorData.detail
+      
+      // Fyers auth required or expired - DON'T clear user session
+      if (detail.error === 'fyers_auth_required' || detail.error === 'fyers_token_expired') {
+        console.warn('⚠️ Fyers authentication required/expired')
+        // Throw specific error that components can handle
+        const error: any = new Error(detail.message || 'Fyers authentication required')
+        error.code = detail.error
+        error.auth_url = detail.auth_url
+        error.isFyersAuth = true
+        throw error
+      }
+    }
+    
+    // If we get here, it's a genuine user session issue
     console.warn('⚠️ Session expired (401) - clearing auth data and redirecting to login')
 
     // Clear invalid token

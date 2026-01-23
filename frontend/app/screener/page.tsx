@@ -33,7 +33,7 @@ export default function ScreenerPage() {
   const [action, setAction] = React.useState('BUY')
 
   React.useEffect(() => {
-    const token = localStorage.getItem('token')
+    const token = localStorage.getItem('auth_token') || localStorage.getItem('token')
     const email = localStorage.getItem('userEmail')
     if (token && email) {
       setUser({ email })
@@ -42,8 +42,11 @@ export default function ScreenerPage() {
 
   const handleLogout = () => {
     localStorage.removeItem('token')
+    localStorage.removeItem('auth_token')
     localStorage.removeItem('userEmail')
+    localStorage.removeItem('user')
     setUser(null)
+    window.location.href = '/login'
   }
 
   const runScan = async () => {
@@ -58,7 +61,7 @@ export default function ScreenerPage() {
       }, 500)
 
       const apiUrl = getApiUrl()
-      const token = localStorage.getItem('token')
+      const token = localStorage.getItem('token') || localStorage.getItem('auth_token')
       const response = await fetch(`${apiUrl}/api/screener/scan`, {
         method: 'POST',
         headers: {
@@ -91,11 +94,58 @@ export default function ScreenerPage() {
             reasons: s.reasons || [],
           }))
         )
+      } else if (response.status === 401) {
+        // Handle 401 - check if it's Fyers auth or session issue
+        const errorData = await response.json().catch(() => ({}))
+        
+        if (errorData.detail && typeof errorData.detail === 'object') {
+          const detail = errorData.detail
+          
+          if (detail.error === 'fyers_auth_required' || detail.error === 'fyers_token_expired') {
+            // Fyers authentication needed - show alert and redirect
+            const message = detail.error === 'fyers_token_expired' 
+              ? 'Your broker authentication has expired. Please reconnect to continue scanning.'
+              : 'You need to connect your broker account to use the scanner. You will be redirected to authorize.'
+            
+            if (confirm(message + '\n\nClick OK to authenticate now.')) {
+              // Redirect to Fyers auth
+              if (detail.auth_url) {
+                window.location.href = detail.auth_url
+              } else {
+                // Fallback: go to dashboard which has auth flow
+                window.location.href = '/'
+              }
+            }
+            return
+          }
+        }
+        
+        // If not Fyers auth, it's a session issue
+        alert('Your session has expired. Please login again.')
+        window.location.href = '/login'
       } else {
-        console.error('Scan failed')
+        console.error('Scan failed:', response.statusText)
+        alert('Scan failed. Please try again.')
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Scan error:', error)
+      
+      // Check if it's a Fyers auth error
+      if (error.isFyersAuth) {
+        const message = error.code === 'fyers_token_expired'
+          ? 'Your broker authentication has expired. Please reconnect to continue scanning.'
+          : 'You need to connect your broker account to use the scanner.'
+        
+        if (confirm(message + '\n\nClick OK to authenticate now.')) {
+          if (error.auth_url) {
+            window.location.href = error.auth_url
+          } else {
+            window.location.href = '/'
+          }
+        }
+      } else {
+        alert('An error occurred while scanning. Please try again.')
+      }
     } finally {
       setLoading(false)
       setProgress(0)
