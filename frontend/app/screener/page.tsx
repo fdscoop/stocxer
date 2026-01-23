@@ -17,8 +17,16 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Label } from '@/components/ui/label'
-import { Search, ArrowLeft, RefreshCw, Loader2 } from 'lucide-react'
+import { Input } from '@/components/ui/input'
+import { Checkbox } from '@/components/ui/checkbox'
+import { Search, ArrowLeft, RefreshCw, Loader2, X, ChevronDown, ChevronUp } from 'lucide-react'
 import { getApiUrl } from '@/lib/api'
+
+interface StockOption {
+  symbol: string
+  name: string
+  short_name: string
+}
 
 export default function ScreenerPage() {
   const [user, setUser] = React.useState<{ email: string } | null>(null)
@@ -31,6 +39,14 @@ export default function ScreenerPage() {
   const [limit, setLimit] = React.useState('50')
   const [confidence, setConfidence] = React.useState('70')
   const [action, setAction] = React.useState('BUY')
+  
+  // Stock selection
+  const [availableStocks, setAvailableStocks] = React.useState<StockOption[]>([])
+  const [searchQuery, setSearchQuery] = React.useState('')
+  const [selectedStocks, setSelectedStocks] = React.useState<string[]>([])
+  const [showStockPicker, setShowStockPicker] = React.useState(false)
+  const [loadingStocks, setLoadingStocks] = React.useState(false)
+  const [scanMode, setScanMode] = React.useState<'random' | 'custom'>('random')
 
   React.useEffect(() => {
     const token = localStorage.getItem('auth_token') || localStorage.getItem('token')
@@ -39,6 +55,72 @@ export default function ScreenerPage() {
       setUser({ email })
     }
   }, [])
+
+  // Fetch available stocks for selection
+  const fetchStocks = async () => {
+    if (availableStocks.length > 0) return // Already loaded
+    
+    setLoadingStocks(true)
+    try {
+      const apiUrl = getApiUrl()
+      const response = await fetch(`${apiUrl}/screener/stocks/list`)
+      if (response.ok) {
+        const data = await response.json()
+        setAvailableStocks(data.stocks || [])
+      }
+    } catch (error) {
+      console.error('Failed to fetch stocks:', error)
+    } finally {
+      setLoadingStocks(false)
+    }
+  }
+
+  // Toggle stock selection
+  const toggleStock = (symbol: string) => {
+    setSelectedStocks(prev =>
+      prev.includes(symbol)
+        ? prev.filter(s => s !== symbol)
+        : [...prev, symbol]
+    )
+  }
+
+  // Filter stocks based on search query
+  const filteredStocks = React.useMemo(() => {
+    if (!searchQuery) return availableStocks.slice(0, 50) // Show top 50 when no search
+    
+    const query = searchQuery.toLowerCase()
+    return availableStocks.filter(stock =>
+      stock.short_name.toLowerCase().includes(query) ||
+      stock.name.toLowerCase().includes(query) ||
+      stock.symbol.toLowerCase().includes(query)
+    ).slice(0, 100) // Limit to 100 results
+  }, [searchQuery, availableStocks])
+
+  // Quick select presets
+  const selectNifty50 = () => {
+    const nifty50Symbols = [
+      'NSE:RELIANCE-EQ', 'NSE:TCS-EQ', 'NSE:HDFCBANK-EQ', 'NSE:INFY-EQ', 'NSE:ICICIBANK-EQ',
+      'NSE:HINDUNILVR-EQ', 'NSE:ITC-EQ', 'NSE:SBIN-EQ', 'NSE:BHARTIARTL-EQ', 'NSE:KOTAKBANK-EQ',
+      'NSE:LT-EQ', 'NSE:AXISBANK-EQ', 'NSE:ASIANPAINT-EQ', 'NSE:MARUTI-EQ', 'NSE:SUNPHARMA-EQ',
+      'NSE:TITAN-EQ', 'NSE:ULTRACEMCO-EQ', 'NSE:BAJFINANCE-EQ', 'NSE:NESTLEIND-EQ', 'NSE:HCLTECH-EQ',
+      'NSE:WIPRO-EQ', 'NSE:M&M-EQ', 'NSE:NTPC-EQ', 'NSE:TATAMOTORS-EQ', 'NSE:TATASTEEL-EQ',
+      'NSE:POWERGRID-EQ', 'NSE:ONGC-EQ', 'NSE:ADANIPORTS-EQ', 'NSE:COALINDIA-EQ', 'NSE:BAJAJFINSV-EQ',
+      'NSE:TECHM-EQ', 'NSE:INDUSINDBK-EQ', 'NSE:HINDALCO-EQ', 'NSE:DIVISLAB-EQ', 'NSE:HEROMOTOCO-EQ',
+      'NSE:DRREDDY-EQ', 'NSE:CIPLA-EQ', 'NSE:EICHERMOT-EQ', 'NSE:GRASIM-EQ', 'NSE:JSWSTEEL-EQ',
+      'NSE:BRITANNIA-EQ', 'NSE:APOLLOHOSP-EQ', 'NSE:BPCL-EQ', 'NSE:TATACONSUM-EQ', 'NSE:UPL-EQ',
+      'NSE:ADANIENT-EQ', 'NSE:SHREECEM-EQ', 'NSE:SBILIFE-EQ', 'NSE:BAJAJ-AUTO-EQ', 'NSE:HDFCLIFE-EQ',
+    ]
+    setSelectedStocks(nifty50Symbols)
+  }
+
+  const selectBankNifty = () => {
+    const bankSymbols = [
+      'NSE:HDFCBANK-EQ', 'NSE:ICICIBANK-EQ', 'NSE:SBIN-EQ', 'NSE:KOTAKBANK-EQ', 'NSE:AXISBANK-EQ',
+      'NSE:INDUSINDBK-EQ', 'NSE:PNB-EQ', 'NSE:BANKBARODA-EQ', 'NSE:CANBK-EQ', 'NSE:IDFCFIRSTB-EQ',
+      'NSE:FEDERALBNK-EQ', 'NSE:BANDHANBNK-EQ', 'NSE:RBLBANK-EQ', 'NSE:AUBANK-EQ'
+    ]
+    setSelectedStocks(bankSymbols)
+  }
 
   const handleLogout = () => {
     localStorage.removeItem('token')
@@ -62,17 +144,30 @@ export default function ScreenerPage() {
 
       const apiUrl = getApiUrl()
       const token = localStorage.getItem('token') || localStorage.getItem('auth_token')
+      
+      // Build request body
+      const requestBody: any = {
+        min_confidence: parseInt(confidence),
+        action,
+      }
+      
+      // If custom mode with selected stocks, send those
+      if (scanMode === 'custom' && selectedStocks.length > 0) {
+        requestBody.symbols = selectedStocks.join(',')
+        requestBody.limit = selectedStocks.length
+      } else {
+        // Random mode - use limit
+        requestBody.limit = parseInt(limit)
+        requestBody.randomize = true
+      }
+      
       const response = await fetch(`${apiUrl}/api/screener/scan`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           ...(token && { Authorization: `Bearer ${token}` }),
         },
-        body: JSON.stringify({
-          limit: parseInt(limit),
-          min_confidence: parseInt(confidence),
-          action,
-        }),
+        body: JSON.stringify(requestBody),
       })
 
       clearInterval(progressInterval)
@@ -80,7 +175,7 @@ export default function ScreenerPage() {
 
       if (response.ok) {
         const data = await response.json()
-        setScanned(data.stocks_scanned || parseInt(limit))
+        setScanned(data.stocks_scanned || selectedStocks.length || parseInt(limit))
         setSignals(
           (data.signals || []).map((s: any) => ({
             id: s.id || Math.random().toString(),
@@ -219,64 +314,268 @@ export default function ScreenerPage() {
 
         {/* Scan Controls */}
         <Card>
-          <CardContent className="p-3 md:p-4">
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
-              <div className="space-y-2">
-                <Label className="text-xs md:text-sm">Stocks to Scan</Label>
-                <Select value={limit} onValueChange={setLimit}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="25">25 - Quick</SelectItem>
-                    <SelectItem value="50">50 - Balanced</SelectItem>
-                    <SelectItem value="100">100 - Deep</SelectItem>
-                    <SelectItem value="200">200 - Full</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label className="text-xs md:text-sm">Min Confidence</Label>
-                <Select value={confidence} onValueChange={setConfidence}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="60">60%</SelectItem>
-                    <SelectItem value="70">70%</SelectItem>
-                    <SelectItem value="80">80%</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label className="text-xs md:text-sm">Action</Label>
-                <Select value={action} onValueChange={setAction}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All</SelectItem>
-                    <SelectItem value="BUY">BUY Only</SelectItem>
-                    <SelectItem value="SELL">SELL Only</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="flex items-end col-span-2 md:col-span-1">
-                <Button className="w-full" onClick={runScan} disabled={loading}>
-                  {loading ? (
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  ) : (
-                    <Search className="w-4 h-4 mr-2" />
-                  )}
-                  Scan Stocks
-                </Button>
-              </div>
+          <CardContent className="p-4 md:p-6">
+            {/* Scan Mode Toggle */}
+            <div className="mb-6 flex gap-3 p-1 bg-muted rounded-lg">
+              <Button
+                variant={scanMode === 'random' ? 'default' : 'ghost'}
+                size="lg"
+                className={`flex-1 text-base font-semibold ${
+                  scanMode === 'random' ? 'shadow-md' : 'hover:bg-accent'
+                }`}
+                onClick={() => setScanMode('random')}
+              >
+                🎲 Random Scan
+              </Button>
+              <Button
+                variant={scanMode === 'custom' ? 'default' : 'ghost'}
+                size="lg"
+                className={`flex-1 text-base font-semibold ${
+                  scanMode === 'custom' ? 'shadow-md' : 'hover:bg-accent'
+                }`}
+                onClick={() => {
+                  setScanMode('custom')
+                  if (availableStocks.length === 0) fetchStocks()
+                }}
+              >
+                🎯 Select Stocks
+              </Button>
             </div>
-            <p className="mt-2 text-xs text-muted-foreground hidden md:block">
-              💡 Each scan analyzes a random selection from 500+ NSE stocks for broader coverage.
-            </p>
+
+            {scanMode === 'random' ? (
+              // Random mode - existing controls
+              <>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
+                  <div className="space-y-2">
+                    <Label className="text-xs md:text-sm">Stocks to Scan</Label>
+                    <Select value={limit} onValueChange={setLimit}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="25">25 - Quick</SelectItem>
+                        <SelectItem value="50">50 - Balanced</SelectItem>
+                        <SelectItem value="100">100 - Deep</SelectItem>
+                        <SelectItem value="200">200 - Full</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-xs md:text-sm">Min Confidence</Label>
+                    <Select value={confidence} onValueChange={setConfidence}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="60">60%</SelectItem>
+                        <SelectItem value="70">70%</SelectItem>
+                        <SelectItem value="80">80%</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-xs md:text-sm">Action</Label>
+                    <Select value={action} onValueChange={setAction}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All</SelectItem>
+                        <SelectItem value="BUY">BUY Only</SelectItem>
+                        <SelectItem value="SELL">SELL Only</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="flex items-end col-span-2 md:col-span-1">
+                    <Button className="w-full" onClick={runScan} disabled={loading}>
+                      {loading ? (
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      ) : (
+                        <Search className="w-4 h-4 mr-2" />
+                      )}
+                      Scan Stocks
+                    </Button>
+                  </div>
+                </div>
+                <p className="mt-2 text-xs text-muted-foreground hidden md:block">
+                  💡 Each scan analyzes a random selection from 500+ NSE stocks for broader coverage.
+                </p>
+              </>
+            ) : (
+              // Custom mode - stock picker
+              <>
+                <div className="space-y-3">
+                  {/* Quick Select Buttons */}
+                  <div className="flex flex-wrap gap-3 items-center p-3 bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-950/20 dark:to-purple-950/20 rounded-lg border-2 border-blue-200 dark:border-blue-800">
+                    <Label className="text-sm font-semibold text-blue-700 dark:text-blue-300">Quick Select:</Label>
+                    <Button variant="outline" size="default" className="font-semibold bg-white dark:bg-gray-900" onClick={selectNifty50}>
+                      📊 NIFTY 50
+                    </Button>
+                    <Button variant="outline" size="default" className="font-semibold bg-white dark:bg-gray-900" onClick={selectBankNifty}>
+                      🏦 Bank Nifty
+                    </Button>
+                    {selectedStocks.length > 0 && (
+                      <Button
+                        variant="destructive"
+                        size="default"
+                        className="font-semibold"
+                        onClick={() => setSelectedStocks([])}
+                      >
+                        <X className="w-4 h-4 mr-2" />
+                        Clear All ({selectedStocks.length})
+                      </Button>
+                    )}
+                    <div className="ml-auto px-4 py-2 bg-blue-600 text-white rounded-md font-bold text-base shadow-md">
+                      {selectedStocks.length} Selected
+                    </div>
+                  </div>
+
+                  {/* Search Box */}
+                  <div className="relative">
+                    <Label className="text-sm font-semibold mb-2 block text-gray-700 dark:text-gray-300">🔍 Search Stocks:</Label>
+                    <div className="relative">
+                      <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-primary" />
+                      <Input
+                        placeholder="Type stock name or symbol (e.g., RELIANCE, TCS, HDFC)..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        onFocus={() => {
+                          setShowStockPicker(true)
+                          if (availableStocks.length === 0) fetchStocks()
+                        }}
+                        className="pl-12 h-12 text-base border-2 border-primary/50 focus:border-primary shadow-sm"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Selected Stocks Display */}
+                  {selectedStocks.length > 0 && (
+                    <div className="space-y-2">
+                      <Label className="text-sm font-bold text-green-700 dark:text-green-400">✓ Selected Stocks:</Label>
+                      <div className="flex flex-wrap gap-2 max-h-40 overflow-y-auto p-4 border-2 border-green-300 dark:border-green-700 rounded-lg bg-green-50 dark:bg-green-950/20">
+                        {selectedStocks.map((symbol) => {
+                          const stock = availableStocks.find(s => s.symbol === symbol)
+                          return (
+                            <Badge 
+                              key={symbol} 
+                              variant="secondary" 
+                              className="px-4 py-2 text-base font-semibold bg-white dark:bg-gray-800 border-2 border-green-500 hover:border-green-600 transition-all shadow-sm"
+                            >
+                              {stock?.short_name || symbol}
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  toggleStock(symbol)
+                                }}
+                                className="ml-2 hover:text-destructive hover:scale-110 transition-all"
+                                aria-label={`Remove ${stock?.short_name || symbol}`}
+                              >
+                                <X className="w-5 h-5 font-bold" />
+                              </button>
+                            </Badge>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Stock Picker Dropdown */}
+                  {showStockPicker && (
+                    <div className="relative">
+                      <Card className="absolute z-50 w-full max-h-96 overflow-y-auto border-2 border-primary shadow-2xl">
+                        <CardContent className="p-3">
+                          {loadingStocks ? (
+                            <div className="text-center py-8">
+                              <Loader2 className="w-6 h-6 animate-spin mx-auto text-primary" />
+                              <p className="text-sm text-muted-foreground mt-2">Loading stocks...</p>
+                            </div>
+                          ) : filteredStocks.length === 0 ? (
+                            <div className="text-center py-8 text-muted-foreground">
+                              No stocks found
+                            </div>
+                          ) : (
+                            <div className="space-y-1">
+                              {filteredStocks.map((stock) => (
+                                <div
+                                  key={stock.symbol}
+                                  className="flex items-center gap-3 p-3 hover:bg-primary/10 rounded-lg cursor-pointer border border-transparent hover:border-primary/30 transition-all"
+                                  onClick={() => toggleStock(stock.symbol)}
+                                >
+                                  <Checkbox
+                                    checked={selectedStocks.includes(stock.symbol)}
+                                    onCheckedChange={() => toggleStock(stock.symbol)}
+                                    className="h-5 w-5"
+                                  />
+                                  <div className="flex-1">
+                                    <div className="font-bold text-base">{stock.short_name}</div>
+                                    <div className="text-sm text-muted-foreground">{stock.name}</div>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </CardContent>
+                      </Card>
+                    </div>
+                  )}
+
+                  {/* Action Controls */}
+                  <div className="grid grid-cols-3 gap-3">
+                    <div className="space-y-2">
+                      <Label className="text-xs md:text-sm">Min Confidence</Label>
+                      <Select value={confidence} onValueChange={setConfidence}>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="60">60%</SelectItem>
+                          <SelectItem value="70">70%</SelectItem>
+                          <SelectItem value="80">80%</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-xs md:text-sm">Action</Label>
+                      <Select value={action} onValueChange={setAction}>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">All</SelectItem>
+                          <SelectItem value="BUY">BUY Only</SelectItem>
+                          <SelectItem value="SELL">SELL Only</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="flex items-end">
+                      <Button 
+                        className="w-full h-12 text-base font-bold shadow-lg" 
+                        onClick={runScan} 
+                        disabled={loading || selectedStocks.length === 0}
+                        size="lg"
+                      >
+                        {loading ? (
+                          <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                        ) : (
+                          <Search className="w-5 h-5 mr-2" />
+                        )}
+                        🚀 Scan {selectedStocks.length} Stock{selectedStocks.length !== 1 ? 's' : ''}
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              </>
+            )}
           </CardContent>
         </Card>
+
+        {/* Close stock picker when clicking outside */}
+        {showStockPicker && (
+          <div
+            className="fixed inset-0 z-40"
+            onClick={() => setShowStockPicker(false)}
+          />
+        )}
 
         {/* Status Bar */}
         {signals.length > 0 && (

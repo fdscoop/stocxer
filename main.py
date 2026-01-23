@@ -4114,11 +4114,66 @@ async def refresh_signal_prices(signals: dict):
 # STOCK SCREENER ENDPOINTS
 # ============================================================================
 
+@app.get("/screener/stocks/list")
+async def get_stock_list():
+    """
+    Get searchable list of all available stocks
+    
+    Returns:
+        List of stocks with symbol, name, and short_name for search/autocomplete
+    """
+    try:
+        # Get comprehensive stock list from screener module
+        from src.analytics.stock_screener import StockScreener
+        
+        # Get all stocks (full list, no limit)
+        screener_instance = StockScreener(fyers_client)
+        raw_stocks = screener_instance.get_nse_stocks_list(limit=None, randomize=False)
+        
+        # Get metadata from index constituents for richer data
+        from src.analytics.index_constituents import index_manager
+        
+        stock_list = []
+        seen_symbols = set()
+        
+        for stock in raw_stocks:
+            if stock in seen_symbols:
+                continue
+            seen_symbols.add(stock)
+            
+            # Parse symbol: "NSE:RELIANCE-EQ" -> "RELIANCE"
+            short_name = stock.replace("NSE:", "").replace("-EQ", "")
+            
+            # Try to get full name from index constituents
+            stock_info = index_manager.get_stock_info(stock)
+            full_name = stock_info.name if stock_info else short_name
+            
+            stock_list.append({
+                "symbol": stock,
+                "name": full_name,
+                "short_name": short_name
+            })
+        
+        # Sort by short_name for easy browsing
+        stock_list.sort(key=lambda x: x["short_name"])
+        
+        return {
+            "status": "success",
+            "total": len(stock_list),
+            "stocks": stock_list
+        }
+        
+    except Exception as e:
+        logger.error(f"Error getting stock list: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @app.get("/screener/scan")
 async def scan_stocks(
     limit: int = Query(50, description="Number of stocks to scan (faster with lower numbers)"),
     min_confidence: float = Query(60.0, description="Minimum confidence level (0-100)"),
     randomize: bool = Query(True, description="Randomly sample stocks for variety"),
+    symbols: str = Query(None, description="Optional: comma-separated list of symbols to scan (e.g., 'NSE:RELIANCE-EQ,NSE:TCS-EQ')"),
     authorization: str = Header(None, description="Bearer token (required)"),
 ):
     """
@@ -4183,13 +4238,29 @@ async def scan_stocks(
         fyers_client.access_token = fyers_token.access_token
         fyers_client._initialize_client()
         
-        logger.info(f"Stock screener scan requested by {user.email}: limit={limit}, min_confidence={min_confidence}, randomize={randomize}")
+        # Parse symbols if provided
+        stocks_list = None
+        if symbols:
+            stocks_list = [s.strip() for s in symbols.split(",") if s.strip()]
+            # Ensure proper format (NSE:SYMBOL-EQ)
+            stocks_list = [
+                s if s.startswith("NSE:") else f"NSE:{s}-EQ"
+                for s in stocks_list
+            ]
+            logger.info(f"Stock screener scan requested by {user.email}: scanning {len(stocks_list)} specific stocks")
+        else:
+            logger.info(f"Stock screener scan requested by {user.email}: limit={limit}, min_confidence={min_confidence}, randomize={randomize}")
         
         # Get screener instance
         screener = get_stock_screener(fyers_client)
         
-        # Run scan
-        signals = screener.scan_stocks(limit=limit, min_confidence=min_confidence, randomize=randomize)
+        # Run scan (pass stocks_list if specific symbols were provided)
+        signals = screener.scan_stocks(
+            limit=limit,
+            min_confidence=min_confidence,
+            randomize=randomize,
+            stocks=stocks_list
+        )
         
         # Integrate news sentiment into signals
         sentiment_data = None
@@ -4297,6 +4368,7 @@ async def scan_stocks_post(
 ):
     """
     POST endpoint for stock screener (frontend compatibility)
+    Supports both random scanning and custom stock selection
     """
     try:
         body = await request.json()
@@ -4304,12 +4376,14 @@ async def scan_stocks_post(
         min_confidence = body.get("min_confidence", 60.0)
         action = body.get("action", "BUY")
         randomize = body.get("randomize", True)
+        symbols = body.get("symbols", None)  # Comma-separated or None
         
         # Re-use the GET endpoint logic
         return await scan_stocks(
             limit=limit,
             min_confidence=min_confidence,
             randomize=randomize,
+            symbols=symbols,
             authorization=authorization
         )
     except Exception as e:

@@ -419,7 +419,8 @@ class StockScreener:
     
     def scan_stocks(self, limit: Optional[int] = 50, 
                    min_confidence: float = 60.0,
-                   randomize: bool = True) -> List[Dict]:
+                   randomize: bool = True,
+                   stocks: Optional[List[str]] = None) -> List[Dict]:
         """
         Scan multiple stocks and return high-confidence signals
         
@@ -427,17 +428,23 @@ class StockScreener:
             limit: Maximum number of stocks to scan (default 50 for faster scans)
             min_confidence: Minimum confidence threshold (default 60%)
             randomize: If True, randomly sample stocks for variety
+            stocks: Optional list of specific stock symbols to scan (overrides limit/randomize)
             
         Returns:
             List of signal dicts sorted by confidence
         """
-        logger.info(f"Starting stock scan: limit={limit}, min_confidence={min_confidence}, randomize={randomize}")
+        logger.info(f"Starting stock scan: limit={limit}, min_confidence={min_confidence}, randomize={randomize}, custom_stocks={len(stocks) if stocks else 0}")
         
-        stocks = self.get_nse_stocks_list(limit=limit, randomize=randomize)
+        # Use provided stocks or fetch from list
+        if stocks:
+            stocks_to_scan = stocks
+        else:
+            stocks_to_scan = self.get_nse_stocks_list(limit=limit, randomize=randomize)
+
         signals = []
         
-        for idx, symbol in enumerate(stocks):
-            logger.info(f"Analyzing {symbol}... ({idx+1}/{len(stocks)})")
+        for idx, symbol in enumerate(stocks_to_scan):
+            logger.info(f"Analyzing {symbol}... ({idx+1}/{len(stocks_to_scan)})")
             signal = self.analyze_stock(symbol)
             
             if signal and signal["confidence"] >= min_confidence:
@@ -446,13 +453,14 @@ class StockScreener:
             
             # Rate limit protection: Add delay between API calls to avoid 429 errors
             # Fyers API has strict rate limits, so we add 0.6s delay between each stock
-            if idx < len(stocks) - 1:  # Don't delay after the last stock
+            if idx < len(stocks_to_scan) - 1:  # Don't delay after the last stock
                 time.sleep(0.6)  # 600ms delay = max ~100 stocks/minute
         
         # Sort by confidence (highest first)
         signals.sort(key=lambda x: x["confidence"], reverse=True)
         
-        logger.info(f"Scan complete: Found {len(signals)} signals out of {len(stocks)} stocks")
+        logger.info(f"Scan complete: Found {len(signals)} signals out of {len(stocks_to_scan)} stocks")
+
         return signals
 
 

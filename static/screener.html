@@ -13,18 +13,42 @@
     <style>
         /* Screener-specific mobile styles */
         @media screen and (max-width: 767px) {
-            .container { padding: 8px !important; }
-            .screener-header { flex-direction: column !important; gap: 12px !important; }
-            .screener-header > div:first-child { text-align: center; }
-            .screener-header .flex { flex-wrap: wrap !important; justify-content: center !important; }
-            .status-bar-grid { 
-                display: grid !important; 
-                grid-template-columns: repeat(2, 1fr) !important; 
-                gap: 8px !important; 
+            .container {
+                padding: 8px !important;
             }
-            .status-bar-grid > div { text-align: center !important; padding: 8px !important; }
-            #signalsGrid { gap: 8px !important; }
-            .signal-card { padding: 12px !important; }
+
+            .screener-header {
+                flex-direction: column !important;
+                gap: 12px !important;
+            }
+
+            .screener-header>div:first-child {
+                text-align: center;
+            }
+
+            .screener-header .flex {
+                flex-wrap: wrap !important;
+                justify-content: center !important;
+            }
+
+            .status-bar-grid {
+                display: grid !important;
+                grid-template-columns: repeat(2, 1fr) !important;
+                gap: 8px !important;
+            }
+
+            .status-bar-grid>div {
+                text-align: center !important;
+                padding: 8px !important;
+            }
+
+            #signalsGrid {
+                gap: 8px !important;
+            }
+
+            .signal-card {
+                padding: 12px !important;
+            }
         }
     </style>
 </head>
@@ -45,13 +69,15 @@
                             <div class="text-xs text-gray-400">Logged in as</div>
                             <div id="userEmail" class="text-sm font-semibold text-cyan-400"></div>
                         </div>
-                        <button id="logoutBtn" class="px-2 md:px-3 py-2 bg-red-600 hover:bg-red-700 rounded text-xs md:text-sm">
+                        <button id="logoutBtn"
+                            class="px-2 md:px-3 py-2 bg-red-600 hover:bg-red-700 rounded text-xs md:text-sm">
                             Logout
                         </button>
                     </div>
                 </div>
                 <!-- Login Button -->
-                <a id="loginBtn" href="/login.html" class="px-3 md:px-4 py-2 bg-purple-600 hover:bg-purple-700 rounded text-sm">
+                <a id="loginBtn" href="/login.html"
+                    class="px-3 md:px-4 py-2 bg-purple-600 hover:bg-purple-700 rounded text-sm">
                     Login
                 </a>
                 <a href="/" class="px-3 md:px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded text-sm">
@@ -61,7 +87,8 @@
         </div>
 
         <!-- User Dashboard Indicator -->
-        <div id="userDashboardBanner" class="bg-gradient-to-r from-cyan-900/30 to-blue-900/30 rounded-lg p-3 mb-4 border border-cyan-500/30 hidden">
+        <div id="userDashboardBanner"
+            class="bg-gradient-to-r from-cyan-900/30 to-blue-900/30 rounded-lg p-3 mb-4 border border-cyan-500/30 hidden">
             <div class="flex items-center justify-between flex-wrap gap-2">
                 <div class="flex items-center gap-2">
                     <span class="text-lg">👤</span>
@@ -74,12 +101,50 @@
             </div>
         </div>
 
+        <!-- Stock Search Section -->
+        <div class="bg-gray-800 rounded-lg p-3 md:p-4 mb-4 md:mb-6">
+            <div class="flex items-center justify-between mb-3">
+                <h3 class="text-sm md:text-base font-semibold text-cyan-400">🔍 Search & Select Stocks</h3>
+                <button id="clearSelectedBtn" class="text-xs text-gray-400 hover:text-white hidden">
+                    Clear All
+                </button>
+            </div>
+
+            <!-- Search Input -->
+            <div class="relative mb-3">
+                <input type="text" id="stockSearch"
+                    placeholder="Type stock name or symbol (e.g., 'Reliance' or 'TCS')..."
+                    class="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-sm focus:border-cyan-500 focus:outline-none"
+                    autocomplete="off" />
+                <div id="searchResults"
+                    class="absolute z-10 w-full mt-1 bg-gray-700 border border-gray-600 rounded max-h-64 overflow-y-auto hidden">
+                </div>
+            </div>
+
+            <!-- Selected Stocks Display -->
+            <div id="selectedStocksContainer" class="hidden">
+                <div class="flex items-center justify-between mb-2">
+                    <span class="text-xs text-gray-400">Selected: <span id="selectedCount">0</span> stocks</span>
+                </div>
+                <div id="selectedStocks" class="flex flex-wrap gap-2"></div>
+                <button id="scanSelectedBtn"
+                    class="mt-3 w-full px-4 py-2 bg-cyan-600 hover:bg-cyan-700 rounded font-semibold text-sm">
+                    🎯 Scan Selected Stocks
+                </button>
+            </div>
+
+            <div class="mt-2 text-xs text-gray-500">
+                💡 Search and select specific stocks to scan, or use the regular scan below for random stocks.
+            </div>
+        </div>
+
         <!-- Scan Controls - Compact for mobile -->
         <div class="bg-gray-800 rounded-lg p-3 md:p-4 mb-4 md:mb-6">
             <div class="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-4">
                 <div>
                     <label class="block text-xs md:text-sm text-gray-400 mb-1 md:mb-2">Stocks to Scan</label>
-                    <select id="limitSelect" class="w-full bg-gray-700 border border-gray-600 rounded px-2 md:px-3 py-2 text-sm">
+                    <select id="limitSelect"
+                        class="w-full bg-gray-700 border border-gray-600 rounded px-2 md:px-3 py-2 text-sm">
                         <option value="25">25 - Quick</option>
                         <option value="50" selected>50 - Balanced</option>
                         <option value="100">100 - Deep</option>
@@ -88,7 +153,8 @@
                 </div>
                 <div>
                     <label class="block text-xs md:text-sm text-gray-400 mb-1 md:mb-2">Min Confidence</label>
-                    <select id="confidenceSelect" class="w-full bg-gray-700 border border-gray-600 rounded px-2 md:px-3 py-2 text-sm">
+                    <select id="confidenceSelect"
+                        class="w-full bg-gray-700 border border-gray-600 rounded px-2 md:px-3 py-2 text-sm">
                         <option value="60">60%</option>
                         <option value="70" selected>70%</option>
                         <option value="80">80%</option>
@@ -96,14 +162,16 @@
                 </div>
                 <div>
                     <label class="block text-xs md:text-sm text-gray-400 mb-1 md:mb-2">Action</label>
-                    <select id="actionFilter" class="w-full bg-gray-700 border border-gray-600 rounded px-2 md:px-3 py-2 text-sm">
+                    <select id="actionFilter"
+                        class="w-full bg-gray-700 border border-gray-600 rounded px-2 md:px-3 py-2 text-sm">
                         <option value="all">All</option>
                         <option value="BUY" selected>BUY</option>
                         <option value="SELL">SELL</option>
                     </select>
                 </div>
                 <div class="flex items-end col-span-2 md:col-span-1">
-                    <button id="scanBtn" class="w-full px-3 md:px-4 py-2 bg-green-600 hover:bg-green-700 rounded font-semibold text-sm md:text-base">
+                    <button id="scanBtn"
+                        class="w-full px-3 md:px-4 py-2 bg-green-600 hover:bg-green-700 rounded font-semibold text-sm md:text-base">
                         🔍 Scan Stocks
                     </button>
                 </div>
@@ -120,7 +188,8 @@
                     <h3 class="text-base md:text-lg font-semibold text-yellow-400">🔐 Market Data</h3>
                     <p id="authStatusText" class="text-gray-300 text-xs md:text-sm">Checking status...</p>
                 </div>
-                <button id="fyersAuthBtn" class="px-3 py-2 bg-blue-600 hover:bg-blue-700 rounded text-xs md:text-sm hidden">
+                <button id="fyersAuthBtn"
+                    class="px-3 py-2 bg-blue-600 hover:bg-blue-700 rounded text-xs md:text-sm hidden">
                     Connect Fyers
                 </button>
             </div>
@@ -152,25 +221,26 @@
             </div>
         </div>
 
-    <!-- Loading -->
-    <div id="loadingDiv" class="text-center py-8 md:py-12 hidden">
-        <div class="animate-spin inline-block w-10 h-10 md:w-12 md:h-12 border-4 border-cyan-400 border-t-transparent rounded-full">
+        <!-- Loading -->
+        <div id="loadingDiv" class="text-center py-8 md:py-12 hidden">
+            <div
+                class="animate-spin inline-block w-10 h-10 md:w-12 md:h-12 border-4 border-cyan-400 border-t-transparent rounded-full">
+            </div>
+            <p class="mt-4 text-gray-400 text-sm md:text-base" id="loadingText">Scanning stocks...</p>
+            <p class="mt-2 text-xs md:text-sm text-gray-500" id="scanProgress">Analyzing: 0 / 0 stocks</p>
         </div>
-        <p class="mt-4 text-gray-400 text-sm md:text-base" id="loadingText">Scanning stocks...</p>
-        <p class="mt-2 text-xs md:text-sm text-gray-500" id="scanProgress">Analyzing: 0 / 0 stocks</p>
-    </div>
 
-    <!-- Signals Grid - Responsive -->
-    <div id="signalsGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4 px-4 md:px-0">
-        <!-- Stock cards will be inserted here -->
-    </div>
+        <!-- Signals Grid - Responsive -->
+        <div id="signalsGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4 px-4 md:px-0">
+            <!-- Stock cards will be inserted here -->
+        </div>
 
-    <!-- No Signals Message -->
-    <div id="noSignals" class="text-center py-8 md:py-12 hidden">
-        <div class="text-5xl md:text-6xl mb-4">📭</div>
-        <h3 class="text-lg md:text-xl text-gray-400">No signals found</h3>
-        <p class="text-gray-500 mt-2 text-sm">Try adjusting filters or scan again</p>
-    </div>
+        <!-- No Signals Message -->
+        <div id="noSignals" class="text-center py-8 md:py-12 hidden">
+            <div class="text-5xl md:text-6xl mb-4">📭</div>
+            <h3 class="text-lg md:text-xl text-gray-400">No signals found</h3>
+            <p class="text-gray-500 mt-2 text-sm">Try adjusting filters or scan again</p>
+        </div>
     </div>
 
     <script src="config.js"></script>
@@ -196,6 +266,211 @@
         const userDashboardBanner = document.getElementById('userDashboardBanner');
         const userEmailBanner = document.getElementById('userEmailBanner');
 
+        // Stock search elements
+        const stockSearch = document.getElementById('stockSearch');
+        const searchResults = document.getElementById('searchResults');
+        const selectedStocksContainer = document.getElementById('selectedStocksContainer');
+        const selectedStocks = document.getElementById('selectedStocks');
+        const selectedCount = document.getElementById('selectedCount');
+        const clearSelectedBtn = document.getElementById('clearSelectedBtn');
+        const scanSelectedBtn = document.getElementById('scanSelectedBtn');
+
+        // Stock search state
+        let allStocks = [];
+        let selectedStocksList = [];
+
+        // Load stock list from API
+        async function loadStockList() {
+            try {
+                const response = await fetch(`${API_BASE}/screener/stocks/list`);
+                const data = await response.json();
+
+                if (data.status === 'success') {
+                    allStocks = data.stocks;
+                    console.log(`✅ Loaded ${allStocks.length} stocks for search`);
+                } else {
+                    console.error('Failed to load stock list:', data);
+                }
+            } catch (error) {
+                console.error('Error loading stock list:', error);
+            }
+        }
+
+        // Filter and display search results
+        function filterStocks(query) {
+            if (!query || query.length < 2) {
+                searchResults.classList.add('hidden');
+                return;
+            }
+
+            const queryLower = query.toLowerCase();
+            const matches = allStocks.filter(stock => {
+                return stock.short_name.toLowerCase().includes(queryLower) ||
+                    stock.name.toLowerCase().includes(queryLower);
+            }).slice(0, 10); // Limit to 10 results
+
+            if (matches.length === 0) {
+                searchResults.innerHTML = '<div class="p-3 text-gray-400 text-sm">No stocks found</div>';
+                searchResults.classList.remove('hidden');
+                return;
+            }
+
+            searchResults.innerHTML = matches.map(stock => `
+                <div class="p-2 hover:bg-gray-600 cursor-pointer border-b border-gray-600 last:border-0"
+                     onclick="selectStock('${stock.symbol}', '${stock.short_name}', '${stock.name.replace(/'/g, "\\'")}')"
+                     >
+                    <div class="text-sm font-semibold">${stock.short_name}</div>
+                    <div class="text-xs text-gray-400">${stock.name}</div>
+                </div>
+            `).join('');
+
+            searchResults.classList.remove('hidden');
+        }
+
+        // Select a stock
+        function selectStock(symbol, shortName, fullName) {
+            // Check if already selected
+            if (selectedStocksList.some(s => s.symbol === symbol)) {
+                alert('Stock already selected');
+                return;
+            }
+
+            // Add to selected list
+            selectedStocksList.push({ symbol, shortName, fullName });
+            updateSelectedStocksDisplay();
+
+            // Clear search
+            stockSearch.value = '';
+            searchResults.classList.add('hidden');
+        }
+
+        // Remove a stock from selection
+        function removeStock(symbol) {
+            selectedStocksList = selectedStocksList.filter(s => s.symbol !== symbol);
+            updateSelectedStocksDisplay();
+        }
+
+        // Update selected stocks display
+        function updateSelectedStocksDisplay() {
+            if (selectedStocksList.length === 0) {
+                selectedStocksContainer.classList.add('hidden');
+                clearSelectedBtn.classList.add('hidden');
+                return;
+            }
+
+            selectedStocksContainer.classList.remove('hidden');
+            clearSelectedBtn.classList.remove('hidden');
+            selectedCount.textContent = selectedStocksList.length;
+
+            selectedStocks.innerHTML = selectedStocksList.map(stock => `
+                <div class="bg-cyan-900/50 border border-cyan-500/50 rounded px-3 py-1 flex items-center gap-2 text-sm">
+                    <span class="font-semibold">${stock.shortName}</span>
+                    <button onclick="removeStock('${stock.symbol}')" 
+                            class="text-gray-400 hover:text-white font-bold">
+                        ✕
+                    </button>
+                </div>
+            `).join('');
+        }
+
+        // Clear all selected stocks
+        function clearAllSelected() {
+            selectedStocksList = [];
+            updateSelectedStocksDisplay();
+        }
+
+        // Scan selected stocks
+        async function scanSelectedStocks() {
+            if (selectedStocksList.length === 0) {
+                alert('Please select at least one stock to scan');
+                return;
+            }
+
+            if (!authToken) {
+                alert('❌ Login required to use the stock screener.\\n\\nPlease login to scan stocks and save your results.');
+                window.location.href = '/login.html';
+                return;
+            }
+
+            const symbols = selectedStocksList.map(s => s.symbol).join(',');
+            const minConfidence = confidenceSelect.value;
+
+            try {
+                showLoading(true);
+
+                const url = `${API_BASE}/screener/scan?symbols=${encodeURIComponent(symbols)}&min_confidence=${minConfidence}`;
+
+                const response = await fetch(url, {
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`
+                    }
+                });
+                const data = await response.json();
+
+                if (response.ok && data.status === 'success') {
+                    currentSignals = data.signals;
+                    updateStatusBar(data);
+                    displaySignals();
+
+                    if (data.saved) {
+                        console.log('✅ Scan results saved to your account!');
+                    }
+                } else if (response.status === 401 && data.detail?.error === 'fyers_auth_required') {
+                    // Handle Fyers auth (same as regular scan)
+                    const authModal = document.createElement('div');
+                    authModal.innerHTML = `
+                        <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                            <div class="bg-gray-800 p-6 rounded-lg max-w-md mx-4">
+                                <div class="text-center">
+                                    <div class="text-6xl mb-4">🔐</div>
+                                    <h2 class="text-xl font-bold text-cyan-400 mb-4">Fyers Authentication Required</h2>
+                                    <p class="text-gray-300 mb-6">To fetch live market data and scan stocks, you need to connect your Fyers account.</p>
+                                    <div class="flex gap-3 justify-center">
+                                        <button onclick="openFyersAuth('${data.detail.auth_url}'); this.closest('.fixed').remove();" 
+                                                class="px-6 py-2 bg-cyan-600 hover:bg-cyan-700 rounded text-white">
+                                            Connect Fyers Account
+                                        </button>
+                                        <button onclick="this.closest('.fixed').remove()" 
+                                                class="px-6 py-2 bg-gray-600 hover:bg-gray-700 rounded text-white">
+                                            Cancel
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    document.body.appendChild(authModal);
+                } else if (response.status === 401) {
+                    alert('Your session has expired. Please login again.');
+                    localStorage.removeItem('auth_token');
+                    window.location.href = '/login.html';
+                } else {
+                    const errorMsg = data.detail?.message || data.detail || data.message || 'Unknown error';
+                    alert('Error scanning stocks: ' + errorMsg);
+                }
+            } catch (error) {
+                console.error('Scan error:', error);
+                alert('Failed to scan stocks. Check console for details.');
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        // Stock search event listeners
+        stockSearch.addEventListener('input', (e) => {
+            filterStocks(e.target.value);
+        });
+
+        // Hide search results when clicking outside
+        document.addEventListener('click', (e) => {
+            if (!stockSearch.contains(e.target) && !searchResults.contains(e.target)) {
+                searchResults.classList.add('hidden');
+            }
+        });
+
+        clearSelectedBtn.addEventListener('click', clearAllSelected);
+        scanSelectedBtn.addEventListener('click', scanSelectedStocks);
+
         // Initialize authentication
         function initAuth() {
             authToken = localStorage.getItem('auth_token');
@@ -206,7 +481,7 @@
                 userEmail.textContent = currentUser.email;
                 userInfo.classList.remove('hidden');
                 loginBtn.classList.add('hidden');
-                
+
                 // Show user dashboard banner
                 if (userDashboardBanner) {
                     userDashboardBanner.classList.remove('hidden');
@@ -700,6 +975,9 @@
 
         // Initialize authentication on page load
         initAuth();
+
+        // Load stock list for search functionality
+        loadStockList();
 
         // Check Fyers auth status
         if (authToken) {
