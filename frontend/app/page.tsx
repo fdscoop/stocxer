@@ -301,7 +301,12 @@ export default function DashboardPage() {
     }, 60000)
 
     // Check for auth token - redirect to landing if not logged in
-    const token = localStorage.getItem('token') || localStorage.getItem('jwt_token')
+    // Use helper to check all possible token keys
+    const token = typeof window !== 'undefined' ? (
+      localStorage.getItem('auth_token') ||
+      localStorage.getItem('token') ||
+      localStorage.getItem('jwt_token')
+    ) : null
     const email = localStorage.getItem('userEmail')
     if (token && email) {
       setUser({ email })
@@ -329,7 +334,7 @@ export default function DashboardPage() {
           setToast({ message: '✅ Fyers authentication successful!', type: 'success' })
           setTimeout(() => setToast(null), 3000)
           // Refresh auth status
-          const authToken = localStorage.getItem('token') || localStorage.getItem('jwt_token')
+          const authToken = localStorage.getItem('auth_token') || localStorage.getItem('token') || localStorage.getItem('jwt_token')
           if (authToken) {
             checkFyersAuth(authToken)
           }
@@ -401,7 +406,7 @@ export default function DashboardPage() {
         if (popup && popup.closed) {
           clearInterval(checkClosed)
           // Refresh auth status after popup closes
-          const token = localStorage.getItem('token') || localStorage.getItem('jwt_token')
+          const token = localStorage.getItem('auth_token') || localStorage.getItem('token') || localStorage.getItem('jwt_token')
           if (token) {
             setTimeout(() => {
               checkFyersAuth(token)
@@ -419,8 +424,8 @@ export default function DashboardPage() {
   }
 
   const handleLogout = () => {
-    localStorage.removeItem('token')
-    localStorage.removeItem('jwt_token')
+    // Use helper to clear all auth data
+    clearAuthData()
     localStorage.removeItem('userEmail')
     setUser(null)
     // Redirect to landing page after logout
@@ -727,10 +732,10 @@ export default function DashboardPage() {
                   <Badge
                     variant="outline"
                     className={`text-xs ${(tradingSignal as any).entry_grade === 'A' ? 'border-green-500 text-green-500' :
-                        (tradingSignal as any).entry_grade === 'B' ? 'border-lime-500 text-lime-500' :
-                          (tradingSignal as any).entry_grade === 'C' ? 'border-yellow-500 text-yellow-500' :
-                            (tradingSignal as any).entry_grade === 'D' ? 'border-orange-500 text-orange-500' :
-                              'border-red-500 text-red-500'
+                      (tradingSignal as any).entry_grade === 'B' ? 'border-lime-500 text-lime-500' :
+                        (tradingSignal as any).entry_grade === 'C' ? 'border-yellow-500 text-yellow-500' :
+                          (tradingSignal as any).entry_grade === 'D' ? 'border-orange-500 text-orange-500' :
+                            'border-red-500 text-red-500'
                       }`}
                   >
                     Entry: {(tradingSignal as any).entry_grade || 'C'}
@@ -745,8 +750,8 @@ export default function DashboardPage() {
               {/* WAIT/AVOID Warning if applicable */}
               {(tradingSignal.action.includes('WAIT') || tradingSignal.action.includes('AVOID')) && (
                 <div className={`p-3 rounded-lg border ${tradingSignal.action.includes('AVOID')
-                    ? 'bg-red-500/10 border-red-500/30'
-                    : 'bg-orange-500/10 border-orange-500/30'
+                  ? 'bg-red-500/10 border-red-500/30'
+                  : 'bg-orange-500/10 border-orange-500/30'
                   }`}>
                   <div className="flex items-center gap-2 mb-2">
                     <span className="text-xl">{tradingSignal.action.includes('AVOID') ? '⛔' : '⏳'}</span>
@@ -772,8 +777,8 @@ export default function DashboardPage() {
                 <div className="p-3 bg-card rounded-lg border">
                   <div className="text-xs text-muted-foreground mb-1">What to Buy</div>
                   <div className={`text-xl md:text-2xl font-bold ${tradingSignal.action.includes('AVOID') ? 'text-red-500' :
-                      tradingSignal.action.includes('WAIT') ? 'text-orange-500' :
-                        tradingSignal.type === 'CALL' ? 'text-bullish' : 'text-bearish'
+                    tradingSignal.action.includes('WAIT') ? 'text-orange-500' :
+                      tradingSignal.type === 'CALL' ? 'text-bullish' : 'text-bearish'
                     }`}>
                     {tradingSignal.action}
                   </div>
@@ -953,7 +958,7 @@ export default function DashboardPage() {
                   {/* Entry Quality Note */}
                   {(tradingSignal as any).entry_grade && (
                     <p className={`font-medium ${['A', 'B'].includes((tradingSignal as any).entry_grade) ? 'text-green-500' :
-                        (tradingSignal as any).entry_grade === 'C' ? 'text-yellow-500' : 'text-red-500'
+                      (tradingSignal as any).entry_grade === 'C' ? 'text-yellow-500' : 'text-red-500'
                       }`}>
                       • Entry Quality: Grade {(tradingSignal as any).entry_grade}
                       {['A', 'B'].includes((tradingSignal as any).entry_grade) ? ' - Good conditions for entry' :
@@ -1022,8 +1027,8 @@ export default function DashboardPage() {
               <CardTitle className="flex items-center gap-2 text-base md:text-lg">
                 📈 Multi-Timeframe Analysis
                 <Badge variant="outline" className={`text-xs ${(tradingSignal as any).mtf_bias === 'bullish' ? 'border-green-500 text-green-500' :
-                    (tradingSignal as any).mtf_bias === 'bearish' ? 'border-red-500 text-red-500' :
-                      'border-yellow-500 text-yellow-500'
+                  (tradingSignal as any).mtf_bias === 'bearish' ? 'border-red-500 text-red-500' :
+                    'border-yellow-500 text-yellow-500'
                   }`}>
                   Overall: {(tradingSignal as any).mtf_bias?.toUpperCase()}
                 </Badge>
@@ -1033,13 +1038,13 @@ export default function DashboardPage() {
               <div className="grid grid-cols-2 md:grid-cols-6 gap-2">
                 {Object.entries(scanResults.mtf_ict_analysis.timeframes || {}).map(([tf, data]: [string, any]) => (
                   <div key={tf} className={`p-2 rounded-lg border text-center ${data.bias === 'bullish' ? 'bg-green-500/10 border-green-500/30' :
-                      data.bias === 'bearish' ? 'bg-red-500/10 border-red-500/30' :
-                        'bg-yellow-500/10 border-yellow-500/30'
+                    data.bias === 'bearish' ? 'bg-red-500/10 border-red-500/30' :
+                      'bg-yellow-500/10 border-yellow-500/30'
                     }`}>
                     <div className="text-xs text-muted-foreground mb-1">{tf}</div>
                     <div className={`text-sm font-bold ${data.bias === 'bullish' ? 'text-green-400' :
-                        data.bias === 'bearish' ? 'text-red-400' :
-                          'text-yellow-400'
+                      data.bias === 'bearish' ? 'text-red-400' :
+                        'text-yellow-400'
                       }`}>
                       {data.bias === 'bullish' ? '📈' : data.bias === 'bearish' ? '📉' : '➡️'}
                     </div>
