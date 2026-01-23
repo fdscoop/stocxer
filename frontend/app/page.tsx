@@ -93,6 +93,18 @@ interface TradingSignal {
   raw_ltp?: number
 }
 
+interface NewsArticle {
+  id: string
+  title: string
+  description?: string
+  published_at: string
+  source: string
+  url?: string
+  sentiment?: 'positive' | 'negative' | 'neutral'
+  impact_level?: 'high' | 'medium' | 'low'
+  affected_indices?: string[]
+}
+
 interface ScanResults {
   probability_analysis?: ProbabilityAnalysis
   recommended_option_type?: 'CALL' | 'PUT' | 'STRADDLE'
@@ -141,6 +153,8 @@ export default function DashboardPage() {
   const [scanResults, setScanResults] = React.useState<ScanResults | null>(null)
   const [tradingSignal, setTradingSignal] = React.useState<TradingSignal | null>(null)
   const [toast, setToast] = React.useState<{ message: string; type: 'success' | 'error' } | null>(null)
+  const [news, setNews] = React.useState<NewsArticle[]>([])
+  const [loadingNews, setLoadingNews] = React.useState(false)
 
   // Calculate trading signal from scan results with improved entry analysis
   const calculateTradingSignal = (data: ScanResults): TradingSignal | null => {
@@ -352,6 +366,28 @@ export default function DashboardPage() {
       window.removeEventListener('message', handleMessage)
     }
   }, [router])
+
+  // Fetch recent news on mount
+  React.useEffect(() => {
+    fetchNews()
+  }, [])
+
+  const fetchNews = async () => {
+    setLoadingNews(true)
+    try {
+      const apiUrl = getApiUrl()
+      const response = await fetch(`${apiUrl}/api/news?hours=6&limit=10`)
+      
+      if (response.ok) {
+        const data = await response.json()
+        setNews(data.articles || [])
+      }
+    } catch (error) {
+      console.error('Error fetching news:', error)
+    } finally {
+      setLoadingNews(false)
+    }
+  }
 
   // Check Fyers authentication status
   const checkFyersAuth = async (token: string) => {
@@ -1419,6 +1455,212 @@ export default function DashboardPage() {
 
             {/* Signal Grid */}
             <SignalGrid signals={signals} compact />
+          </CardContent>
+        </Card>
+
+        {/* Recent Market News */}
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <CardTitle className="flex items-center gap-2 text-base md:text-lg">
+                <span>📰</span>
+                Market News
+                <Badge variant="secondary" className="text-xs">Last 6 Hours</Badge>
+              </CardTitle>
+              <Button variant="outline" size="sm" onClick={fetchNews} disabled={loadingNews}>
+                {loadingNews ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {loadingNews && news.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                <Loader2 className="w-8 h-8 mx-auto mb-2 animate-spin" />
+                Loading news...
+              </div>
+            ) : news.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                No recent news available
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {news.slice(0, 5).map((article) => (
+                  <div
+                    key={article.id}
+                    className="p-3 rounded-lg border bg-card hover:bg-accent/50 transition-colors cursor-pointer"
+                    onClick={() => article.url && window.open(article.url, '_blank')}
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex-1 space-y-1">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <h4 className="text-sm font-medium line-clamp-2">{article.title}</h4>
+                        </div>
+                        {article.description && (
+                          <p className="text-xs text-muted-foreground line-clamp-2">
+                            {article.description}
+                          </p>
+                        )}
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground flex-wrap">
+                          <span>{article.source}</span>
+                          <span>•</span>
+                          <span>{new Date(article.published_at).toLocaleString('en-IN', {
+                            month: 'short',
+                            day: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit'
+                          })}</span>
+                          {article.affected_indices && article.affected_indices.length > 0 && (
+                            <>
+                              <span>•</span>
+                              <span>{article.affected_indices.join(', ')}</span>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                      <div className="flex flex-col items-end gap-1">
+                        {article.sentiment && (
+                          <Badge
+                            variant="secondary"
+                            className={`text-xs ${
+                              article.sentiment === 'positive'
+                                ? 'bg-green-500/10 text-green-500 border-green-500/20'
+                                : article.sentiment === 'negative'
+                                ? 'bg-red-500/10 text-red-500 border-red-500/20'
+                                : 'bg-gray-500/10 text-gray-500 border-gray-500/20'
+                            }`}
+                          >
+                            {article.sentiment === 'positive' ? '📈' : article.sentiment === 'negative' ? '📉' : '➖'}
+                          </Badge>
+                        )}
+                        {article.impact_level && (
+                          <Badge
+                            variant="outline"
+                            className={`text-xs ${
+                              article.impact_level === 'high'
+                                ? 'border-orange-500/50 text-orange-500'
+                                : article.impact_level === 'medium'
+                                ? 'border-yellow-500/50 text-yellow-500'
+                                : 'border-gray-500/50 text-gray-500'
+                            }`}
+                          >
+                            {article.impact_level}
+                          </Badge>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+                {news.length > 5 && (
+                  <div className="text-center pt-2">
+                    <Button variant="ghost" size="sm" className="text-xs">
+                      View all {news.length} articles
+                    </Button>
+                  </div>
+                )}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Recent Market News */}
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <CardTitle className="flex items-center gap-2 text-base md:text-lg">
+                <span>📰</span>
+                Market News
+                <Badge variant="secondary" className="text-xs">Last 6 Hours</Badge>
+              </CardTitle>
+              <Button variant="outline" size="sm" onClick={fetchNews} disabled={loadingNews}>
+                {loadingNews ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {loadingNews && news.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                <Loader2 className="w-8 h-8 mx-auto mb-2 animate-spin" />
+                Loading news...
+              </div>
+            ) : news.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                No recent news available
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {news.slice(0, 5).map((article) => (
+                  <div
+                    key={article.id}
+                    className="p-3 rounded-lg border bg-card hover:bg-accent/50 transition-colors cursor-pointer"
+                    onClick={() => article.url && window.open(article.url, '_blank')}
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex-1 space-y-1">
+                        <h4 className="text-sm font-medium line-clamp-2">{article.title}</h4>
+                        {article.description && (
+                          <p className="text-xs text-muted-foreground line-clamp-2">
+                            {article.description}
+                          </p>
+                        )}
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground flex-wrap">
+                          <span>{article.source}</span>
+                          <span>•</span>
+                          <span>{new Date(article.published_at).toLocaleString('en-IN', {
+                            month: 'short',
+                            day: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit'
+                          })}</span>
+                          {article.affected_indices && article.affected_indices.length > 0 && (
+                            <>
+                              <span>•</span>
+                              <span>{article.affected_indices.join(', ')}</span>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                      <div className="flex flex-col items-end gap-1">
+                        {article.sentiment && (
+                          <Badge
+                            variant="secondary"
+                            className={`text-xs ${
+                              article.sentiment === 'positive'
+                                ? 'bg-green-500/10 text-green-500 border-green-500/20'
+                                : article.sentiment === 'negative'
+                                ? 'bg-red-500/10 text-red-500 border-red-500/20'
+                                : 'bg-gray-500/10 text-gray-500 border-gray-500/20'
+                            }`}
+                          >
+                            {article.sentiment === 'positive' ? '📈' : article.sentiment === 'negative' ? '📉' : '➖'}
+                          </Badge>
+                        )}
+                        {article.impact_level && (
+                          <Badge
+                            variant="outline"
+                            className={`text-xs ${
+                              article.impact_level === 'high'
+                                ? 'border-orange-500/50 text-orange-500'
+                                : article.impact_level === 'medium'
+                                ? 'border-yellow-500/50 text-yellow-500'
+                                : 'border-gray-500/50 text-gray-500'
+                            }`}
+                          >
+                            {article.impact_level}
+                          </Badge>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+                {news.length > 5 && (
+                  <div className="text-center pt-2">
+                    <Button variant="ghost" size="sm" className="text-xs">
+                      View all {news.length} articles
+                    </Button>
+                  </div>
+                )}
+              </div>
+            )}
           </CardContent>
         </Card>
 
