@@ -162,6 +162,75 @@ class IndexOptionsAnalyzer:
         self.cache = {}
         self.cache_time = {}
         self.cache_duration = 60  # seconds
+        
+        # VIX historical data cache (5-minute cache to avoid repeated API calls)
+        self._vix_history_cache = None
+        self._vix_cache_time = None
+        self._vix_cache_duration = 300  # 5 minutes
+    
+    def calculate_vix_percentile(self, current_vix: float) -> tuple:
+        """
+        Calculate actual VIX percentile based on 1-year historical data
+        
+        Args:
+            current_vix: Current India VIX value
+            
+        Returns:
+            tuple: (percentile, vix_trend, avg_5d, min_1y, max_1y)
+        """
+        from datetime import datetime
+        import numpy as np
+        
+        try:
+            # Check cache
+            now = datetime.now()
+            if (self._vix_history_cache is not None and 
+                self._vix_cache_time is not None and
+                (now - self._vix_cache_time).seconds < self._vix_cache_duration):
+                vix_df = self._vix_history_cache
+            else:
+                # Fetch fresh historical VIX data
+                vix_df = self.fyers.get_historical_vix(days=252)
+                self._vix_history_cache = vix_df
+                self._vix_cache_time = now
+                logger.info(f"📊 Fetched {len(vix_df)} days of historical VIX data")
+            
+            if vix_df is None or vix_df.empty:
+                logger.warning("No historical VIX data available, using estimates")
+                # Fallback to rough estimate
+                return (min(100, (current_vix / 30) * 100), "stable", current_vix, 10.0, 30.0)
+            
+            # Get VIX close prices
+            vix_closes = vix_df['close'].values
+            
+            # Calculate percentile
+            percentile = (np.sum(vix_closes < current_vix) / len(vix_closes)) * 100
+            
+            # Calculate VIX trend (compare to 5-day average)
+            if len(vix_closes) >= 5:
+                avg_5d = np.mean(vix_closes[-5:])
+                if current_vix > avg_5d * 1.05:  # 5% above 5-day avg
+                    vix_trend = "rising"
+                elif current_vix < avg_5d * 0.95:  # 5% below 5-day avg
+                    vix_trend = "falling"
+                else:
+                    vix_trend = "stable"
+            else:
+                avg_5d = current_vix
+                vix_trend = "stable"
+            
+            # 1-year min/max for context
+            vix_min_1y = float(np.min(vix_closes))
+            vix_max_1y = float(np.max(vix_closes))
+            
+            logger.info(f"📈 VIX: {current_vix:.2f} | Percentile: {percentile:.1f}% | Trend: {vix_trend} | 5D Avg: {avg_5d:.2f} | 1Y Range: {vix_min_1y:.2f}-{vix_max_1y:.2f}")
+            
+            return (round(percentile, 1), vix_trend, round(avg_5d, 2), round(vix_min_1y, 2), round(vix_max_1y, 2))
+            
+        except Exception as e:
+            logger.error(f"Error calculating VIX percentile: {e}")
+            # Fallback to rough estimate
+            return (min(100, (current_vix / 30) * 100), "stable", current_vix, 10.0, 30.0)
     
     def get_market_regime(self) -> MarketRegime:
         """
@@ -210,16 +279,13 @@ class IndexOptionsAnalyzer:
                     trend = "bearish"
                     strength = min(100, 50 + abs(change_pct) * 20)
             
-            # VIX percentile (simplified - would need historical data)
-            vix_percentile = (vix / 30) * 100  # Rough estimate
-            
-            # VIX trend
-            vix_trend = "stable"
+            # Calculate actual VIX percentile from historical data
+            vix_percentile, vix_trend, vix_5d_avg, vix_min_1y, vix_max_1y = self.calculate_vix_percentile(vix)
             
             return MarketRegime(
                 vix=vix,
                 vix_trend=vix_trend,
-                vix_percentile=min(100, vix_percentile),
+                vix_percentile=vix_percentile,
                 regime=regime,
                 trend=trend,
                 strength=strength

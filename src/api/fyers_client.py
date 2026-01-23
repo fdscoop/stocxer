@@ -281,6 +281,42 @@ class FyersClient:
         
         response = self.fyers.funds()
         return response
+    
+    def get_historical_vix(self, days: int = 252) -> pd.DataFrame:
+        """
+        Fetch historical India VIX data for percentile calculation
+        
+        Args:
+            days: Number of trading days of history (default: 252 = 1 year)
+            
+        Returns:
+            DataFrame with VIX OHLCV data indexed by timestamp
+        """
+        if not self.fyers:
+            raise Exception("Client not initialized")
+        
+        date_to = datetime.now()
+        # Add buffer days for holidays/weekends
+        date_from = date_to - timedelta(days=int(days * 1.5))
+        
+        try:
+            df = self.get_historical_data(
+                symbol="NSE:INDIAVIX-INDEX",
+                resolution="D",
+                date_from=date_from,
+                date_to=date_to
+            )
+            
+            if df is not None and not df.empty:
+                # Return only the requested number of trading days
+                return df.tail(days)
+            else:
+                logger.warning("No historical VIX data received")
+                return pd.DataFrame()
+                
+        except Exception as e:
+            logger.error(f"Error fetching historical VIX: {e}")
+            return pd.DataFrame()
 
 
 # Global client instance

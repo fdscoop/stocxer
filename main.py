@@ -4931,10 +4931,22 @@ def generate_mock_options_scan_data(index: str, expiry: str, min_volume: int, mi
     }
 
 
-def process_options_scan(chain, min_volume: int, min_oi: int, strategy: str):
-    """Process real option chain data for scanning with discount zone analysis"""
+def process_options_scan(chain, min_volume: int, min_oi: int, strategy: str, 
+                         fetch_historical: bool = True):
+    """
+    Process real option chain data for scanning with discount zone analysis.
+    
+    Args:
+        chain: OptionChainAnalysis object with all strikes
+        min_volume: Minimum volume filter
+        min_oi: Minimum open interest filter
+        strategy: Strategy type (all, momentum, reversal, volatility)
+        fetch_historical: If True, fetch intraday history for top options (adds latency)
+    """
     options = []
     spot_price = chain.spot_price
+    index = getattr(chain, 'index', 'NIFTY')
+    expiry_date = getattr(chain, 'expiry_date', None)
     
     # Get market context for discount zone calculations
     dte = getattr(chain, 'days_to_expiry', 7)  # Default 7 days
@@ -5066,7 +5078,185 @@ def process_options_scan(chain, min_volume: int, min_oi: int, strategy: str):
             })
     
     # Sort by score (highest first)
-    return sorted(options, key=lambda x: x["score"], reverse=True)
+    sorted_options = sorted(options, key=lambda x: x["score"], reverse=True)
+    
+    # =====================================================
+    # ENHANCED: Fetch historical context for top 5 options
+    # This adds intraday price position analysis for better entry timing
+    # =====================================================
+    if fetch_historical and expiry_date and len(sorted_options) > 0:
+        top_n = min(5, len(sorted_options))
+        logger.info(f"📊 Fetching intraday history for top {top_n} options...")
+        
+        for i in range(top_n):
+            opt = sorted_options[i]
+            try:
+                # Fetch historical context
+                hist_ctx = get_option_historical_context(
+                    index=index,
+                    strike=opt["strike"],
+                    option_type=opt["type"],
+                    expiry_date=expiry_date,
+                    current_ltp=opt["ltp"]
+                )
+                
+                # Re-calculate discount zone with historical context
+                if hist_ctx.get("has_history"):
+                    enhanced_dz = calculate_discount_zone(
+                        option_ltp=opt["ltp"],
+                        spot_price=spot_price,
+                        strike=opt["strike"],
+                        option_type=opt["type"],
+                        iv=opt.get("iv", 0.15),
+                        delta=opt.get("delta", 0.5),
+                        dte=dte,
+                        avg_iv=avg_iv,
+                        market_momentum=market_momentum,
+                        oi_analysis=getattr(next((s for s in chain.strikes if s.strike == opt["strike"]), None), 
+                                            'call_analysis' if opt["type"] == "CALL" else 'put_analysis', 'neutral') or 'neutral',
+                        historical_context=hist_ctx
+                    )
+                    sorted_options[i]["discount_zone"] = enhanced_dz
+                    sorted_options[i]["historical_context"] = hist_ctx
+                    logger.debug(f"✅ Enhanced {opt['type']} {opt['strike']} with intraday data")
+                    
+            except Exception as e:
+                logger.warning(f"Could not enhance {opt['type']} {opt['strike']}: {e}")
+    
+    return sorted_options
+
+
+def get_option_historical_context(
+    index: str,
+    strike: float,
+    option_type: str,
+    expiry_date: str,
+    current_ltp: float
+) -> dict:
+    """
+    Fetch intraday historical context for an option to determine price position.
+    
+    This helps identify if current LTP is at day high (avoid) or day low (better entry).
+    
+    Args:
+        index: Index name (NIFTY, BANKNIFTY, FINNIFTY)
+        strike: Option strike price
+        option_type: "CALL" or "PUT"
+        expiry_date: Expiry date in YYYY-MM-DD format
+        current_ltp: Current Last Traded Price
+        
+    Returns:
+        dict with price position metrics
+    """
+    from datetime import datetime, timedelta
+    
+    result = {
+        "has_history": False,
+        "day_high": current_ltp,
+        "day_low": current_ltp,
+        "day_open": current_ltp,
+        "vwap_estimate": current_ltp,
+        "price_range": 0,
+        "position_in_range_pct": 50,  # 0 = at day low, 100 = at day high
+        "near_day_high": False,
+        "near_day_low": False,
+        "at_vwap": True,
+        "recommendation": "neutral"
+    }
+    
+    try:
+        # Build option symbol for Fyers
+        # Format: NSE:NIFTY{YYMM}{DD}{STRIKE}{CE/PE}
+        # Example: NSE:NIFTY2612323000CE
+        
+        # Parse expiry date
+        exp_dt = datetime.strptime(expiry_date, "%Y-%m-%d")
+        exp_yy = exp_dt.strftime("%y")
+        exp_mm = exp_dt.strftime("%m")
+        exp_dd = exp_dt.strftime("%d")
+        
+        # Map index to option prefix
+        option_prefix_map = {
+            "NIFTY": "NIFTY",
+            "BANKNIFTY": "BANKNIFTY",
+            "FINNIFTY": "FINNIFTY",
+            "MIDCPNIFTY": "MIDCPNIFTY"
+        }
+        
+        prefix = option_prefix_map.get(index.upper(), index.upper())
+        opt_type_suffix = "CE" if option_type.upper() == "CALL" else "PE"
+        
+        # Build symbol (e.g., NSE:NIFTY2612323000CE)
+        option_symbol = f"NSE:{prefix}{exp_yy}{exp_mm}{exp_dd}{int(strike)}{opt_type_suffix}"
+        
+        logger.debug(f"📊 Fetching historical context for: {option_symbol}")
+        
+        # Fetch intraday data (5-min candles for today)
+        today = datetime.now()
+        market_open = today.replace(hour=9, minute=15, second=0, microsecond=0)
+        
+        df = fyers_client.get_historical_data(
+            symbol=option_symbol,
+            resolution="5",  # 5-minute candles
+            date_from=market_open,
+            date_to=today
+        )
+        
+        if df is not None and not df.empty and len(df) >= 2:
+            result["has_history"] = True
+            
+            # Calculate day metrics
+            day_high = float(df['high'].max())
+            day_low = float(df['low'].min())
+            day_open = float(df['open'].iloc[0])
+            
+            # VWAP estimate (simplified: volume-weighted average of typical price)
+            if 'volume' in df.columns and df['volume'].sum() > 0:
+                typical_price = (df['high'] + df['low'] + df['close']) / 3
+                vwap = (typical_price * df['volume']).sum() / df['volume'].sum()
+            else:
+                vwap = (day_high + day_low) / 2
+            
+            result["day_high"] = round(day_high, 2)
+            result["day_low"] = round(day_low, 2)
+            result["day_open"] = round(day_open, 2)
+            result["vwap_estimate"] = round(vwap, 2)
+            
+            # Calculate price range and position
+            price_range = day_high - day_low
+            result["price_range"] = round(price_range, 2)
+            
+            if price_range > 0:
+                position_pct = ((current_ltp - day_low) / price_range) * 100
+                result["position_in_range_pct"] = round(max(0, min(100, position_pct)), 1)
+            
+            # Determine position flags
+            # Near day high: within 10% of high or above 90th percentile
+            result["near_day_high"] = result["position_in_range_pct"] >= 85
+            result["near_day_low"] = result["position_in_range_pct"] <= 15
+            
+            # Within 5% of VWAP
+            if vwap > 0:
+                result["at_vwap"] = abs(current_ltp - vwap) / vwap < 0.05
+            
+            # Generate recommendation
+            if result["near_day_high"]:
+                result["recommendation"] = "wait_pullback"
+            elif result["near_day_low"]:
+                result["recommendation"] = "good_entry"
+            elif result["at_vwap"]:
+                result["recommendation"] = "fair_entry"
+            else:
+                result["recommendation"] = "neutral"
+            
+            logger.debug(f"📈 {option_symbol}: LTP={current_ltp}, Range={day_low}-{day_high}, Position={result['position_in_range_pct']:.0f}%, Rec={result['recommendation']}")
+        else:
+            logger.debug(f"⚠️ No intraday history for {option_symbol}")
+            
+    except Exception as e:
+        logger.warning(f"Could not fetch option historical context: {e}")
+    
+    return result
 
 
 def calculate_simple_delta(spot: float, strike: float, option_type: str) -> float:
@@ -5406,7 +5596,8 @@ def calculate_discount_zone(
     dte: int,
     avg_iv: float = 0.15,  # Historical average IV (15% default for NIFTY)
     market_momentum: str = "neutral",  # "bullish", "bearish", "neutral"
-    oi_analysis: str = "neutral"  # "long_build", "short_build", "long_unwind", "short_cover"
+    oi_analysis: str = "neutral",  # "long_build", "short_build", "long_unwind", "short_cover"
+    historical_context: dict = None  # Optional: from get_option_historical_context()
 ) -> dict:
     """
     Calculate if current option price is in a discounted zone.
@@ -5417,6 +5608,7 @@ def calculate_discount_zone(
     2. Underlying momentum and trend direction
     3. Time feasibility for expected price movement
     4. OI analysis for institutional positioning
+    5. Intraday price position (day high/low analysis)
     
     Args:
         option_ltp: Current option LTP (Last Traded Price)
@@ -5429,6 +5621,7 @@ def calculate_discount_zone(
         avg_iv: Historical average IV (default 15%)
         market_momentum: Current market momentum direction
         oi_analysis: OI-based analysis for positioning
+        historical_context: Optional dict from get_option_historical_context()
         
     Returns:
         dict with:
@@ -5441,6 +5634,7 @@ def calculate_discount_zone(
             - time_feasible: Whether time allows for entry setup
             - supports_entry: Boolean - should user enter now
             - reasoning: Explanation of the analysis
+            - price_position: Intraday price position metrics (if available)
     """
     
     # Default response structure
@@ -5641,6 +5835,32 @@ def calculate_discount_zone(
         best_entry_price = option_ltp * 0.80
         reasoning = f"🔴 HIGH PREMIUM: IV +{iv_premium_pct:.0f}% very elevated. Avoid or wait for significant pullback."
     
+    # =====================================================
+    # 7. INCORPORATE HISTORICAL PRICE POSITION
+    # =====================================================
+    price_position = None
+    if historical_context and historical_context.get("has_history"):
+        price_position = {
+            "day_high": historical_context.get("day_high"),
+            "day_low": historical_context.get("day_low"),
+            "vwap": historical_context.get("vwap_estimate"),
+            "position_in_range_pct": historical_context.get("position_in_range_pct", 50),
+            "near_day_high": historical_context.get("near_day_high", False),
+            "near_day_low": historical_context.get("near_day_low", False),
+            "intraday_recommendation": historical_context.get("recommendation", "neutral")
+        }
+        
+        # Adjust supports_entry based on intraday position
+        if historical_context.get("near_day_high"):
+            # Option is at intraday high - recommend waiting even if IV looks good
+            if supports_entry:
+                supports_entry = False  # Override to wait
+                reasoning += " ⚠️ Also at intraday HIGH - wait for pullback."
+        elif historical_context.get("near_day_low"):
+            # Option is at intraday low - this is a good entry point
+            if status in ["fair", "discounted", "deep_discount"]:
+                reasoning += " ✅ Also at intraday LOW - excellent entry zone!"
+    
     result = {
         "status": status,
         "current_price": round(option_ltp, 2),
@@ -5653,7 +5873,8 @@ def calculate_discount_zone(
         "minutes_remaining": minutes_remaining,
         "supports_entry": supports_entry,
         "momentum_direction": market_momentum,
-        "reasoning": reasoning
+        "reasoning": reasoning,
+        "price_position": price_position
     }
     
     return result
