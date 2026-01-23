@@ -433,7 +433,7 @@ export default function DashboardPage() {
   }
 
   const handleQuickScan = async () => {
-    const token = localStorage.getItem('token') || localStorage.getItem('jwt_token')
+    const token = localStorage.getItem('auth_token') || localStorage.getItem('token') || localStorage.getItem('jwt_token')
 
     // Check if user is logged in
     if (!token) {
@@ -507,9 +507,34 @@ export default function DashboardPage() {
       })
 
       if (response.status === 401) {
-        // Token expired or invalid
-        localStorage.removeItem('token')
-        localStorage.removeItem('jwt_token')
+        // Check if it's a Fyers auth issue or user session issue
+        const errorData = await response.json().catch(() => ({}))
+        
+        if (errorData.detail && typeof errorData.detail === 'object') {
+          const detail = errorData.detail
+          
+          if (detail.error === 'fyers_auth_required' || detail.error === 'fyers_token_expired') {
+            // Fyers authentication needed - show alert and redirect
+            const message = detail.error === 'fyers_token_expired' 
+              ? 'Your broker authentication has expired. Please reconnect to continue.'
+              : 'You need to connect your broker account to scan options.'
+            
+            setToast({ message: message + ' Redirecting...', type: 'error' })
+            setTimeout(() => {
+              setToast(null)
+              if (detail.auth_url) {
+                window.location.href = detail.auth_url
+              } else {
+                // Trigger Fyers auth from dashboard
+                openFyersAuthPopup()
+              }
+            }, 2000)
+            return
+          }
+        }
+        
+        // If not Fyers auth, it's a genuine session issue
+        clearAuthData()
         setToast({ message: 'Session expired. Please login again.', type: 'error' })
         setTimeout(() => {
           setToast(null)
