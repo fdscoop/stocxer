@@ -185,7 +185,7 @@ export default function DashboardPage() {
     // Get entry analysis data
     const entryAnalysis = (bestOption as any).entry_analysis || {}
     const discountZone = (bestOption as any).discount_zone || {}
-    
+
     // Use RECOMMENDED entry price, not just LTP
     const rawLtp = bestOption.ltp
     const recommendedEntry = entryAnalysis.recommended_entry || rawLtp
@@ -196,7 +196,7 @@ export default function DashboardPage() {
     const shouldWaitForPullback = entryAnalysis.wait_for_pullback || false
     const supportsImmediateEntry = entryAnalysis.supports_immediate_entry !== false
     const entryReasons: string[] = entryAnalysis.reasoning || []
-    
+
     // Use limit order price if waiting for pullback, otherwise use LTP
     const entryPrice = shouldWaitForPullback ? limitOrderPrice : rawLtp
     const optionType = bestOption.type === 'CE' ? 'CALL' : bestOption.type === 'PE' ? 'PUT' : bestOption.type
@@ -204,26 +204,26 @@ export default function DashboardPage() {
     // Calculate realistic targets using Greeks-based projections if available
     const delta = bestOption.delta || 0.4
     const dte = data.market_data?.days_to_expiry || 7
-    
+
     // Target calculation based on expected underlying move and delta
     // More sophisticated than arbitrary percentage multipliers
     let target1Points: number
     let target2Points: number
     let stopLossPoints: number
-    
+
     // For intraday, expect 0.5-1% index move = proportional option move via delta
     const expectedIndexMovePct = prob.expected_move_pct || 0.5
     const spotPrice = data.market_data?.spot_price || 24000
     const expectedIndexPoints = spotPrice * expectedIndexMovePct / 100
-    
+
     // Option price change ≈ Delta × Underlying price change
     const expectedOptionMove = Math.abs(delta) * expectedIndexPoints
-    
+
     // Set targets based on expected move
     target1Points = Math.max(expectedOptionMove * 0.6, rawLtp * 0.20) // Min 20% or 60% of expected
     target2Points = Math.max(expectedOptionMove * 1.2, rawLtp * 0.50) // Min 50% or 120% of expected
     stopLossPoints = Math.min(rawLtp * 0.25, expectedOptionMove * 0.5) // Max 25% or 50% of expected
-    
+
     // Adjust for time decay if close to expiry
     if (dte <= 2) {
       // Reduce targets due to theta decay
@@ -232,7 +232,7 @@ export default function DashboardPage() {
       // Tighter stop loss to limit time decay damage
       stopLossPoints *= 0.8
     }
-    
+
     const target1 = Math.round((entryPrice + target1Points) * 100) / 100
     const target2 = Math.round((entryPrice + target2Points) * 100) / 100
     const stopLoss = Math.round((entryPrice - stopLossPoints) * 100) / 100
@@ -253,7 +253,7 @@ export default function DashboardPage() {
     } else {
       action = recommendedType === 'CALL' ? 'BUY CALL' : recommendedType === 'PUT' ? 'BUY PUT' : 'STRADDLE'
     }
-    
+
     const direction = prob.expected_direction
 
     // Calculate confidence - factor in entry grade
@@ -317,12 +317,12 @@ export default function DashboardPage() {
       // Handle auth token requests from popup
       if (event.data.type === 'get_auth_token') {
         const authToken = localStorage.getItem('token') || localStorage.getItem('jwt_token')
-        event.source?.postMessage({ 
-          type: 'auth_token_response', 
-          token: authToken 
+        event.source?.postMessage({
+          type: 'auth_token_response',
+          token: authToken
         }, event.origin as any)
       }
-      
+
       // Handle Fyers auth completion
       if (event.data.type === 'fyers_auth_complete') {
         if (event.data.success) {
@@ -339,7 +339,7 @@ export default function DashboardPage() {
         }
       }
     }
-    
+
     window.addEventListener('message', handleMessage)
 
     return () => {
@@ -371,9 +371,9 @@ export default function DashboardPage() {
       } else {
         console.warn('⚠️ Fyers authentication required for live data')
         // Show a toast notification about Fyers auth
-        setToast({ 
-          message: 'Fyers authentication required for live market data. Please connect your Fyers account.', 
-          type: 'error' 
+        setToast({
+          message: 'Fyers authentication required for live market data. Please connect your Fyers account.',
+          type: 'error'
         })
         setTimeout(() => setToast(null), 5000)
       }
@@ -576,7 +576,7 @@ export default function DashboardPage() {
           action: backendSignal.action,
           strike: backendSignal.option.strike,
           type: backendSignal.option.type,
-          entry_price: backendSignal.entry.price,
+          entry_price: backendSignal.entry.best_entry_price || backendSignal.entry.price,
           target_1: backendSignal.targets.target_1,
           target_2: backendSignal.targets.target_2,
           stop_loss: backendSignal.targets.stop_loss,
@@ -724,15 +724,14 @@ export default function DashboardPage() {
                     {scanResults.data_source === 'live' ? '🟢 Live' : '🟡 Demo'}
                   </Badge>
                   {/* Entry Grade Badge */}
-                  <Badge 
-                    variant="outline" 
-                    className={`text-xs ${
-                      (tradingSignal as any).entry_grade === 'A' ? 'border-green-500 text-green-500' :
-                      (tradingSignal as any).entry_grade === 'B' ? 'border-lime-500 text-lime-500' :
-                      (tradingSignal as any).entry_grade === 'C' ? 'border-yellow-500 text-yellow-500' :
-                      (tradingSignal as any).entry_grade === 'D' ? 'border-orange-500 text-orange-500' :
-                      'border-red-500 text-red-500'
-                    }`}
+                  <Badge
+                    variant="outline"
+                    className={`text-xs ${(tradingSignal as any).entry_grade === 'A' ? 'border-green-500 text-green-500' :
+                        (tradingSignal as any).entry_grade === 'B' ? 'border-lime-500 text-lime-500' :
+                          (tradingSignal as any).entry_grade === 'C' ? 'border-yellow-500 text-yellow-500' :
+                            (tradingSignal as any).entry_grade === 'D' ? 'border-orange-500 text-orange-500' :
+                              'border-red-500 text-red-500'
+                      }`}
                   >
                     Entry: {(tradingSignal as any).entry_grade || 'C'}
                   </Badge>
@@ -745,11 +744,10 @@ export default function DashboardPage() {
             <CardContent className="space-y-4">
               {/* WAIT/AVOID Warning if applicable */}
               {(tradingSignal.action.includes('WAIT') || tradingSignal.action.includes('AVOID')) && (
-                <div className={`p-3 rounded-lg border ${
-                  tradingSignal.action.includes('AVOID') 
-                    ? 'bg-red-500/10 border-red-500/30' 
+                <div className={`p-3 rounded-lg border ${tradingSignal.action.includes('AVOID')
+                    ? 'bg-red-500/10 border-red-500/30'
                     : 'bg-orange-500/10 border-orange-500/30'
-                }`}>
+                  }`}>
                   <div className="flex items-center gap-2 mb-2">
                     <span className="text-xl">{tradingSignal.action.includes('AVOID') ? '⛔' : '⏳'}</span>
                     <span className={`font-semibold ${tradingSignal.action.includes('AVOID') ? 'text-red-500' : 'text-orange-500'}`}>
@@ -768,16 +766,15 @@ export default function DashboardPage() {
                   </div>
                 </div>
               )}
-              
+
               {/* Action & Strike */}
               <div className="grid grid-cols-2 gap-3">
                 <div className="p-3 bg-card rounded-lg border">
                   <div className="text-xs text-muted-foreground mb-1">What to Buy</div>
-                  <div className={`text-xl md:text-2xl font-bold ${
-                    tradingSignal.action.includes('AVOID') ? 'text-red-500' :
-                    tradingSignal.action.includes('WAIT') ? 'text-orange-500' :
-                    tradingSignal.type === 'CALL' ? 'text-bullish' : 'text-bearish'
-                  }`}>
+                  <div className={`text-xl md:text-2xl font-bold ${tradingSignal.action.includes('AVOID') ? 'text-red-500' :
+                      tradingSignal.action.includes('WAIT') ? 'text-orange-500' :
+                        tradingSignal.type === 'CALL' ? 'text-bullish' : 'text-bearish'
+                    }`}>
                     {tradingSignal.action}
                   </div>
                   <div className="text-sm text-muted-foreground">
@@ -861,7 +858,7 @@ export default function DashboardPage() {
                   <div className="text-xs text-muted-foreground mb-1">Trading Symbol</div>
                   <div className="text-sm font-mono text-blue-400">{tradingSignal.trading_symbol}</div>
                 </div>
-                
+
                 {/* Best Entry Price from Discount Zone */}
                 {(tradingSignal as any).discount_zone?.best_entry && (
                   <div className="p-3 bg-green-500/10 rounded-lg border border-green-500/30">
@@ -874,7 +871,7 @@ export default function DashboardPage() {
                     </div>
                   </div>
                 )}
-                
+
                 {/* Liquidity Score */}
                 {(tradingSignal as any).liquidity_score !== undefined && (
                   <div className="p-3 bg-purple-500/10 rounded-lg border border-purple-500/30">
@@ -910,7 +907,7 @@ export default function DashboardPage() {
                     </div>
                   </div>
                 )}
-                
+
                 {/* Reversal Detection */}
                 {(tradingSignal as any).reversal_detected && (
                   <div className="p-3 bg-orange-500/10 rounded-lg border border-orange-500/30">
@@ -924,7 +921,7 @@ export default function DashboardPage() {
                   </div>
                 )}
               </div>
-              
+
               {/* Day Trading Tips */}
               <div className="p-3 bg-orange-500/10 rounded-lg border border-orange-500/30">
                 <div className="text-xs text-muted-foreground mb-1">⏰ Day Trading Tips</div>
@@ -945,7 +942,7 @@ export default function DashboardPage() {
                     the market looks <span className={tradingSignal.direction === 'BULLISH' ? 'text-green-500 font-semibold' : 'text-red-500 font-semibold'}>{tradingSignal.direction}</span>
                   </p>
                   <p>
-                    • {(tradingSignal as any).wait_for_pullback 
+                    • {(tradingSignal as any).wait_for_pullback
                       ? <>Place limit order for <span className="text-primary font-semibold">{tradingSignal.trading_symbol}</span> at ₹{tradingSignal.entry_price.toFixed(0)} (current: ₹{(tradingSignal as any).raw_ltp?.toFixed(0)})</>
                       : <>Buy <span className="text-primary font-semibold">{tradingSignal.trading_symbol}</span> at around ₹{tradingSignal.entry_price.toFixed(0)}</>
                     }
@@ -955,18 +952,17 @@ export default function DashboardPage() {
                   </p>
                   {/* Entry Quality Note */}
                   {(tradingSignal as any).entry_grade && (
-                    <p className={`font-medium ${
-                      ['A', 'B'].includes((tradingSignal as any).entry_grade) ? 'text-green-500' :
-                      (tradingSignal as any).entry_grade === 'C' ? 'text-yellow-500' : 'text-red-500'
-                    }`}>
-                      • Entry Quality: Grade {(tradingSignal as any).entry_grade} 
-                      {['A', 'B'].includes((tradingSignal as any).entry_grade) ? ' - Good conditions for entry' : 
-                       (tradingSignal as any).entry_grade === 'C' ? ' - Average, proceed with caution' : ' - Consider waiting'}
+                    <p className={`font-medium ${['A', 'B'].includes((tradingSignal as any).entry_grade) ? 'text-green-500' :
+                        (tradingSignal as any).entry_grade === 'C' ? 'text-yellow-500' : 'text-red-500'
+                      }`}>
+                      • Entry Quality: Grade {(tradingSignal as any).entry_grade}
+                      {['A', 'B'].includes((tradingSignal as any).entry_grade) ? ' - Good conditions for entry' :
+                        (tradingSignal as any).entry_grade === 'C' ? ' - Average, proceed with caution' : ' - Consider waiting'}
                     </p>
                   )}
                 </div>
               </div>
-              
+
               {/* Confidence Breakdown - Show how probability was calculated */}
               {(tradingSignal as any).confidence_adjustments && (
                 <div className="p-3 bg-slate-500/10 rounded-lg border border-slate-500/30">
@@ -1018,18 +1014,17 @@ export default function DashboardPage() {
             </CardContent>
           </Card>
         )}
-        
+
         {/* Multi-Timeframe Analysis Summary */}
         {(tradingSignal as any)?.mtf_bias && scanResults?.mtf_ict_analysis && (
           <Card className="border-slate-500/30">
             <CardHeader className="pb-3">
               <CardTitle className="flex items-center gap-2 text-base md:text-lg">
                 📈 Multi-Timeframe Analysis
-                <Badge variant="outline" className={`text-xs ${
-                  (tradingSignal as any).mtf_bias === 'bullish' ? 'border-green-500 text-green-500' :
-                  (tradingSignal as any).mtf_bias === 'bearish' ? 'border-red-500 text-red-500' :
-                  'border-yellow-500 text-yellow-500'
-                }`}>
+                <Badge variant="outline" className={`text-xs ${(tradingSignal as any).mtf_bias === 'bullish' ? 'border-green-500 text-green-500' :
+                    (tradingSignal as any).mtf_bias === 'bearish' ? 'border-red-500 text-red-500' :
+                      'border-yellow-500 text-yellow-500'
+                  }`}>
                   Overall: {(tradingSignal as any).mtf_bias?.toUpperCase()}
                 </Badge>
               </CardTitle>
@@ -1037,17 +1032,15 @@ export default function DashboardPage() {
             <CardContent>
               <div className="grid grid-cols-2 md:grid-cols-6 gap-2">
                 {Object.entries(scanResults.mtf_ict_analysis.timeframes || {}).map(([tf, data]: [string, any]) => (
-                  <div key={tf} className={`p-2 rounded-lg border text-center ${
-                    data.bias === 'bullish' ? 'bg-green-500/10 border-green-500/30' :
-                    data.bias === 'bearish' ? 'bg-red-500/10 border-red-500/30' :
-                    'bg-yellow-500/10 border-yellow-500/30'
-                  }`}>
-                    <div className="text-xs text-muted-foreground mb-1">{tf}</div>
-                    <div className={`text-sm font-bold ${
-                      data.bias === 'bullish' ? 'text-green-400' :
-                      data.bias === 'bearish' ? 'text-red-400' :
-                      'text-yellow-400'
+                  <div key={tf} className={`p-2 rounded-lg border text-center ${data.bias === 'bullish' ? 'bg-green-500/10 border-green-500/30' :
+                      data.bias === 'bearish' ? 'bg-red-500/10 border-red-500/30' :
+                        'bg-yellow-500/10 border-yellow-500/30'
                     }`}>
+                    <div className="text-xs text-muted-foreground mb-1">{tf}</div>
+                    <div className={`text-sm font-bold ${data.bias === 'bullish' ? 'text-green-400' :
+                        data.bias === 'bearish' ? 'text-red-400' :
+                          'text-yellow-400'
+                      }`}>
                       {data.bias === 'bullish' ? '📈' : data.bias === 'bearish' ? '📉' : '➡️'}
                     </div>
                     <div className="text-xs text-muted-foreground capitalize">{data.structure}</div>
@@ -1072,7 +1065,7 @@ export default function DashboardPage() {
               <div className="flex items-center gap-2">
                 {scanResults && (
                   <Badge className={`text-xs ${scanResults.probability_analysis?.expected_direction === 'BULLISH' ? 'bg-bullish' :
-                      scanResults.probability_analysis?.expected_direction === 'BEARISH' ? 'bg-bearish' : 'bg-neutral'
+                    scanResults.probability_analysis?.expected_direction === 'BEARISH' ? 'bg-bearish' : 'bg-neutral'
                     }`}>
                     {scanResults.probability_analysis?.expected_direction || 'N/A'}
                   </Badge>
@@ -1139,7 +1132,7 @@ export default function DashboardPage() {
                   <div className="flex justify-between text-sm">
                     <span className="text-muted-foreground">Expected Direction</span>
                     <span className={`font-semibold ${scanResults?.probability_analysis?.expected_direction === 'BULLISH' ? 'text-bullish' :
-                        scanResults?.probability_analysis?.expected_direction === 'BEARISH' ? 'text-bearish' : 'text-neutral'
+                      scanResults?.probability_analysis?.expected_direction === 'BEARISH' ? 'text-bearish' : 'text-neutral'
                       }`}>
                       {scanResults?.probability_analysis?.expected_direction === 'BULLISH' && '📈 '}
                       {scanResults?.probability_analysis?.expected_direction === 'BEARISH' && '📉 '}
