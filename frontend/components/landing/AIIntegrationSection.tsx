@@ -18,7 +18,7 @@ export default function AIIntegrationSection() {
             Talk to Your Trading Account
           </h2>
           <p className="text-xl text-gray-400 max-w-3xl mx-auto">
-            Connect Stocxer to ChatGPT, Claude, or your favorite AI assistant. 
+            Connect Stocxer to Claude, Cursor, or Windsurf. 
             Get market analysis and portfolio insights through simple conversation.
           </p>
         </div>
@@ -127,7 +127,7 @@ export default function AIIntegrationSection() {
             </button>
           </Link>
           <p className="text-sm text-gray-500 mt-4">
-            Works with Claude, ChatGPT, Cursor, and more • Free to use
+            Works with Claude Desktop, Cursor IDE, and Windsurf • Free to use
           </p>
         </div>
       </div>
