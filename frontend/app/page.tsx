@@ -393,30 +393,33 @@ export default function DashboardPage() {
   const checkFyersAuth = async (token: string) => {
     try {
       const apiUrl = getApiUrl()
-      const response = await fetch(`${apiUrl}/api/fyers/token`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
+      
+      // For localhost, use status endpoint that doesn't require user auth
+      const statusResponse = await fetch(`${apiUrl}/api/fyers/token/status`)
+      
+      if (statusResponse.ok) {
+        const statusData = await statusResponse.json()
+        
+        if (statusData.has_token && statusData.status === 'valid') {
+          console.log('✅ Fyers token valid:', statusData.message)
+          return
+        } else if (statusData.status === 'expired') {
+          console.warn('⏰ Fyers token expired:', statusData.message)
+          setToast({
+            message: `Token expired. Please re-authenticate on production (stocxer.in)`,
+            type: 'error'
+          })
+          setTimeout(() => setToast(null), 8000)
+        } else {
+          console.warn('⚠️ No valid Fyers token:', statusData.message)
+          setToast({
+            message: statusData.message,
+            type: 'error'
+          })
+          setTimeout(() => setToast(null), 8000)
         }
-      })
-
-      if (response.ok) {
-        const data = await response.json()
-        console.log('✅ Fyers token found:', data)
-        // Refresh the server's Fyers client with this token
-        await fetch(`${apiUrl}/api/fyers/refresh-token`, {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        })
       } else {
-        console.warn('⚠️ Fyers authentication required for live data')
-        // Show a toast notification about Fyers auth
-        setToast({
-          message: 'Fyers authentication required for live market data. Please connect your Fyers account.',
-          type: 'error'
-        })
-        setTimeout(() => setToast(null), 5000)
+        console.warn('⚠️ Could not check Fyers token status')
       }
     } catch (error) {
       console.error('Error checking Fyers auth:', error)

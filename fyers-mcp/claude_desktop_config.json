@@ -1,0 +1,16 @@
+{
+  "mcpServers": {
+    "fyers": {
+      "command": "python",
+      "args": [
+        "/Users/bineshbalan/TradeWise/mcp/server.py"
+      ],
+      "env": {
+        "FYERS_ACCESS_TOKEN": "your_access_token_here",
+        "FYERS_CLIENT_ID": "your_client_id_here",
+        "SUPABASE_URL": "your_supabase_url",
+        "SUPABASE_KEY": "your_supabase_key"
+      }
+    }
+  }
+}

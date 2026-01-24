@@ -1,0 +1,347 @@
+#!/usr/bin/env python3
+"""
+FYERS MCP Server
+Model Context Protocol server for FYERS trading integration
+Fetches FYERS tokens from Supabase database
+"""
+import asyncio
+import json
+import os
+import sys
+from datetime import datetime, timedelta, timezone
+from typing import Any, Dict, List, Optional
+import logging
+
+# Add parent directory to path
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+# MCP SDK imports
+try:
+    from mcp.server.models import InitializationOptions
+    from mcp.server import NotificationOptions, Server
+    from mcp.server.stdio import stdio_server
+    from mcp.types import Resource, Tool, TextContent
+except ImportError:
+    print("ERROR: MCP SDK not installed. Run: pip install mcp")
+    sys.exit(1)
+
+# Import FYERS and Supabase
+from src.api.fyers_client import FyersClient
+from src.analytics.index_options_analyzer import IndexOptionsAnalyzer
+from src.analytics.mtf_ict_analysis import MultiTimeframeICTAnalyzer
+from config.settings import settings
+from config.supabase_config import supabase_admin
+
+# Setup logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger("fyers-mcp")
+
+# Initialize server
+server = Server("fyers-mcp")
+
+# Global FYERS client
+fyers_client = None
+
+async def get_valid_fyers_token() -> Optional[str]:
+    """Get valid FYERS token from Supabase"""
+    try:
+        response = supabase_admin.table("fyers_tokens").select("*").order("updated_at", desc=True).execute()
+        
+        if not response.data:
+            logger.warning("No FYERS tokens found in database")
+            return None
+        
+        # Find first non-expired token
+        for token_data in response.data:
+            access_token = token_data.get("access_token")
+            if not access_token:
+                continue
+            
+            # Check expiry
+            if token_data.get("expires_at"):
+                expires_at = datetime.fromisoformat(token_data["expires_at"])
+                if expires_at.tzinfo is None:
+                    expires_at = expires_at.replace(tzinfo=timezone.utc)
+                
+                now = datetime.now(timezone.utc)
+                if expires_at < now:
+                    continue
+            
+            logger.info(f"Found valid token for user {token_data.get('user_id', '')[:8]}...")
+            return access_token
+        
+        logger.warning("All tokens in database are expired")
+        return None
+    except Exception as e:
+        logger.error(f"Error fetching token from Supabase: {e}")
+        return None
+
+async def ensure_fyers_client():
+    """Ensure FYERS client is initialized with valid token from Supabase"""
+    global fyers_client
+    
+    if fyers_client is None:
+        token = await get_valid_fyers_token()
+        if not token:
+            raise Exception("No valid FYERS token found in database. Please authenticate via TradeWise app.")
+        
+        # Temporarily set token in settings
+        settings.fyers_access_token = token
+        fyers_client = FyersClient()
+        logger.info("FYERS client initialized successfully")
+
+# Resources - Expose key FYERS data
+@server.list_resources()
+async def handle_list_resources() -> list[Resource]:
+    """List available FYERS data resources"""
+    return [
+        Resource(
+            uri="fyers://portfolio/summary",
+            name="Portfolio Summary",
+            description="Current portfolio balance, margin, and P&L",
+            mimeType="application/json",
+        ),
+        Resource(
+            uri="fyers://positions/current",
+            name="Current Positions",
+            description="All open positions with P&L",
+            mimeType="application/json",
+        ),
+        Resource(
+            uri="fyers://orders/today",
+            name="Today's Orders",
+            description="All orders placed today",
+            mimeType="application/json",
+        ),
+        Resource(
+            uri="fyers://market/indices",
+            name="Market Indices",
+            description="NIFTY and BANKNIFTY current levels",
+            mimeType="application/json",
+        ),
+    ]
+
+@server.read_resource()
+async def handle_read_resource(uri: str) -> str:
+    """Read FYERS resource data"""
+    await ensure_fyers_client()
+    
+    if uri == "fyers://portfolio/summary":
+        data = fyers_client.get_portfolio_summary()
+        return json.dumps(data, indent=2)
+    
+    elif uri == "fyers://positions/current":
+        positions = fyers_client.get_positions()
+        return json.dumps(positions, indent=2)
+    
+    elif uri == "fyers://orders/today":
+        orders = fyers_client.get_orders()
+        return json.dumps(orders, indent=2)
+    
+    elif uri == "fyers://market/indices":
+        nifty = fyers_client.get_quotes(["NSE:NIFTY50-INDEX"])
+        banknifty = fyers_client.get_quotes(["NSE:NIFTYBANK-INDEX"])
+        return json.dumps({"NIFTY": nifty, "BANKNIFTY": banknifty}, indent=2)
+    
+    else:
+        raise ValueError(f"Unknown resource: {uri}")
+
+# Tools - Actions AI can perform
+@server.list_tools()
+async def handle_list_tools() -> list[Tool]:
+    """List available FYERS tools"""
+    return [
+        Tool(
+            name="get_positions",
+            description="Get all current open positions with P&L",
+            inputSchema={
+                "type": "object",
+                "properties": {},
+            },
+        ),
+        Tool(
+            name="get_orders",
+            description="Get all orders for today",
+            inputSchema={
+                "type": "object",
+                "properties": {},
+            },
+        ),
+        Tool(
+            name="get_portfolio_summary",
+            description="Get portfolio summary with balance and margin",
+            inputSchema={
+                "type": "object",
+                "properties": {},
+            },
+        ),
+        Tool(
+            name="get_option_chain",
+            description="Get option chain for NIFTY or BANKNIFTY with PCR ratio",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "symbol": {
+                        "type": "string",
+                        "enum": ["NIFTY", "BANKNIFTY"],
+                        "description": "Index symbol",
+                    },
+                },
+                "required": ["symbol"],
+            },
+        ),
+        Tool(
+            name="analyze_index",
+            description="Analyze index using ICT methodology (support, resistance, order blocks)",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "symbol": {
+                        "type": "string",
+                        "enum": ["NIFTY", "BANKNIFTY"],
+                        "description": "Index symbol",
+                    },
+                },
+                "required": ["symbol"],
+            },
+        ),
+        Tool(
+            name="get_stock_quote",
+            description="Get real-time quote for any stock or index",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "symbol": {
+                        "type": "string",
+                        "description": "Stock symbol (e.g., NSE:RELIANCE-EQ)",
+                    },
+                },
+                "required": ["symbol"],
+            },
+        ),
+        Tool(
+            name="get_historical_data",
+            description="Get historical candle data",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "symbol": {
+                        "type": "string",
+                        "description": "Trading symbol",
+                    },
+                    "timeframe": {
+                        "type": "string",
+                        "enum": ["1", "5", "15", "60", "D"],
+                        "description": "Candle timeframe (1=1min, 5=5min, 15=15min, 60=1hour, D=daily)",
+                    },
+                    "days": {
+                        "type": "integer",
+                        "description": "Number of days of historical data",
+                        "default": 5,
+                    },
+                },
+                "required": ["symbol", "timeframe"],
+            },
+        ),
+        Tool(
+            name="search_symbol",
+            description="Search for trading symbols",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "query": {
+                        "type": "string",
+                        "description": "Search query (e.g., RELIANCE, HDFC)",
+                    },
+                },
+                "required": ["query"],
+            },
+        ),
+    ]
+
+@server.call_tool()
+async def handle_call_tool(name: str, arguments: dict[str, Any]) -> list[TextContent]:
+    """Execute FYERS tool"""
+    await ensure_fyers_client()
+    
+    try:
+        if name == "get_positions":
+            positions = fyers_client.get_positions()
+            return [TextContent(type="text", text=json.dumps(positions, indent=2))]
+        
+        elif name == "get_orders":
+            orders = fyers_client.get_orders()
+            return [TextContent(type="text", text=json.dumps(orders, indent=2))]
+        
+        elif name == "get_portfolio_summary":
+            summary = fyers_client.get_portfolio_summary()
+            return [TextContent(type="text", text=json.dumps(summary, indent=2))]
+        
+        elif name == "get_option_chain":
+            symbol = arguments["symbol"]
+            analyzer = IndexOptionsAnalyzer()
+            chain = analyzer.get_option_chain(symbol)
+            pcr = analyzer.calculate_pcr_ratio(symbol)
+            result = {"option_chain": chain, "pcr_ratio": pcr}
+            return [TextContent(type="text", text=json.dumps(result, indent=2))]
+        
+        elif name == "analyze_index":
+            symbol = arguments["symbol"]
+            analyzer = MultiTimeframeICTAnalyzer()
+            analysis = analyzer.analyze_index(symbol)
+            return [TextContent(type="text", text=json.dumps(analysis, indent=2))]
+        
+        elif name == "get_stock_quote":
+            symbol = arguments["symbol"]
+            quote = fyers_client.get_quotes([symbol])
+            return [TextContent(type="text", text=json.dumps(quote, indent=2))]
+        
+        elif name == "get_historical_data":
+            symbol = arguments["symbol"]
+            timeframe = arguments["timeframe"]
+            days = arguments.get("days", 5)
+            
+            range_from = datetime.now() - timedelta(days=days)
+            range_to = datetime.now()
+            
+            data = fyers_client.get_historical_data(
+                symbol=symbol,
+                resolution=timeframe,
+                date_from=range_from,
+                date_to=range_to
+            )
+            return [TextContent(type="text", text=json.dumps(data, indent=2))]
+        
+        elif name == "search_symbol":
+            query = arguments["query"]
+            results = fyers_client.search_symbols(query)
+            return [TextContent(type="text", text=json.dumps(results, indent=2))]
+        
+        else:
+            raise ValueError(f"Unknown tool: {name}")
+    
+    except Exception as e:
+        logger.error(f"Tool execution error: {e}")
+        return [TextContent(type="text", text=f"Error: {str(e)}")]
+
+async def main():
+    """Run MCP server"""
+    logger.info("Starting FYERS MCP Server...")
+    logger.info("Token will be fetched from Supabase database")
+    
+    async with stdio_server() as (read_stream, write_stream):
+        await server.run(
+            read_stream,
+            write_stream,
+            InitializationOptions(
+                server_name="fyers-mcp",
+                server_version="1.0.0",
+                capabilities=server.get_capabilities(
+                    notification_options=NotificationOptions(),
+                    experimental_capabilities={},
+                ),
+            ),
+        )
+
+if __name__ == "__main__":
+    asyncio.run(main())

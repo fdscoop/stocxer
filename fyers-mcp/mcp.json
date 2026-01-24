@@ -1,0 +1,12 @@
+{
+  "name": "fyers-mcp",
+  "version": "1.0.0",
+  "description": "FYERS trading context for AI assistants",
+  "main": "server.py",
+  "type": "stdio",
+  "command": "python",
+  "args": ["server.py"],
+  "env": {
+    "PYTHONPATH": ".."
+  }
+}

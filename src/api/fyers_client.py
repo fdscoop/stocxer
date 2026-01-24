@@ -29,10 +29,16 @@ class FyersClient:
     
     def _initialize_client(self):
         """Initialize Fyers client with access token"""
+        import tempfile
+        import os
+        # Use temp directory for logs to avoid permission issues
+        log_path = os.path.join(tempfile.gettempdir(), "fyers_logs")
+        os.makedirs(log_path, exist_ok=True)
+        
         self.fyers = fyersModel.FyersModel(
             client_id=self.client_id,
             token=self.access_token,
-            log_path=""
+            log_path=log_path
         )
         logger.info("Fyers client initialized successfully")
     

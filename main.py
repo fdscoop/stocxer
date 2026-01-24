@@ -615,6 +615,68 @@ async def get_fyers_token(authorization: str = Header(None, description="Bearer 
     return fyers_token
 
 
+@app.get("/api/fyers/token/status")
+async def get_fyers_token_status():
+    """Check if any valid Fyers token exists (for development)"""
+    try:
+        from datetime import timezone
+        from config.supabase_config import supabase_admin
+        
+        response = supabase_admin.table("fyers_tokens").select("*").order("updated_at", desc=True).limit(1).execute()
+        
+        if not response.data:
+            return {
+                "status": "no_token",
+                "message": "No FYERS tokens found in database. Please authenticate via production site.",
+                "has_token": False
+            }
+        
+        token_data = response.data[0]
+        expires_at = token_data.get("expires_at")
+        
+        if expires_at:
+            expiry_time = datetime.fromisoformat(expires_at.replace('Z', '+00:00'))
+            now = datetime.now(timezone.utc)
+            
+            if expiry_time < now:
+                return {
+                    "status": "expired",
+                    "message": f"Token expired at {expires_at}. Please re-authenticate on production.",
+                    "has_token": False,
+                    "expired_at": expires_at,
+                    "user_id": token_data.get("user_id", "")[:8] + "..."
+                }
+            
+            # Token is valid - refresh the client
+            fyers_client.access_token = token_data.get("access_token")
+            
+            time_left = expiry_time - now
+            hours_left = int(time_left.total_seconds() / 3600)
+            
+            return {
+                "status": "valid",
+                "message": f"Token valid for {hours_left} more hours",
+                "has_token": True,
+                "expires_at": expires_at,
+                "hours_remaining": hours_left,
+                "user_id": token_data.get("user_id", "")[:8] + "..."
+            }
+        
+        return {
+            "status": "unknown",
+            "message": "Token found but no expiry information",
+            "has_token": True
+        }
+        
+    except Exception as e:
+        logger.error(f"Error checking token status: {e}")
+        return {
+            "status": "error",
+            "message": str(e),
+            "has_token": False
+        }
+
+
 @app.delete("/api/fyers/token")
 async def delete_fyers_token(authorization: str = Header(None, description="Bearer token")):
     """Delete stored Fyers token"""
@@ -3751,6 +3813,67 @@ def _get_session_timing(session):
         "risk_level": "N/A",
         "next_session": "Tomorrow 9:15 AM" if weekday < 4 else "Monday 9:15 AM"
     }
+
+
+@app.get("/signals/stock/{symbol}")
+async def get_stock_trading_signal(
+    symbol: str,
+    authorization: str = Header(None, description="Bearer token for authenticated access")
+):
+    """
+    Get stock trading signal using the existing screener method
+    
+    Uses technical analysis (SMA, RSI, volume) - same as screener page
+    
+    Args:
+        symbol: Stock symbol (e.g., "SBIN", "TCS", "NSE:SBIN-EQ")
+    """
+    try:
+        # Try to load user's Fyers token if authorization provided
+        if authorization:
+            try:
+                token = authorization.replace("Bearer ", "")
+                user = await auth_service.get_current_user(token)
+                fyers_token = await auth_service.get_fyers_token(user.id)
+                
+                if fyers_token and fyers_token.access_token:
+                    # Check expiry
+                    now = datetime.now()
+                    if fyers_token.expires_at:
+                        if fyers_token.expires_at.tzinfo is not None:
+                            now = now.replace(tzinfo=timezone.utc)
+                        if fyers_token.expires_at > now:
+                            fyers_client.access_token = fyers_token.access_token
+                            fyers_client._initialize_client()
+                            logger.info(f"✅ Using Fyers token from DB for user {user.email}")
+            except Exception as auth_error:
+                logger.debug(f"Auth check skipped: {auth_error}")
+        
+        # Normalize symbol to NSE:SYMBOL-EQ format
+        if ':' not in symbol:
+            symbol = f'NSE:{symbol.upper()}-EQ'
+        elif not symbol.endswith('-EQ'):
+            symbol = f'{symbol}-EQ'
+        
+        logger.info(f"📊 Stock screener analysis: {symbol}")
+        
+        # Use existing stock screener (same as screener page)
+        screener = get_stock_screener(fyers_client)
+        
+        # Scan this specific stock with min_confidence=0 to always get a signal
+        signals = screener.scan_stocks(stocks=[symbol], limit=1, min_confidence=0)
+        
+        if not signals or len(signals) == 0:
+            raise HTTPException(status_code=404, detail="No signal generated for this stock")
+        
+        # Return the first (and only) signal
+        return signals[0]
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error analyzing stock {symbol}: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @app.get("/options/quote/{index}/{strike}/{option_type}")
