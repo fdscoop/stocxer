@@ -5,6 +5,7 @@ import HowItWorksSection from '@/components/landing/HowItWorksSection'
 import CompetitorComparison from '@/components/landing/CompetitorComparison'
 import WatchmanAISection from '@/components/landing/WatchmanAISection'
 import AnalysisFeaturesDetail from '@/components/landing/AnalysisFeaturesDetail'
+import AIIntegrationSection from '@/components/landing/AIIntegrationSection'
 import PricingSection from '@/components/landing/PricingSection'
 import FAQSection from '@/components/landing/FAQSection'
 import DisclaimerSection from '@/components/landing/DisclaimerSection'
@@ -65,6 +66,9 @@ export default function LandingPage() {
 
             {/* Analysis Features Detail - ICT + Options + Sentiment */}
             <AnalysisFeaturesDetail />
+
+            {/* AI Integration - Talk to Your Trading Account */}
+            <AIIntegrationSection />
 
             {/* Pricing Section */}
             <section id="pricing">
