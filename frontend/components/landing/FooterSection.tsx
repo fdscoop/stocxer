@@ -10,11 +10,15 @@ const footerLinks = {
         { name: 'Options Scanner', href: '/' },
         { name: 'Index Analyzer', href: '/analyzer' },
     ],
+    account: [
+        { name: 'Billing & Credits', href: '/billing' },
+        { name: 'Subscription', href: '/subscription' },
+        { name: 'Support', href: '/support' },
+    ],
     resources: [
         { name: 'How It Works', href: '#how-it-works' },
         { name: 'Pricing', href: '#pricing' },
         { name: 'FAQ', href: '/faq' },
-        { name: 'Support', href: '/support' },
     ],
     legal: [
         { name: 'Privacy Policy', href: '/privacy' },
@@ -52,7 +56,7 @@ export default function FooterSection() {
                         <div className="space-y-3 text-sm">
                             <div className="flex items-center gap-2 text-gray-400">
                                 <Building2 className="w-4 h-4 text-purple-400" />
-                                <span>Cadreago De Private Limited</span>
+                                <span>FDS COOP LLP</span>
                             </div>
                             <div className="flex items-center gap-2 text-gray-400">
                                 <MapPin className="w-4 h-4 text-purple-400" />
@@ -72,6 +76,23 @@ export default function FooterSection() {
                         <h4 className="text-white font-semibold mb-4">Product</h4>
                         <ul className="space-y-3">
                             {footerLinks.product.map((link, i) => (
+                                <li key={i}>
+                                    <Link
+                                        href={link.href}
+                                        className="text-gray-400 text-sm hover:text-purple-400 transition-colors"
+                                    >
+                                        {link.name}
+                                    </Link>
+                                </li>
+                            ))}
+                        </ul>
+                    </div>
+
+                    {/* Account Links */}
+                    <div>
+                        <h4 className="text-white font-semibold mb-4">Account</h4>
+                        <ul className="space-y-3">
+                            {footerLinks.account.map((link, i) => (
                                 <li key={i}>
                                     <Link
                                         href={link.href}
@@ -123,7 +144,7 @@ export default function FooterSection() {
                 <div className="pt-8 border-t border-white/5">
                     <div className="flex flex-col md:flex-row items-center justify-between gap-4">
                         <p className="text-gray-500 text-sm text-center md:text-left">
-                            © {new Date().getFullYear()} Cadreago De Private Limited. All rights reserved.
+                            © {new Date().getFullYear()} FDS COOP LLP. All rights reserved.
                         </p>
 
                         <div className="flex items-center gap-4 text-xs text-gray-500">

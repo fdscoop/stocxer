@@ -185,7 +185,7 @@ export default function SupportPage() {
                 <section className="p-6 rounded-2xl bg-white/5 border border-white/10">
                     <h2 className="text-xl font-bold text-white mb-4">Company Information</h2>
                     <div className="space-y-3 text-gray-400">
-                        <p><span className="text-white font-semibold">Company:</span> Cadreago De Private Limited</p>
+                        <p><span className="text-white font-semibold">Company:</span> FDS COOP LLP</p>
                         <p><span className="text-white font-semibold">Email:</span> help@stocxer.in</p>
                         <p><span className="text-white font-semibold">Country:</span> India</p>
                     </div>

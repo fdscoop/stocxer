@@ -47,6 +47,16 @@ export default function LoginPage() {
         localStorage.setItem('auth_token', data.access_token) // For compatibility with old frontend
         localStorage.setItem('userEmail', loginEmail)
         
+        // Store refresh token if provided
+        if (data.refresh_token) {
+          localStorage.setItem('refresh_token', data.refresh_token)
+        }
+        
+        // Store token expiry time
+        if (data.expires_at) {
+          localStorage.setItem('token_expires_at', data.expires_at)
+        }
+        
         // Check if there's a pending Fyers auth code to process
         const urlParams = new URLSearchParams(window.location.search)
         const fyersAuthCode = urlParams.get('fyers_auth_code')

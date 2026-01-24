@@ -1,5 +1,18 @@
 # TradeWise 📈
 
+## 🎉 New: Hybrid Billing System
+
+TradeWise now includes a complete billing system with:
+- **Pay-As-You-Go** credits (₹0.98/option scan, ₹0.85/stock scan)
+- **Monthly Subscriptions** (Free, Medium ₹499, Pro ₹999)
+- **Razorpay Integration** for seamless payments
+- **Usage Tracking** and transaction history
+
+👉 **Setup Guide**: [BILLING_SYSTEM_GUIDE.md](BILLING_SYSTEM_GUIDE.md)  
+👉 **Implementation Summary**: [BILLING_IMPLEMENTATION_SUMMARY.md](BILLING_IMPLEMENTATION_SUMMARY.md)
+
+---
+
 An intelligent options trading platform for the Indian market that combines ICT (Inner Circle Trader) concepts, machine learning predictions, and quantitative analysis to generate trading signals.
 
 ## Features

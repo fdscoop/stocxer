@@ -138,6 +138,7 @@ class AuthService:
             
             return TokenResponse(
                 access_token=response.session.access_token,
+                refresh_token=response.session.refresh_token,
                 user=user_response,
                 expires_at=datetime.fromtimestamp(response.session.expires_at) if response.session.expires_at else None
             )
@@ -171,24 +172,71 @@ class AuthService:
             logger.error(f"Logout error: {str(e)}")
             raise HTTPException(status_code=400, detail="Logout failed")
     
+    async def refresh_access_token(self, refresh_token: str) -> TokenResponse:
+        """Refresh access token using refresh token"""
+        try:
+            # Use Supabase refresh session
+            response = self.supabase.auth.refresh_session(refresh_token)
+            
+            if not response.session or not response.user:
+                raise HTTPException(status_code=401, detail="Invalid refresh token")
+            
+            # Get user profile
+            user_profile = self.supabase.table("users").select("*").eq("id", response.user.id).execute()
+            profile = user_profile.data[0] if user_profile.data else {}
+            
+            # Parse created_at
+            created_at = datetime.now()
+            if response.user.created_at:
+                try:
+                    if isinstance(response.user.created_at, str):
+                        created_at = datetime.fromisoformat(response.user.created_at.replace('Z', '+00:00'))
+                    elif hasattr(response.user.created_at, 'isoformat'):
+                        created_at = response.user.created_at
+                except Exception as e:
+                    logger.warning(f"Could not parse created_at: {e}")
+            
+            user_response = UserResponse(
+                id=response.user.id,
+                email=response.user.email,
+                full_name=profile.get("full_name"),
+                created_at=created_at
+            )
+            
+            return TokenResponse(
+                access_token=response.session.access_token,
+                refresh_token=response.session.refresh_token,
+                user=user_response,
+                expires_at=datetime.fromtimestamp(response.session.expires_at) if response.session.expires_at else None
+            )
+            
+        except HTTPException:
+            raise
+        except Exception as e:
+            logger.error(f"Token refresh error: {str(e)}")
+            raise HTTPException(status_code=401, detail="Failed to refresh token")
+    
     async def get_current_user(self, access_token: str) -> UserResponse:
         """Get current user from access token"""
         try:
-            # Set the session
-            self.supabase.auth.set_session(access_token, refresh_token="")
+            # Get user directly from token (don't need to set session)
+            user_response = self.supabase.auth.get_user(access_token)
             
-            # Get user
-            user = self.supabase.auth.get_user(access_token)
-            
-            if not user:
+            if not user_response or not user_response.user:
                 raise HTTPException(status_code=401, detail="Invalid token")
             
-            # Get user profile
-            user_profile = self.supabase.table("users").select("*").eq("id", user.user.id).execute()
-            profile = user_profile.data[0] if user_profile.data else {}
+            user = user_response.user
+            
+            # Get user profile using admin client to bypass RLS
+            try:
+                user_profile = self.supabase_admin.table("users").select("*").eq("id", user.id).execute()
+                profile = user_profile.data[0] if user_profile.data else {}
+            except Exception as profile_error:
+                logger.warning(f"Could not fetch user profile: {profile_error}")
+                profile = {}
             
             # Handle created_at properly - it might be a string or datetime object
-            created_at = user.user.created_at
+            created_at = user.created_at
             if isinstance(created_at, str):
                 created_at = datetime.fromisoformat(created_at.replace('Z', '+00:00'))
             elif hasattr(created_at, 'isoformat'):
@@ -199,12 +247,14 @@ class AuthService:
                 created_at = datetime.now()
             
             return UserResponse(
-                id=user.user.id,
-                email=user.user.email,
+                id=user.id,
+                email=user.email,
                 full_name=profile.get("full_name"),
                 created_at=created_at
             )
             
+        except HTTPException:
+            raise
         except Exception as e:
             logger.error(f"Get user error: {str(e)}")
             raise HTTPException(status_code=401, detail="Invalid token")

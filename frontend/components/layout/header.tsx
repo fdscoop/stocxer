@@ -12,6 +12,8 @@ const navigation = [
   { name: 'Stock Screener', href: '/screener', icon: '🔍' },
   { name: 'Index Analyzer', href: '/analyzer', icon: '📈' },
   { name: 'Options Scanner', href: '/options', icon: '🎯' },
+  { name: 'Subscription', href: '/subscription', icon: '⭐' },
+  { name: 'Billing & Credits', href: '/billing', icon: '💳' },
 ]
 
 const indices = ['NIFTY', 'BANKNIFTY', 'FINNIFTY', 'MIDCPNIFTY', 'SENSEX', 'BANKEX']

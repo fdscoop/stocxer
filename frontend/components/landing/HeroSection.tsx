@@ -33,31 +33,56 @@ export default function HeroSection() {
 
                 {/* Main Headline */}
                 <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold mb-6 leading-tight">
-                    <span className="text-white">Data-Driven </span>
+                    <span className="text-white">India's First </span>
                     <span className="bg-gradient-to-r from-purple-400 via-blue-400 to-cyan-400 bg-clip-text text-transparent">
-                        Market Analysis
+                        ICT + AI
                     </span>
                     <br />
-                    <span className="text-white">for Smarter Trading Decisions</span>
+                    <span className="text-white">Market Analysis Platform</span>
                 </h1>
 
                 {/* Sub-headline */}
                 <p className="text-lg sm:text-xl text-gray-400 max-w-3xl mx-auto mb-10 leading-relaxed">
-                    Scan indices and stocks, apply deep analytical models with{' '}
-                    <span className="text-purple-400 font-semibold">Watchman AI v3.5</span>, and view clean,
-                    probability-based insights — all in one intelligent dashboard.
+                    Stop interpreting raw data. Get consolidated probability analysis powered by{' '}
+                    <span className="text-purple-400 font-semibold">Smart Money Concepts</span>,{' '}
+                    <span className="text-blue-400 font-semibold">Machine Learning</span>, and{' '}
+                    <span className="text-cyan-400 font-semibold">News Sentiment</span> — for informed decision-making.
                 </p>
 
                 {/* CTAs */}
-                <div className="flex justify-center mb-16">
+                <div className="flex flex-col sm:flex-row gap-4 justify-center mb-12">
                     <Link
                         href="/login"
-                        className="group relative inline-flex items-center gap-2 px-8 py-4 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 rounded-xl text-white font-semibold text-lg transition-all duration-300 shadow-lg shadow-purple-500/25 hover:shadow-purple-500/40 hover:scale-105"
+                        className="group relative inline-flex items-center justify-center gap-2 px-8 py-4 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 rounded-xl text-white font-semibold text-lg transition-all duration-300 shadow-lg shadow-purple-500/25 hover:shadow-purple-500/40 hover:scale-105"
                     >
                         <BarChart3 className="w-5 h-5" />
-                        Get Started
+                        Start Free — 100 Credits
                         <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
                     </Link>
+                    <Link
+                        href="#how-it-works"
+                        className="group inline-flex items-center justify-center gap-2 px-8 py-4 bg-white/5 hover:bg-white/10 border border-white/10 hover:border-purple-500/30 rounded-xl text-white font-semibold text-lg transition-all duration-300"
+                    >
+                        <TrendingUp className="w-5 h-5" />
+                        See How It Works
+                    </Link>
+                </div>
+
+                {/* Trust Badges */}
+                <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-16 max-w-4xl mx-auto">
+                    {[
+                        'ICT Order Block & FVG Detection',
+                        'ML-Powered Probability Assessment',
+                        'Real-time News Sentiment Scoring'
+                    ].map((badge, i) => (
+                        <div
+                            key={i}
+                            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-white/5 border border-white/10 backdrop-blur-sm"
+                        >
+                            <span className="text-green-400 text-lg">✓</span>
+                            <span className="text-sm text-gray-300">{badge}</span>
+                        </div>
+                    ))}
                 </div>
 
                 {/* Floating Stats */}
@@ -65,8 +90,8 @@ export default function HeroSection() {
                     {[
                         { label: 'Indices Tracked', value: '6+', icon: '📊' },
                         { label: 'Stocks Analyzed', value: '500+', icon: '📈' },
-                        { label: 'Real-time Updates', value: 'Live', icon: '⚡' },
-                        { label: 'AI Models', value: 'v3.5', icon: '🤖' },
+                        { label: 'News Sources', value: 'Real-time', icon: '📰' },
+                        { label: 'AI Engine', value: 'Watchman v3.5', icon: '🤖' },
                     ].map((stat, i) => (
                         <div
                             key={i}

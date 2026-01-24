@@ -30,6 +30,7 @@ class UserResponse(BaseModel):
 class TokenResponse(BaseModel):
     """Authentication token response"""
     access_token: Optional[str] = None
+    refresh_token: Optional[str] = None
     token_type: str = "bearer"
     user: UserResponse
     expires_at: Optional[datetime] = None

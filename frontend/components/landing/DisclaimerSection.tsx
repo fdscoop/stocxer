@@ -42,7 +42,7 @@ export default function DisclaimerSection() {
                             <div>
                                 <p className="text-red-400 font-semibold mb-1">Regulatory Notice</p>
                                 <p className="text-gray-400 text-sm">
-                                    Stocxer AI and Cadreago De Private Limited are <strong className="text-red-300">not registered
+                                    Stocxer AI and FDS COOP LLP are <strong className="text-red-300">not registered
                                         as SEBI investment advisers</strong>. The platform provides market analytics tools only
                                     and should not be construed as personalized investment advice.
                                 </p>

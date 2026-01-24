@@ -1,58 +1,73 @@
 'use client'
 
-import { Check, Sparkles, Zap, Crown } from 'lucide-react'
+import { Check, Sparkles, Zap, Crown, Coins } from 'lucide-react'
 
 const plans = [
     {
-        name: 'Free',
+        name: 'Free Trial',
         price: '₹0',
-        period: 'forever',
-        description: 'Get started with basic market analytics',
+        period: '',
+        description: 'Explore all features risk-free',
         icon: Sparkles,
         features: [
-            'Limited scans per day',
-            'Basic dashboard access',
-            'Index overview data',
-            'Community support',
+            '100 credits to explore',
+            'All features included',
+            'No card required',
+            'Perfect to get started',
         ],
-        cta: 'Get Started Free',
+        cta: 'Start Free Trial',
         popular: false,
         gradient: 'from-gray-600 to-gray-700',
         borderColor: 'border-gray-700',
     },
     {
-        name: 'Starter',
-        price: '₹499',
+        name: 'Pay As You Go',
+        price: 'From ₹50',
+        period: '',
+        description: 'Buy credits and pay only for what you use',
+        icon: Coins,
+        features: [
+            '₹0.85 per stock scan',
+            '₹0.98 per option scan',
+            'No expiry on credits',
+            'Top up anytime',
+        ],
+        cta: 'Buy Credits',
+        popular: false,
+        gradient: 'from-green-600 to-emerald-600',
+        borderColor: 'border-green-700',
+        isPAYG: true,
+    },
+    {
+        name: 'Medium',
+        price: '₹4,999',
         period: '/month',
-        description: 'Perfect for active traders seeking insights',
+        description: 'Perfect for active traders',
         icon: Zap,
         features: [
-            'Live index scanner',
-            'Stock screener access',
-            'Latest insights per instrument',
-            'Watchman AI v3.5 analysis',
+            '30,000 scans/month',
+            'Watchman AI v3.5',
+            '25 stocks per bulk scan',
             'Email support',
-            'Mobile app access',
         ],
-        cta: 'Start Starter Plan',
+        cta: 'Start Medium Plan',
         popular: true,
         gradient: 'from-purple-600 to-blue-600',
         borderColor: 'border-purple-500',
     },
     {
         name: 'Pro',
-        price: '₹999',
+        price: '₹9,999',
         period: '/month',
-        description: 'Full access to all analytics features',
+        description: 'Full access for professionals',
         icon: Crown,
         features: [
-            'Everything in Starter',
-            'Full scanner access',
-            'Accuracy tracking dashboard',
-            'Advanced analytical features',
-            'Historical data access',
+            '150,000 scans/month',
+            'Unlimited bulk scans',
+            'Accuracy tracking',
+            'Historical data',
             'Priority support',
-            'Early access to new features',
+            'Early access to features',
         ],
         cta: 'Go Pro',
         popular: false,
@@ -64,27 +79,26 @@ const plans = [
 export default function PricingSection() {
     return (
         <section className="py-24 px-4 sm:px-6 lg:px-8 bg-[#0a0a0f]">
-            <div className="max-w-6xl mx-auto">
+            <div className="max-w-7xl mx-auto">
                 {/* Section Header */}
                 <div className="text-center mb-16">
                     <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold mb-4">
-                        <span className="text-white">Simple, </span>
+                        <span className="text-white">Simple, Transparent </span>
                         <span className="bg-gradient-to-r from-purple-400 to-cyan-400 bg-clip-text text-transparent">
-                            Transparent
+                            Pricing
                         </span>
-                        <span className="text-white"> Pricing</span>
                     </h2>
                     <p className="text-gray-400 text-lg max-w-2xl mx-auto">
-                        Choose the plan that fits your trading journey. No hidden fees, no aggressive upsells.
+                        Choose the plan that fits your trading style. No hidden fees, cancel anytime.
                     </p>
                 </div>
 
                 {/* Pricing Cards */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 lg:gap-8">
                     {plans.map((plan, index) => (
                         <div
                             key={index}
-                            className={`relative rounded-2xl bg-gradient-to-b from-white/5 to-transparent border ${plan.borderColor} p-8 ${plan.popular ? 'ring-2 ring-purple-500/50 scale-[1.02]' : ''
+                            className={`relative rounded-2xl bg-gradient-to-b from-white/5 to-transparent border ${plan.borderColor} p-8 ${plan.popular ? 'ring-2 ring-purple-500/50 md:scale-[1.05]' : ''
                                 } hover:scale-[1.02] transition-all duration-300`}
                         >
                             {/* Popular Badge */}
@@ -125,7 +139,9 @@ export default function PricingSection() {
                             <button
                                 className={`w-full py-3 rounded-xl font-semibold transition-all duration-300 ${plan.popular
                                         ? 'bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 text-white shadow-lg shadow-purple-500/25'
-                                        : 'bg-white/10 hover:bg-white/20 text-white'
+                                        : plan.isPAYG
+                                            ? 'bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-500 hover:to-emerald-500 text-white shadow-lg shadow-green-500/25'
+                                            : 'bg-white/10 hover:bg-white/20 text-white'
                                     }`}
                             >
                                 {plan.cta}
@@ -137,10 +153,10 @@ export default function PricingSection() {
                 {/* Bottom Notes */}
                 <div className="mt-12 text-center space-y-2">
                     <p className="text-gray-500 text-sm">
-                        All prices are in Indian Rupees (₹). GST applicable as per regulations.
+                        All prices in INR. GST applicable.
                     </p>
                     <p className="text-gray-500 text-sm">
-                        Cancel anytime. No long-term commitments required.
+                        Cancel anytime. No long-term commitment.
                     </p>
                 </div>
             </div>

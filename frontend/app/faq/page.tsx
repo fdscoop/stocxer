@@ -17,7 +17,7 @@ const faqs = [
             },
             {
                 question: 'Is Stocxer AI a SEBI registered investment advisor?',
-                answer: 'No. Stocxer AI and Cadreago De Private Limited are NOT registered as SEBI investment advisers. The platform provides analytical tools for informational and educational purposes only. It does not constitute investment advice.'
+                answer: 'No. Stocxer AI and FDS COOP LLP are NOT registered as SEBI investment advisers. The platform provides analytical tools for informational and educational purposes only. It does not constitute investment advice.'
             },
             {
                 question: 'Who can use Stocxer AI?',
@@ -68,7 +68,7 @@ const faqs = [
         questions: [
             {
                 question: 'What subscription plans are available?',
-                answer: 'We offer Free, Starter (₹499/month), and Pro (₹1,499/month) plans. Each plan offers different levels of access to features like scans, AI insights, and premium indicators. Annual plans are available with discounts.'
+                answer: 'We offer Free, Starter (₹4,999/month), and Pro (₹9,999/month) plans. Each plan offers different levels of access to features like scans, AI insights, and premium indicators. Annual plans are available with discounts.'
             },
             {
                 question: 'Can I cancel my subscription anytime?',

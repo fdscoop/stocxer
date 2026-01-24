@@ -1,59 +1,59 @@
 'use client'
 
 import {
-    Scan,
-    Brain,
     TrendingUp,
-    Filter,
-    History,
-    Shield
+    Brain,
+    Calculator,
+    Newspaper,
+    Shield,
+    LayoutDashboard
 } from 'lucide-react'
 
 const features = [
     {
-        icon: Scan,
-        title: 'Market Scanning',
-        description: 'Scan major indices and stocks across NSE & BSE with real-time data integration.',
+        icon: TrendingUp,
+        title: 'ICT / Smart Money Analysis',
+        description: 'Automatic detection of Order Blocks, Fair Value Gaps, Liquidity Sweeps, and Market Structure Breaks — no other Indian platform offers this.',
         color: 'from-blue-500 to-cyan-500',
         bgColor: 'bg-blue-500/10',
         borderColor: 'border-blue-500/20',
     },
     {
         icon: Brain,
-        title: 'Deep Analysis with Watchman AI v3.5',
-        description: 'Perform advanced analysis of market data using our proprietary AI engine for probability-based insights.',
+        title: 'ML Probability Engine',
+        description: 'XGBoost, LightGBM, Random Forest models provide probability-weighted market analysis trained on Indian data.',
         color: 'from-purple-500 to-pink-500',
         bgColor: 'bg-purple-500/10',
         borderColor: 'border-purple-500/20',
     },
     {
-        icon: TrendingUp,
-        title: 'Probability Evaluation',
-        description: 'Evaluate confidence levels and market conditions to understand potential scenarios.',
+        icon: Calculator,
+        title: 'Options Greeks & IV',
+        description: 'Calculate Delta, Gamma, Theta, Vega, Rho, and Implied Volatility in real-time using Black-Scholes.',
         color: 'from-green-500 to-emerald-500',
         bgColor: 'bg-green-500/10',
         borderColor: 'border-green-500/20',
     },
     {
-        icon: Filter,
-        title: 'Processed Insights Only',
-        description: 'View clean, relevant insights without the noise of raw option chains or overwhelming data.',
+        icon: Newspaper,
+        title: 'News Sentiment Analysis',
+        description: 'Real-time sentiment scoring from market news to gauge bullish/bearish mood.',
         color: 'from-yellow-500 to-orange-500',
         bgColor: 'bg-yellow-500/10',
         borderColor: 'border-yellow-500/20',
     },
     {
-        icon: History,
-        title: 'Accuracy Tracking',
-        description: 'Track historical performance of analytical models for continuous improvement and transparency.',
+        icon: Shield,
+        title: 'Risk Management Tools',
+        description: 'Position sizing calculator and stop-loss suggestions based on your capital and risk tolerance.',
         color: 'from-cyan-500 to-blue-500',
         bgColor: 'bg-cyan-500/10',
         borderColor: 'border-cyan-500/20',
     },
     {
-        icon: Shield,
-        title: 'User-Specific Dashboard',
-        description: 'Access your personalized dashboard with insights tailored to your scanning preferences.',
+        icon: LayoutDashboard,
+        title: 'Composite Dashboard',
+        description: 'ICT + ML + Options + Sentiment — all combined in one clean view, no raw data clutter.',
         color: 'from-pink-500 to-purple-500',
         bgColor: 'bg-pink-500/10',
         borderColor: 'border-pink-500/20',
@@ -67,14 +67,13 @@ export default function FeaturesSection() {
                 {/* Section Header */}
                 <div className="text-center mb-16">
                     <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold mb-4">
-                        <span className="text-white">What </span>
+                        <span className="text-white">Why Traders Choose </span>
                         <span className="bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent">
                             Stocxer AI
                         </span>
-                        <span className="text-white"> Does</span>
                     </h2>
                     <p className="text-gray-400 text-lg max-w-2xl mx-auto">
-                        A comprehensive market analytics platform that transforms complex data into actionable insights
+                        Unique features that set us apart from other Indian trading platforms
                     </p>
                 </div>
 

@@ -158,7 +158,7 @@ export default function RefundPage() {
                             For refund requests or questions about this policy:
                         </p>
                         <div className="p-4 rounded-xl bg-white/5 border border-white/10">
-                            <p className="text-white font-semibold">Cadreago De Private Limited</p>
+                            <p className="text-white font-semibold">FDS COOP LLP</p>
                             <p className="text-gray-400">Email: help@stocxer.in</p>
                             <p className="text-gray-400">Subject: Refund Request</p>
                             <p className="text-gray-400">Country: India</p>

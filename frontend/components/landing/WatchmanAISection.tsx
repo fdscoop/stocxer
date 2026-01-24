@@ -1,27 +1,37 @@
 'use client'
 
-import { Activity, BarChart2, Cpu, Zap } from 'lucide-react'
+import { TrendingUp, Activity, BarChart2, Calculator, Newspaper, Target } from 'lucide-react'
 
 const capabilities = [
     {
-        icon: Activity,
+        icon: TrendingUp,
         title: 'Price Action Analysis',
-        description: 'Deep analysis of price movements and patterns across timeframes',
+        description: 'Detects ICT patterns: Order Blocks, FVG, BOS/CHoCH',
     },
     {
-        icon: Zap,
+        icon: Activity,
         title: 'Momentum Evaluation',
-        description: 'Measure market momentum and trend strength indicators',
+        description: 'Measures trend strength across multiple timeframes',
     },
     {
         icon: BarChart2,
         title: 'Volatility Assessment',
-        description: 'Track India VIX and instrument-specific volatility metrics',
+        description: 'Tracks India VIX and instrument-specific volatility',
     },
     {
-        icon: Cpu,
-        title: 'Historical Behavior',
-        description: 'Learn from past market patterns for probability assessment',
+        icon: Calculator,
+        title: 'Options Greeks',
+        description: 'Delta, Gamma, Theta, Vega, Rho calculations',
+    },
+    {
+        icon: Newspaper,
+        title: 'News Sentiment',
+        description: 'Real-time bullish/bearish/neutral scoring',
+    },
+    {
+        icon: Target,
+        title: 'Risk Analysis',
+        description: 'Position sizing and stop-loss suggestions',
     },
 ]
 
@@ -91,16 +101,15 @@ export default function WatchmanAISection() {
 
                         {/* Description */}
                         <p className="text-lg text-gray-400 mb-8 leading-relaxed">
-                            Watchman AI v3.5 is Stocxer AI&apos;s advanced analytical engine designed to perform deep analysis
-                            of stock and index data. It evaluates price action, momentum, volatility, and historical
-                            behavior to generate probability-based insights that support informed decision-making.
+                            Watchman AI is Stocxer&apos;s proprietary analysis engine. It combines multiple analytical 
+                            methods to generate probability-based insights for informed decision-making.
                         </p>
 
                         {/* Important Note */}
                         <div className="p-4 rounded-xl bg-purple-500/10 border border-purple-500/20 mb-8">
                             <p className="text-sm text-purple-300">
-                                <strong>Note:</strong> Watchman AI v3.5 provides analysis and probability assessments,
-                                not guaranteed predictions. All outputs are for informational purposes.
+                                <strong>Compliance Note:</strong> Watchman AI provides analysis and probability assessments for 
+                                informational purposes only, not guaranteed predictions.
                             </p>
                         </div>
 

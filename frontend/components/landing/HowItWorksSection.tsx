@@ -7,24 +7,24 @@ const steps = [
         number: '01',
         icon: Search,
         title: 'Scan',
-        subtitle: 'Market Data Collection',
-        description: 'Scan indices and stocks across NSE & BSE. Choose from NIFTY, BANKNIFTY, FINNIFTY, and individual stocks.',
+        subtitle: 'Select Market or Stock',
+        description: 'Select an index (NIFTY, BANKNIFTY, FINNIFTY, MIDCPNIFTY, SENSEX, BANKEX) or individual stocks from NSE/BSE.',
         color: 'from-blue-500 to-cyan-500',
     },
     {
         number: '02',
         icon: Cpu,
         title: 'Analyze',
-        subtitle: 'AI-Powered Processing',
-        description: 'Apply probability models and Watchman AI v3.5 to evaluate price action, momentum, volatility, and patterns.',
+        subtitle: 'Watchman AI Processing',
+        description: 'Watchman AI v3.5 runs ICT detection, ML models, options flow, and sentiment analysis automatically.',
         color: 'from-purple-500 to-pink-500',
     },
     {
         number: '03',
         icon: LayoutDashboard,
         title: 'View',
-        subtitle: 'Clean Insights Dashboard',
-        description: 'Access your personalized dashboard with processed, probability-based insights presented clearly.',
+        subtitle: 'Clean Dashboard Results',
+        description: 'Get a clean dashboard with probability scores, detected patterns, and sentiment indicators.',
         color: 'from-green-500 to-emerald-500',
     },
 ]
@@ -42,7 +42,7 @@ export default function HowItWorksSection() {
                         </span>
                     </h2>
                     <p className="text-gray-400 text-lg max-w-2xl mx-auto">
-                        Three simple steps to access powerful market analytics
+                        Three steps to smarter analysis
                     </p>
                 </div>
 

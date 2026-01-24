@@ -26,6 +26,9 @@ from src.services.auth_service import auth_service
 from src.services.screener_service import screener_service
 from src.models.auth_models import UserRegister, UserLogin, FyersTokenStore
 
+# Billing system (hybrid subscription + PAYG)
+from src.api.billing_routes import router as billing_router
+
 # News sentiment service for market analysis
 try:
     from src.services.news_service import news_service, MarketauxNewsService
@@ -77,6 +80,9 @@ app.add_middleware(
 static_dir = os.path.join(os.path.dirname(__file__), "static")
 if os.path.exists(static_dir):
     app.mount("/static", StaticFiles(directory=static_dir), name="static")
+
+# Include billing routes
+app.include_router(billing_router)
 
 # Initialize background scheduler
 scheduler = AsyncIOScheduler()
@@ -566,6 +572,12 @@ async def logout(authorization: str = Query(..., description="Bearer token")):
     """Logout user"""
     token = authorization.replace("Bearer ", "")
     return await auth_service.logout_user(token)
+
+
+@app.post("/api/auth/refresh")
+async def refresh_token(refresh_token: str):
+    """Refresh access token using refresh token"""
+    return await auth_service.refresh_access_token(refresh_token)
 
 
 @app.get("/api/auth/me")

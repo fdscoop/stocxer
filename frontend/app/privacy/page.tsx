@@ -4,7 +4,7 @@ import { ArrowLeft, Shield } from 'lucide-react'
 
 export const metadata: Metadata = {
     title: 'Privacy Policy - Stocxer AI',
-    description: 'Privacy Policy for Stocxer AI market analytics platform by Cadreago De Private Limited',
+    description: 'Privacy Policy for Stocxer AI market analytics platform by FDS COOP LLP',
 }
 
 export default function PrivacyPage() {
@@ -36,7 +36,7 @@ export default function PrivacyPage() {
                     <section>
                         <h2 className="text-xl font-semibold text-white mb-4">1. Introduction</h2>
                         <p className="text-gray-400 leading-relaxed">
-                            Welcome to Stocxer AI, operated by Cadreago De Private Limited (&quot;Company&quot;, &quot;we&quot;, &quot;us&quot;, or &quot;our&quot;).
+                            Welcome to Stocxer AI, operated by FDS COOP LLP (&quot;Company&quot;, &quot;we&quot;, &quot;us&quot;, or &quot;our&quot;).
                             This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you
                             use our market analytics platform.
                         </p>
@@ -126,7 +126,7 @@ export default function PrivacyPage() {
                             If you have questions about this Privacy Policy, please contact us at:
                         </p>
                         <div className="mt-4 p-4 rounded-xl bg-white/5 border border-white/10">
-                            <p className="text-white font-semibold">Cadreago De Private Limited</p>
+                            <p className="text-white font-semibold">FDS COOP LLP</p>
                             <p className="text-gray-400">Email: help@stocxer.in</p>
                             <p className="text-gray-400">Country: India</p>
                         </div>

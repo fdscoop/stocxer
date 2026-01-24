@@ -36,7 +36,7 @@ export default function TermsPage() {
                     <section>
                         <h2 className="text-xl font-semibold text-white mb-4">1. Acceptance of Terms</h2>
                         <p className="text-gray-400 leading-relaxed">
-                            By accessing or using Stocxer AI (&quot;the Platform&quot;), operated by Cadreago De Private Limited,
+                            By accessing or using Stocxer AI (&quot;the Platform&quot;), operated by FDS COOP LLP,
                             you agree to be bound by these Terms & Conditions. If you do not agree, please do not use
                             the Platform.
                         </p>
@@ -95,7 +95,7 @@ export default function TermsPage() {
                         <h2 className="text-xl font-semibold text-white mb-4">6. Intellectual Property</h2>
                         <p className="text-gray-400 leading-relaxed">
                             All content, including Watchman AI v3.5, analytical models, software, design, and trademarks,
-                            are owned by Cadreago De Private Limited. You may not copy, modify, or distribute any
+                            are owned by FDS COOP LLP. You may not copy, modify, or distribute any
                             Platform content without express written permission.
                         </p>
                     </section>
@@ -114,7 +114,7 @@ export default function TermsPage() {
                     <section>
                         <h2 className="text-xl font-semibold text-white mb-4">8. Limitation of Liability</h2>
                         <p className="text-gray-400 leading-relaxed">
-                            To the maximum extent permitted by law, Cadreago De Private Limited shall not be liable
+                            To the maximum extent permitted by law, FDS COOP LLP shall not be liable
                             for any indirect, incidental, special, or consequential damages arising from your use of
                             the Platform, including but not limited to trading losses, lost profits, or data loss.
                         </p>
@@ -124,7 +124,7 @@ export default function TermsPage() {
                         <h2 className="text-xl font-semibold text-white mb-4">9. Regulatory Compliance</h2>
                         <div className="p-4 rounded-xl bg-orange-500/10 border border-orange-500/20">
                             <p className="text-orange-300 text-sm">
-                                Stocxer AI and Cadreago De Private Limited are NOT registered as SEBI investment advisers.
+                                Stocxer AI and FDS COOP LLP are NOT registered as SEBI investment advisers.
                                 The Platform provides market analytics tools only and should not be construed as
                                 personalized investment advice.
                             </p>
@@ -152,7 +152,7 @@ export default function TermsPage() {
                     <section>
                         <h2 className="text-xl font-semibold text-white mb-4">12. Contact Information</h2>
                         <div className="p-4 rounded-xl bg-white/5 border border-white/10">
-                            <p className="text-white font-semibold">Cadreago De Private Limited</p>
+                            <p className="text-white font-semibold">FDS COOP LLP</p>
                             <p className="text-gray-400">Email: help@stocxer.in</p>
                             <p className="text-gray-400">Country: India</p>
                         </div>

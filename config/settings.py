@@ -61,6 +61,11 @@ class Settings(BaseSettings):
     news_fetch_interval_minutes: int = 15  # How often to fetch news
     news_retention_days: int = 7  # How long to keep news in database
     
+    # Razorpay Payment Gateway (for subscriptions and credits)
+    razorpay_key_id: Optional[str] = None
+    razorpay_key_secret: Optional[str] = None
+    razorpay_mode: str = "test"  # 'test' or 'live'
+    
     @property
     def database_url(self) -> str:
         """Generate database URL"""
@@ -73,7 +78,7 @@ class Settings(BaseSettings):
     
     class Config:
         env_file = ".env"
-        case_sensitive = False
+        extra = "allow"  # Allow extra fields from .env file
 
 
 # Global settings instance
