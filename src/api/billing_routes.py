@@ -200,6 +200,18 @@ async def verify_credit_payment(
             description=f"Credit purchase: ₹{amount_inr} ({pack.name if pack else 'Custom'})"
         )
         
+        # If payment already processed, that's OK - don't treat as error
+        if not success and "already processed" in message:
+            # Payment was already processed via webhook, just return current balance
+            billing_status = await billing_service.get_user_billing_status(user_id)
+            return {
+                'success': True,
+                'message': "Payment already processed via webhook",
+                'credits_added': 0,
+                'new_balance': float(billing_status.credit_balance),
+                'payment_id': verification.razorpay_payment_id
+            }
+        
         if not success:
             raise HTTPException(status_code=500, detail=message)
         
@@ -213,6 +225,9 @@ async def verify_credit_payment(
     except HTTPException:
         raise
     except Exception as e:
+        import traceback
+        error_details = traceback.format_exc()
+        print(f"Payment verification error: {error_details}")
         raise HTTPException(status_code=500, detail=f"Failed to verify payment: {str(e)}")
 
 
