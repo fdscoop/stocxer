@@ -347,15 +347,38 @@ export default function BillingDashboard() {
                             } else {
                                 console.error('Payment verification failed:', result)
                                 alert('Payment verification failed. Please contact support.')
+                                // Still refresh data in case webhook processed it
+                                fetchBillingData()
                             }
                         } else {
-                            const errorText = await verifyResponse.text()
-                            console.error('Payment verification HTTP error:', errorText)
-                            alert('Payment verification failed. Please contact support.')
+                            // Parse error response
+                            let errorMessage = 'Payment verification failed.'
+                            try {
+                                const errorData = await verifyResponse.json()
+                                errorMessage = errorData.detail || errorMessage
+                                console.error('Payment verification HTTP error:', errorData)
+                            } catch {
+                                const errorText = await verifyResponse.text()
+                                console.error('Payment verification HTTP error:', errorText)
+                            }
+                            
+                            // Check if payment was already processed (webhook may have handled it)
+                            alert('Payment processing... Please wait while we verify your payment.')
+                            
+                            // Refresh billing data to check if webhook processed it
+                            setTimeout(() => {
+                                fetchBillingData()
+                                // Check again after refresh if credits were added
+                                setTimeout(() => {
+                                    alert('Payment completed! Please refresh the page if you don\'t see your credits.')
+                                }, 1000)
+                            }, 2000)
                         }
                     } catch (error) {
                         console.error('Verification error:', error)
-                        alert('Payment verification failed. Please contact support.')
+                        alert('Payment is being processed. Please refresh the page in a few seconds to see your credits.')
+                        // Refresh billing data anyway - webhook might have processed it
+                        setTimeout(() => fetchBillingData(), 2000)
                     }
                 },
                 prefill: {

@@ -79,15 +79,15 @@ async def validate_and_deduct_tokens(
                 return TokenValidationResult(
                     allowed=True,
                     message=f"Using subscription ({billing_status.plan_type})",
-                    balance_after=billing_status.credit_balance
+                    balance_after=billing_status.credits_balance
                 )
         
         # Use wallet (either no subscription or limits exceeded)
-        if billing_status.credit_balance < token_cost:
+        if billing_status.credits_balance < token_cost:
             # Insufficient balance - block request
             return TokenValidationResult(
                 allowed=False,
-                message=f"""Token balance insufficient. Required: {token_cost}, Available: {billing_status.credit_balance}. 
+                message=f"""Token balance insufficient. Required: {token_cost}, Available: {billing_status.credits_balance}. 
                 
 Please:
 • Subscribe to a plan
@@ -113,7 +113,7 @@ Please:
         return TokenValidationResult(
             allowed=True,
             message=f"Deducted {token_cost} tokens from wallet",
-            balance_after=balance_data.get('balance', billing_status.credit_balance)
+            balance_after=balance_data.get('balance', billing_status.credits_balance)
         )
         
     except Exception as e:

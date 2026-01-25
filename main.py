@@ -3105,20 +3105,28 @@ def _generate_actionable_signal(mtf_result, session_info, chain_data, historical
             
         # Adjust for time decay (closer to expiry = tighter stops)
         # DAY TRADING: Exit by 3:15 PM regardless of profit/loss
+        # CRITICAL FIX: Use min() not max() to ensure stop loss is BELOW entry (tighter = lower price for longs)
         if dte <= 3:
-            stop_loss = max(stop_loss, entry_for_calc * 0.85)  # Tighter stop for near expiry
+            stop_loss = min(stop_loss, entry_for_calc * 0.85)  # Tighter stop for near expiry (15% max loss)
             theta_warning = "⚠️ INTRADAY ONLY - Exit before 3:15 PM to avoid theta"
         elif dte <= 7:
-            stop_loss = max(stop_loss, entry_for_calc * 0.90)
+            stop_loss = min(stop_loss, entry_for_calc * 0.90)  # Max 10% loss for expiry week
             theta_warning = "⏰ DAY TRADE - Exit by 3:15 PM or risk overnight theta"
         else:
             theta_warning = "✅ Can hold beyond today if needed"
+        
+        # CRITICAL VALIDATION: For LONG options (buying), stop loss MUST be below entry price
+        # This catches any calculation errors or logic bugs
+        if stop_loss >= entry_for_calc:
+            logger.error(f"🚨 BUG DETECTED: Stop loss (₹{stop_loss:.2f}) >= Entry (₹{entry_for_calc:.2f})! Correcting...")
+            stop_loss = entry_for_calc * 0.85  # Force 15% stop loss as safety
+            logger.info(f"   Corrected stop loss to ₹{stop_loss:.2f}")
             
     except Exception:
         # Fallback to conservative targets
         target_1 = strategic_entry_price * 1.3
         target_2 = strategic_entry_price * 1.8
-        stop_loss = option_price * 0.7
+        stop_loss = strategic_entry_price * 0.85  # FIXED: Use strategic_entry_price, not option_price
         theta_warning = "Unknown theta impact"
     
     # Calculate Greeks for the selected option

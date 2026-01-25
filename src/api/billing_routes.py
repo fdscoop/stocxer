@@ -273,7 +273,7 @@ async def verify_credit_payment(
                 'success': True,
                 'message': "Payment successful! Credits were already added via webhook.",
                 'credits_added': float(credits_to_add),  # Show what would have been added
-                'new_balance': float(billing_status.credit_balance),
+                'new_balance': float(billing_status.credits_balance),
                 'payment_id': verification.razorpay_payment_id
             }
         
