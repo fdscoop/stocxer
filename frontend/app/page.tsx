@@ -330,6 +330,8 @@ export default function DashboardPage() {
       checkFyersAuth(token)
       // Fetch recent scans on page load
       fetchRecentScans(token)
+      // Fetch latest scan results and display on dashboard
+      fetchLatestScanResults(token)
     } else {
       // Redirect to landing page if not authenticated
       router.push('/landing')
@@ -455,6 +457,49 @@ export default function DashboardPage() {
       console.error('Error fetching recent scans:', error)
     } finally {
       setLoadingRecentScans(false)
+    }
+  }
+
+  // Fetch the latest scan results from database and display on dashboard
+  const fetchLatestScanResults = async (token: string) => {
+    try {
+      const apiUrl = getApiUrl()
+      
+      const response = await fetch(`${apiUrl}/screener/latest`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      })
+      
+      if (response.ok) {
+        const data = await response.json()
+        if (data.status === 'success') {
+          console.log('✅ Loaded latest scan results from database:', data)
+          
+          // Set the scan results
+          setScanResults(data)
+          
+          // Calculate and set the trading signal
+          const signal = calculateTradingSignal(data)
+          if (signal) {
+            setTradingSignal(signal)
+          }
+          
+          // Update selected index if scan data contains index
+          if (data.index && data.index !== selectedIndex) {
+            setSelectedIndex(data.index)
+          }
+        } else {
+          console.log('No latest scan results found:', data.message)
+        }
+      } else if (response.status === 404) {
+        console.log('No scan results available yet - user needs to run a scan first')
+      } else {
+        console.warn('Could not fetch latest scan results:', response.status)
+      }
+    } catch (error) {
+      console.error('Error fetching latest scan results:', error)
     }
   }
 
