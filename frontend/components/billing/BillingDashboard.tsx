@@ -450,12 +450,21 @@ export default function BillingDashboard() {
                             </div>
                             <div>
                                 <div className="text-gray-400 text-sm">Current Plan</div>
-                                <div className="text-2xl font-bold capitalize">{billingStatus?.plan_type || 'Free'}</div>
+                                <div className="text-2xl font-bold">
+                                    {billingStatus?.subscription_active 
+                                        ? billingStatus.plan_type === 'medium' ? 'Medium' : billingStatus.plan_type === 'pro' ? 'Pro' : 'Free Trial'
+                                        : 'Free Trial (Pay As You Go)'}
+                                </div>
                             </div>
                         </div>
                         {billingStatus?.subscription_active && (
                             <div className="text-sm text-gray-400">
                                 Renews: {new Date(billingStatus.subscription_end || '').toLocaleDateString()}
+                            </div>
+                        )}
+                        {!billingStatus?.subscription_active && (
+                            <div className="text-sm text-gray-400">
+                                ₹0.85 per stock • ₹0.98 per option
                             </div>
                         )}
                     </div>
@@ -491,12 +500,40 @@ export default function BillingDashboard() {
                             </div>
                         </div>
                         <div className="text-sm text-gray-400">
-                            {billingStatus?.limits.daily_option_scans 
+                            {billingStatus?.subscription_active && billingStatus?.limits.daily_option_scans 
                                 ? `Limit: ${billingStatus.limits.daily_option_scans}/day`
-                                : 'Unlimited'}
+                                : billingStatus?.subscription_active 
+                                    ? 'Unlimited'
+                                    : 'Unlimited (credits based)'}
                         </div>
                     </div>
                 </div>
+
+                {/* Free Trial / PAYG Info Banner */}
+                {!billingStatus?.subscription_active && (
+                    <div className="mb-8 bg-gradient-to-r from-blue-500/10 to-purple-500/10 border border-blue-500/30 rounded-2xl p-6">
+                        <div className="flex items-start gap-4">
+                            <CheckCircle className="w-6 h-6 text-blue-400 flex-shrink-0 mt-1" />
+                            <div>
+                                <h3 className="text-lg font-bold mb-2">Free Trial - Pay As You Go</h3>
+                                <p className="text-gray-300 mb-3">
+                                    Start with <span className="font-semibold text-green-400">₹100 in free credits</span> to explore all features. 
+                                    When you run out, buy more credits at your own pace.
+                                </p>
+                                <div className="grid grid-cols-2 gap-4 text-sm">
+                                    <div>
+                                        <div className="text-gray-400">Stock Scans</div>
+                                        <div className="font-semibold text-white">₹0.85 each</div>
+                                    </div>
+                                    <div>
+                                        <div className="text-gray-400">Options Scans</div>
+                                        <div className="font-semibold text-white">₹0.98 each</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )}
 
                 {/* Credit Packs Section */}
                 <div id="credit-packs" className="mb-8">
