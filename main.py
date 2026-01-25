@@ -371,9 +371,9 @@ class OrderRequest(BaseModel):
 
 # Dashboard route (protected - requires authentication)
 @app.get("/")
-async def dashboard():
-    """Serve the dashboard"""
-    return FileResponse(os.path.join(static_dir, "index.html"))
+async def root():
+    """Redirect to frontend on Vercel"""
+    return RedirectResponse(url="https://www.stocxer.in", status_code=302)
 
 
 @app.get("/login.html")
