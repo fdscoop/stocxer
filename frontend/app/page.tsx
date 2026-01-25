@@ -155,8 +155,6 @@ export default function DashboardPage() {
   const [toast, setToast] = React.useState<{ message: string; type: 'success' | 'error' } | null>(null)
   const [news, setNews] = React.useState<NewsArticle[]>([])
   const [loadingNews, setLoadingNews] = React.useState(false)
-  const [recentScans, setRecentScans] = React.useState<any[]>([])
-  const [loadingRecentScans, setLoadingRecentScans] = React.useState(false)
 
   // Calculate trading signal from scan results with improved entry analysis
   const calculateTradingSignal = (data: ScanResults): TradingSignal | null => {
@@ -328,8 +326,6 @@ export default function DashboardPage() {
       setUser({ email })
       // Check Fyers authentication status on page load
       checkFyersAuth(token)
-      // Fetch recent scans on page load
-      fetchRecentScans(token)
       // Fetch latest scan results and display on dashboard
       fetchLatestScanResults(token)
     } else {
@@ -431,35 +427,6 @@ export default function DashboardPage() {
       console.error('Error checking Fyers auth:', error)
     }
   }
-
-  const fetchRecentScans = async (token: string) => {
-    try {
-      setLoadingRecentScans(true)
-      const apiUrl = getApiUrl()
-      
-      const response = await fetch(`${apiUrl}/screener/history?limit=5`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      })
-      
-      if (response.ok) {
-        const data = await response.json()
-        if (data.status === 'success' && data.scans) {
-          setRecentScans(data.scans)
-          console.log('✅ Loaded recent scans:', data.scans)
-        }
-      } else {
-        console.warn('Could not fetch recent scans:', response.status)
-      }
-    } catch (error) {
-      console.error('Error fetching recent scans:', error)
-    } finally {
-      setLoadingRecentScans(false)
-    }
-  }
-
   // Fetch the latest scan results from database and display on dashboard
   const fetchLatestScanResults = async (token: string) => {
     try {
@@ -858,102 +825,6 @@ export default function DashboardPage() {
             <span className="text-sm font-semibold">Scan {selectedIndex}</span>
           </Button>
         </div>
-
-        {/* Recent Scans Section */}
-        <Card>
-          <CardHeader className="pb-3">
-            <div className="flex items-center justify-between">
-              <CardTitle className="flex items-center gap-2">
-                <BarChart3 className="w-5 h-5 text-primary" />
-                Recent Scans
-              </CardTitle>
-              {loadingRecentScans && (
-                <Loader2 className="w-4 h-4 animate-spin text-primary" />
-              )}
-            </div>
-          </CardHeader>
-          <CardContent>
-            {recentScans.length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                {recentScans.map((scan: any) => {
-                  const scanTime = new Date(scan.scan_time);
-                  const timeAgo = (() => {
-                    const now = new Date();
-                    const diff = now.getTime() - scanTime.getTime();
-                    const minutes = Math.floor(diff / 60000);
-                    const hours = Math.floor(diff / 3600000);
-                    const days = Math.floor(diff / 86400000);
-                    if (minutes < 1) return 'Just now';
-                    if (minutes < 60) return `${minutes}m ago`;
-                    if (hours < 24) return `${hours}h ago`;
-                    return `${days}d ago`;
-                  })();
-
-                  const buyCount = scan.buy_signals || 0;
-                  const sellCount = scan.sell_signals || 0;
-                  const totalSignals = scan.total_signals || 0;
-                  const indexName = scan.scan_params?.index || 'NIFTY 50';
-
-                  return (
-                    <div
-                      key={scan.scan_id}
-                      className="p-3 rounded-lg border border-slate-500/30 bg-slate-500/5 hover:bg-slate-500/10 transition-colors cursor-pointer"
-                    >
-                      <div className="flex items-start justify-between mb-2">
-                        <div>
-                          <div className="text-xs text-muted-foreground">{timeAgo}</div>
-                          <div className="text-sm font-medium mt-1">
-                            {scan.stocks_scanned} stocks
-                          </div>
-                        </div>
-                        {totalSignals > 0 && (
-                          <Badge variant="outline" className="text-xs">
-                            {totalSignals} signals
-                          </Badge>
-                        )}
-                      </div>
-
-                      <div className="space-y-1 text-xs">
-                        {buyCount > 0 && (
-                          <div className="flex items-center gap-2">
-                            <span className="text-bullish font-semibold">▲ BUY</span>
-                            <span className="text-bullish">{buyCount}</span>
-                          </div>
-                        )}
-                        {sellCount > 0 && (
-                          <div className="flex items-center gap-2">
-                            <span className="text-bearish font-semibold">▼ SELL</span>
-                            <span className="text-bearish">{sellCount}</span>
-                          </div>
-                        )}
-                        {totalSignals === 0 && (
-                          <div className="text-muted-foreground italic">No signals found</div>
-                        )}
-                      </div>
-
-                      <div className="mt-2 pt-2 border-t border-slate-500/20 text-xs text-muted-foreground">
-                        {indexName}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            ) : loadingRecentScans ? (
-              <div className="flex items-center justify-center py-8">
-                <div className="text-center text-muted-foreground">
-                  <Loader2 className="w-8 h-8 animate-spin mx-auto mb-2 opacity-50" />
-                  <div className="text-sm">Loading your scans...</div>
-                </div>
-              </div>
-            ) : (
-              <div className="text-center py-8 text-muted-foreground">
-                <BarChart3 className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                <div className="text-sm">No recent scans yet</div>
-                <div className="text-xs mt-1">Run a scan to get started →</div>
-              </div>
-            )}
-          </CardContent>
-        </Card>
 
         {/* ============ TRADING SIGNAL CARD - Like Old Dashboard ============ */}
         {tradingSignal && scanResults && (
