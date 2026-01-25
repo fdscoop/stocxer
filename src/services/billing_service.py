@@ -757,7 +757,8 @@ class BillingService:
         amount: Decimal,
         description: Optional[str] = None,
         scan_type: Optional[str] = None,
-        scan_count: Optional[int] = None
+        scan_count: Optional[int] = None,
+        metadata: Optional[Dict] = None
     ) -> Tuple[bool, str, Optional[Dict]]:
         """Deduct credits from user wallet"""
         try:
@@ -792,7 +793,7 @@ class BillingService:
                 'description': description or f"Usage deduction: {amount} credits",
                 'scan_type': scan_type,
                 'scan_count': scan_count,
-                'metadata': {'action': 'usage_deduction'}
+                'metadata': metadata or {'action': 'usage_deduction'}
             }).execute()
             
             return True, f"Deducted {amount} credits", {'balance': float(new_balance)}
@@ -851,11 +852,17 @@ class BillingService:
         self,
         user_id: str,
         scan_type: str,
-        count: int = 1
+        count: int = 1,
+        metadata: Optional[Dict] = None
     ) -> bool:
         """Record usage in usage_logs table"""
         try:
             today = date.today().isoformat()
+            
+            # Merge default metadata with provided metadata
+            usage_metadata = {'recorded_at': datetime.now().isoformat()}
+            if metadata:
+                usage_metadata.update(metadata)
             
             # Upsert usage log (increment if exists)
             self.supabase.table('usage_logs').upsert({
@@ -863,7 +870,7 @@ class BillingService:
                 'scan_type': scan_type,
                 'count': count,
                 'usage_date': today,
-                'metadata': {'recorded_at': datetime.now().isoformat()}
+                'metadata': usage_metadata
             }, on_conflict='user_id,scan_type,usage_date').execute()
             
             return True
