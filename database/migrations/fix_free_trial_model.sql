@@ -17,24 +17,26 @@ SET
 WHERE plan_type = 'free';
 
 -- Ensure "medium" and "pro" plans have proper limits
+-- Medium: 30,000 scans/month without daily limits (tracked monthly only)
 UPDATE public.plan_limits
 SET 
-    daily_option_scans = 50,
-    daily_stock_scans = 200,
-    bulk_scan_limit = 25,
-    daily_bulk_scans = 10,
+    daily_option_scans = NULL,    -- NULL = unlimited daily (only monthly limit applies)
+    daily_stock_scans = NULL,     -- NULL = unlimited daily (only monthly limit applies)
+    bulk_scan_limit = 25,         -- Max 25 stocks per bulk scan
+    daily_bulk_scans = NULL,      -- NULL = unlimited daily bulk scans
     has_accuracy_tracking = FALSE,
     has_priority_support = FALSE,
     has_historical_data = FALSE,
     has_early_access = FALSE
 WHERE plan_type = 'medium';
 
+-- Pro: 150,000 scans/month without any limits (unlimited everything)
 UPDATE public.plan_limits
 SET 
-    daily_option_scans = NULL,    -- Unlimited
-    daily_stock_scans = NULL,     -- Unlimited
-    bulk_scan_limit = 100,        -- Unlimited bulk scans
-    daily_bulk_scans = NULL,      -- Unlimited
+    daily_option_scans = NULL,    -- Unlimited daily
+    daily_stock_scans = NULL,     -- Unlimited daily
+    bulk_scan_limit = NULL,       -- Unlimited bulk scans (100+ stocks)
+    daily_bulk_scans = NULL,      -- Unlimited daily bulk scans
     has_accuracy_tracking = TRUE,
     has_priority_support = TRUE,
     has_historical_data = TRUE,
