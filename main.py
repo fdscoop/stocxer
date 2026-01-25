@@ -171,6 +171,8 @@ async def fetch_market_news():
     - 100 requests/day
     - 3 articles per request
     - Fetch every 15 minutes = ~96 requests/day (safe margin)
+    
+    Fetches 24/7 to keep news updated at all times.
     """
     if not NEWS_SERVICE_AVAILABLE or not news_service:
         logger.warning("⚠️ News service not available, skipping news fetch")
@@ -179,16 +181,9 @@ async def fetch_market_news():
     try:
         logger.info("📰 Starting scheduled news fetch from Marketaux...")
         
-        # Check if market hours (only fetch during trading hours to save API quota)
-        # Indian market: 9:15 AM - 3:30 PM IST
-        current_hour = now_ist().hour
-        
-        # Fetch during extended hours: 8 AM - 6 PM IST
-        if 8 <= current_hour <= 18:
-            articles_stored = await news_service.fetch_and_store_news()
-            logger.info(f"✅ News fetch complete: {articles_stored} articles stored")
-        else:
-            logger.info("💤 Outside market hours, skipping news fetch to save API quota")
+        # Fetch news anytime (24/7) to keep market updates current
+        articles_stored = await news_service.fetch_and_store_news()
+        logger.info(f"✅ News fetch complete: {articles_stored} articles stored")
         
     except Exception as e:
         logger.error(f"❌ News fetch error: {e}")
