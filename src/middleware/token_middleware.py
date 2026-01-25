@@ -42,7 +42,8 @@ class TokenValidationResult:
 async def validate_and_deduct_tokens(
     user_id: str, 
     scan_type: ScanType,
-    scan_count: int = 1
+    scan_count: int = 1,
+    metadata: Optional[Dict] = None
 ) -> TokenValidationResult:
     """
     Validate user has sufficient tokens and deduct if allowed
@@ -56,6 +57,7 @@ async def validate_and_deduct_tokens(
         user_id: User ID
         scan_type: Type of scan being performed
         scan_count: Number of scans (for bulk operations)
+        metadata: Additional scan metadata (e.g., index, symbol)
     
     Returns:
         TokenValidationResult with allowed status and message
@@ -79,7 +81,7 @@ async def validate_and_deduct_tokens(
             
             if can_use_subscription:
                 # Use subscription - no token deduction needed
-                await record_subscription_usage(user_id, scan_type, scan_count)
+                await record_subscription_usage(user_id, scan_type, scan_count, metadata)
                 return TokenValidationResult(
                     allowed=True,
                     message=f"Using subscription ({billing_status.plan_type})",
@@ -105,7 +107,8 @@ Please:
             amount=token_cost,
             description=f"{scan_type.value}: {scan_count} scan(s)",
             scan_type=scan_type.value,
-            scan_count=scan_count
+            scan_count=scan_count,
+            metadata=metadata
         )
         
         if not success:
@@ -174,13 +177,15 @@ async def check_subscription_limits(
 async def record_subscription_usage(
     user_id: str,
     scan_type: ScanType,
-    scan_count: int
+    scan_count: int,
+    metadata: Optional[Dict] = None
 ):
     """Record usage for subscription users"""
     await billing_service.record_usage(
         user_id=user_id,
         scan_type=scan_type.value,
-        count=scan_count
+        count=scan_count,
+        metadata=metadata
     )
 
 
@@ -210,11 +215,15 @@ def require_tokens(scan_type: ScanType, scan_count: int = 1):
             except Exception as e:
                 raise HTTPException(status_code=401, detail="Invalid token")
             
+            # Extract metadata from kwargs (set by endpoint before middleware runs)
+            metadata = kwargs.get('scan_metadata')
+            
             # Validate and deduct tokens
             validation_result = await validate_and_deduct_tokens(
                 user_id, 
                 scan_type, 
-                scan_count
+                scan_count,
+                metadata
             )
             
             if not validation_result.allowed:

@@ -374,6 +374,16 @@ export default function DashboardPage() {
     fetchNews()
   }, [])
 
+  // Refetch scans when selected index changes
+  React.useEffect(() => {
+    if (mounted && user) {
+      const token = localStorage.getItem('auth_token') || localStorage.getItem('token') || localStorage.getItem('jwt_token')
+      if (token) {
+        fetchLatestScanResults(token, selectedIndex)
+      }
+    }
+  }, [selectedIndex, mounted, user])
+
   const fetchNews = async () => {
     setLoadingNews(true)
     try {
@@ -428,11 +438,15 @@ export default function DashboardPage() {
     }
   }
   // Fetch the latest scan results from database and display on dashboard
-  const fetchLatestScanResults = async (token: string) => {
+  const fetchLatestScanResults = async (token: string, indexFilter?: string) => {
     try {
       const apiUrl = getApiUrl()
+      const index = indexFilter || selectedIndex
       
-      const response = await fetch(`${apiUrl}/screener/latest`, {
+      // Add index query parameter to filter scans
+      const url = `${apiUrl}/screener/latest?index=${index}`
+      
+      const response = await fetch(url, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -457,11 +471,15 @@ export default function DashboardPage() {
           if (data.index && data.index !== selectedIndex) {
             setSelectedIndex(data.index)
           }
-        } else {
+        } else if (data.status === 'no_data') {
           console.log('No latest scan results found:', data.message)
+          // Clear existing results
+          setScanResults(null)
+          // Don't show toast on initial load, only when manually changing index
         }
       } else if (response.status === 404) {
         console.log('No scan results available yet - user needs to run a scan first')
+        setScanResults(null)
       } else {
         console.warn('Could not fetch latest scan results:', response.status)
       }
@@ -825,6 +843,30 @@ export default function DashboardPage() {
             <span className="text-sm font-semibold">Scan {selectedIndex}</span>
           </Button>
         </div>
+
+        {/* ============ NO SCANS MESSAGE ============ */}
+        {!loading && !scanResults && !tradingSignal && (
+          <Card className="border-dashed border-2">
+            <CardContent className="pt-6 text-center py-12">
+              <div className="flex flex-col items-center gap-4">
+                <div className="text-6xl">📊</div>
+                <div>
+                  <h3 className="font-semibold text-lg mb-2">No {selectedIndex} Scans Yet</h3>
+                  <p className="text-muted-foreground text-sm mb-4">
+                    Start scanning {selectedIndex} options to see trading signals and analysis here.
+                  </p>
+                  <Button 
+                    onClick={handleQuickScan}
+                    className="gap-2"
+                  >
+                    <Zap className="w-4 h-4" />
+                    Scan {selectedIndex} Now
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* ============ TRADING SIGNAL CARD - Like Old Dashboard ============ */}
         {tradingSignal && scanResults && (

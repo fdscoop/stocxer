@@ -4634,8 +4634,11 @@ async def analyze_single_stock(symbol: str, debug: bool = False):
 
 
 @app.get("/screener/latest")
-async def get_latest_scan(authorization: str = Header(None, description="Bearer token")):
-    """Get latest saved scan results for user"""
+async def get_latest_scan(
+    authorization: str = Header(None, description="Bearer token"),
+    index: Optional[str] = Query(None, description="Filter by index (NIFTY, BANKNIFTY, FINNIFTY)")
+):
+    """Get latest saved scan results for user, optionally filtered by index"""
     try:
         if not authorization:
             raise HTTPException(status_code=401, detail="Authorization header required")
@@ -4643,12 +4646,14 @@ async def get_latest_scan(authorization: str = Header(None, description="Bearer 
         token = authorization.replace("Bearer ", "")
         user = await auth_service.get_current_user(token)
         
-        latest_scan = await screener_service.get_latest_scan(user.id)
+        latest_scan = await screener_service.get_latest_scan(user.id, index)
         
         if not latest_scan:
+            index_msg = f" for {index.upper()}" if index else ""
             return {
                 "status": "no_data",
-                "message": "No saved scans found"
+                "message": f"No saved scans found{index_msg}. Start by scanning options to see results here.",
+                "index": index.upper() if index else "NIFTY"
             }
         
         return {
@@ -4901,6 +4906,13 @@ async def scan_options(
         token = authorization.replace("Bearer ", "")
         user = await auth_service.get_current_user(token)
         
+        # Store scan metadata for usage tracking and filtering
+        scan_metadata = {
+            "index": index.upper(),
+            "expiry": expiry,
+            "strategy": strategy
+        }
+        
         # Try to load user's Fyers token if available
         try:
             fyers_token = await auth_service.get_fyers_token(user.id)
@@ -5060,6 +5072,12 @@ async def scan_options(
         except Exception as sentiment_error:
             logger.warning(f"Could not integrate sentiment: {sentiment_error}")
         
+        # Determine data source
+        data_source = "live" if fyers_client.access_token else "demo"
+        
+        # Update metadata with data source for tracking
+        scan_metadata["data_source"] = data_source
+        
         result = {
             "status": "success",
             "scan_time": datetime.now().isoformat(),
@@ -5083,7 +5101,7 @@ async def scan_options(
             "total_options": len(scanned_options),
             "options": scanned_options[:50],  # Top 50 results
             "user_email": user.email,
-            "data_source": "live" if fyers_client.access_token else "demo"
+            "data_source": data_source
         }
         
         return result

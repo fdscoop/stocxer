@@ -106,8 +106,46 @@ class ScreenerService:
             "scanned_at": ist_timestamp()  # Use IST for signal timestamps
         }
     
-    async def get_latest_scan(self, user_id: str) -> Optional[dict]:
-        """Get latest scan results for user"""
+    async def get_latest_scan(self, user_id: str, index: Optional[str] = None) -> Optional[dict]:
+        """Get latest scan results for user, optionally filtered by index"""
+        try:
+            # Get latest scan metadata from usage_logs
+            query = self.supabase.table("usage_logs")\
+                .select("*")\
+                .eq("user_id", user_id)\
+                .eq("scan_type", "option_scan")
+            
+            # Filter by index if provided
+            if index:
+                # Use jsonb contains operator to filter metadata
+                query = query.contains("metadata", {"index": index.upper()})
+            
+            usage_response = query.order("created_at", desc=True)\
+                .limit(1)\
+                .execute()
+            
+            if not usage_response.data:
+                return None
+            
+            usage_log = usage_response.data[0]
+            metadata = usage_log.get("metadata", {})
+            
+            # Return formatted scan data from metadata
+            return {
+                "scan_id": usage_log.get("id"),
+                "index": metadata.get("index", "NIFTY"),
+                "expiry": metadata.get("expiry"),
+                "scan_time": usage_log.get("created_at"),
+                "scan_type": "option_scan",
+                "data_source": metadata.get("data_source", "demo"),
+                "message": f"Latest {metadata.get('index', 'NIFTY')} options scan"
+            }
+        except Exception as e:
+            logger.error(f"Get latest scan error: {str(e)}")
+            return None
+    
+    async def get_latest_scan_legacy(self, user_id: str) -> Optional[dict]:
+        """Get latest scan results for user from screener_scans table (legacy)"""
         try:
             # Get latest scan metadata
             scan_response = self.supabase.table("screener_scans")\
