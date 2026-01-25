@@ -378,20 +378,20 @@ async def root():
 
 @app.get("/login.html")
 async def login_page():
-    """Serve the login page"""
-    return FileResponse(os.path.join(static_dir, "login.html"))
+    """Redirect to frontend login page"""
+    return RedirectResponse(url="https://www.stocxer.in/login", status_code=302)
 
 
 @app.get("/screener.html")
 async def screener_page():
-    """Serve the screener page"""
-    return FileResponse(os.path.join(static_dir, "screener.html"))
+    """Redirect to frontend screener page"""
+    return RedirectResponse(url="https://www.stocxer.in/screener", status_code=302)
 
 
 @app.get("/index-analyzer.html")
 async def index_analyzer_page():
-    """Serve the index probability analyzer page"""
-    return FileResponse(os.path.join(static_dir, "index-analyzer.html"))
+    """Redirect to frontend analyzer page"""
+    return RedirectResponse(url="https://www.stocxer.in/analyzer", status_code=302)
 
 
 @app.get("/fyers-callback.html")
