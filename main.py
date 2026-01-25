@@ -25,6 +25,8 @@ from src.trading.signal_generator import signal_generator, risk_manager
 from src.services.auth_service import auth_service
 from src.services.screener_service import screener_service
 from src.models.auth_models import UserRegister, UserLogin, FyersTokenStore
+from src.middleware.token_middleware import require_tokens, ScanType
+from src.middleware.refund_decorator import with_refund_on_failure
 
 # Billing system (hybrid subscription + PAYG)
 from src.api.billing_routes import router as billing_router
@@ -4856,6 +4858,8 @@ async def get_all_latest_scans():
 
 
 @app.get("/options/scan")
+@require_tokens(ScanType.OPTION_SCAN)
+@with_refund_on_failure(ScanType.OPTION_SCAN)
 async def scan_options(
     index: str = Query("NIFTY", description="Index to scan options for (NIFTY, BANKNIFTY, FINNIFTY)"),
     expiry: str = Query("weekly", description="weekly or monthly"),

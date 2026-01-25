@@ -271,7 +271,7 @@ async def verify_credit_payment(
             billing_status = await billing_service.get_user_billing_status(user_id)
             return {
                 'success': True,
-                'message': "Payment successful! Credits were already added via webhook.",
+                'message': "Payment successful! Credits have been added to your account.",
                 'credits_added': float(credits_to_add),  # Show what would have been added
                 'new_balance': float(billing_status.credits_balance),
                 'payment_id': verification.razorpay_payment_id
@@ -787,7 +787,7 @@ async def handle_payment_captured(webhook_data: Dict):
                 user_id=user_id,
                 amount=Decimal(str(total_credits)),
                 payment_id=payment_id,
-                description=f"Webhook: Credit purchase ₹{amount_inr}"
+                description=f"Credit purchase ₹{amount_inr}"
             )
             
             if success:

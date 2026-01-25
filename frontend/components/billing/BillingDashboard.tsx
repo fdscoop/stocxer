@@ -341,12 +341,14 @@ export default function BillingDashboard() {
                         if (verifyResponse.ok) {
                             const result = await verifyResponse.json()
                             if (result.success) {
-                                alert(result.message || 'Payment successful! Credits added to your account.')
-                                // Refresh billing data
+                                // Show success message in UI instead of browser alert
+                                console.log('✅ Payment successful:', result.message)
+                                // Refresh billing data to show new credits
                                 fetchBillingData()
+                                // TODO: Replace with toast notification component
                             } else {
                                 console.error('Payment verification failed:', result)
-                                alert('Payment verification failed. Please contact support.')
+                                console.warn('⚠️ Payment failed - please contact support if amount was deducted')
                                 // Still refresh data in case webhook processed it
                                 fetchBillingData()
                             }
@@ -363,20 +365,20 @@ export default function BillingDashboard() {
                             }
                             
                             // Check if payment was already processed (webhook may have handled it)
-                            alert('Payment processing... Please wait while we verify your payment.')
+                            console.log('⏳ Payment processing - checking with backend...')
                             
                             // Refresh billing data to check if webhook processed it
                             setTimeout(() => {
                                 fetchBillingData()
                                 // Check again after refresh if credits were added
                                 setTimeout(() => {
-                                    alert('Payment completed! Please refresh the page if you don\'t see your credits.')
+                                    console.log('✅ Payment should be reflected now. Refresh page if needed.')
                                 }, 1000)
                             }, 2000)
                         }
                     } catch (error) {
                         console.error('Verification error:', error)
-                        alert('Payment is being processed. Please refresh the page in a few seconds to see your credits.')
+                        console.log('⏳ Payment is being processed. Checking status...')
                         // Refresh billing data anyway - webhook might have processed it
                         setTimeout(() => fetchBillingData(), 2000)
                     }
@@ -399,7 +401,7 @@ export default function BillingDashboard() {
 
         } catch (err) {
             console.error('Purchase error:', err)
-            alert('Failed to initiate purchase')
+            console.error('❌ Failed to initiate purchase - please try again')
         }
     }
 

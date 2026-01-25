@@ -18,12 +18,16 @@ class ScanType(str, Enum):
     BULK_SCAN = "bulk_scan"
 
 
-# Token costs per action (configurable)
+# Token costs per action (PAYG Pricing - ₹1 = 1 credit, No expiry on credits)
+# Stock Scan: ₹0.85 per scan (technical analysis of individual stocks)
+# Option Scan: ₹0.98 per scan (comprehensive option chain analysis with Greeks)
+# Chart Scan: ₹0.50 per chart (price action & pattern analysis)
+# Bulk Scan: ₹5.00 per scan (scan up to 50 stocks simultaneously)
 TOKEN_COSTS = {
-    ScanType.STOCK_SCAN: Decimal("1.0"),     # 1 token per stock scan
-    ScanType.OPTION_SCAN: Decimal("2.0"),    # 2 tokens per option scan  
-    ScanType.CHART_SCAN: Decimal("0.5"),     # 0.5 tokens per chart
-    ScanType.BULK_SCAN: Decimal("5.0")       # 5 tokens per bulk scan
+    ScanType.STOCK_SCAN: Decimal("0.85"),    # ₹0.85 per stock scan
+    ScanType.OPTION_SCAN: Decimal("0.98"),   # ₹0.98 per option scan  
+    ScanType.CHART_SCAN: Decimal("0.50"),    # ₹0.50 per chart
+    ScanType.BULK_SCAN: Decimal("5.00")      # ₹5.00 per bulk scan
 }
 
 
@@ -190,6 +194,9 @@ def require_tokens(scan_type: ScanType, scan_count: int = 1):
     async def stock_scan_endpoint(...)
     """
     def decorator(func):
+        from functools import wraps
+        
+        @wraps(func)
         async def wrapper(*args, **kwargs):
             # Extract user_id from authorization header
             authorization = kwargs.get('authorization')
@@ -197,8 +204,11 @@ def require_tokens(scan_type: ScanType, scan_count: int = 1):
                 raise HTTPException(status_code=401, detail="Authorization required")
             
             from src.services.auth_service import auth_service
-            user_data = await auth_service.verify_token(authorization.replace('Bearer ', ''))
-            user_id = user_data['user_id']
+            try:
+                user = await auth_service.get_current_user(authorization.replace('Bearer ', ''))
+                user_id = user.id
+            except Exception as e:
+                raise HTTPException(status_code=401, detail="Invalid token")
             
             # Validate and deduct tokens
             validation_result = await validate_and_deduct_tokens(
@@ -218,6 +228,12 @@ def require_tokens(scan_type: ScanType, scan_count: int = 1):
             
             # Proceed with original function
             return await func(*args, **kwargs)
+        
+        return wrapper
+    return decorator
+        
+        return wrapper
+    return decorator
         
         return wrapper
     return decorator
