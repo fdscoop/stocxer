@@ -23,6 +23,16 @@ services:
         sync: false
       - key: SUPABASE_SERVICE_KEY
         sync: false
+      # Razorpay Payment Gateway
+      - key: RAZORPAY_KEY_ID
+        sync: false
+      - key: RAZORPAY_KEY_SECRET
+        sync: false
+      - key: RAZORPAY_WEBHOOK_SECRET
+        sync: false
+      # News API
+      - key: MARKETAUX_API_KEY
+        sync: false
       # App settings
       - key: DEBUG_MODE
         value: "False"

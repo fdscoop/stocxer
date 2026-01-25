@@ -8,21 +8,26 @@ import hashlib
 from typing import Dict, Optional, Tuple
 import razorpay
 from decimal import Decimal
+from config.settings import settings
 
 
 class RazorpayService:
     """Service for Razorpay payment gateway integration"""
     
     def __init__(self):
-        self.key_id = os.getenv('RAZORPAY_KEY_ID')
-        self.key_secret = os.getenv('RAZORPAY_KEY_SECRET')
+        # Use settings first, then fallback to os.getenv for backward compatibility
+        self.key_id = settings.razorpay_key_id or os.getenv('RAZORPAY_KEY_ID')
+        self.key_secret = settings.razorpay_key_secret or os.getenv('RAZORPAY_KEY_SECRET')
+        self.webhook_secret = os.getenv('RAZORPAY_WEBHOOK_SECRET')
         
         if not self.key_id or not self.key_secret:
             print("⚠️  WARNING: Razorpay credentials not configured. Payment features will be disabled.")
             print("   Add RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET to .env to enable payments.")
+            print(f"   Current values - Key ID: {'*' * 10 if self.key_id else 'None'}, Key Secret: {'*' * 10 if self.key_secret else 'None'}")
             self.client = None
         else:
             self.client = razorpay.Client(auth=(self.key_id, self.key_secret))
+            print(f"✅ Razorpay client initialized successfully with key: {self.key_id[:10]}...")
     
     
     # ============================================
@@ -124,6 +129,9 @@ class RazorpayService:
         Returns:
             (success, payment_data)
         """
+        if not self.client:
+            return False, {'error': 'Razorpay not configured'}
+        
         try:
             payment = self.client.payment.fetch(payment_id)
             
@@ -141,6 +149,65 @@ class RazorpayService:
         
         except Exception as e:
             return False, {'error': str(e)}
+    
+    
+    def fetch_order(self, order_id: str) -> Tuple[bool, Dict]:
+        """
+        Fetch order details from Razorpay
+        
+        Args:
+            order_id: Razorpay order ID
+        
+        Returns:
+            (success, order_data)
+        """
+        if not self.client:
+            return False, {'error': 'Razorpay not configured'}
+        
+        try:
+            order = self.client.order.fetch(order_id)
+            
+            return True, {
+                'id': order['id'],
+                'amount': order['amount'],
+                'currency': order['currency'],
+                'status': order['status'],
+                'receipt': order.get('receipt'),
+                'notes': order.get('notes', {}),
+                'created_at': order['created_at']
+            }
+        
+        except Exception as e:
+            return False, {'error': str(e)}
+    
+    
+    def verify_webhook_signature(self, payload: str, signature: str) -> bool:
+        """
+        Verify Razorpay webhook signature
+        
+        Args:
+            payload: Raw webhook payload
+            signature: X-Razorpay-Signature header value
+        
+        Returns:
+            True if signature is valid
+        """
+        if not self.webhook_secret:
+            print("⚠️  Warning: Webhook secret not configured, skipping signature verification")
+            return True  # Allow webhook in development
+        
+        try:
+            expected_signature = hmac.new(
+                self.webhook_secret.encode(),
+                payload.encode(),
+                hashlib.sha256
+            ).hexdigest()
+            
+            return hmac.compare_digest(expected_signature, signature)
+            
+        except Exception as e:
+            print(f"Webhook signature verification error: {e}")
+            return False
     
     
     # ============================================

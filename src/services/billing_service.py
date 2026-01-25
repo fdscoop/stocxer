@@ -460,6 +460,7 @@ class BillingService:
         user_id: str, 
         plan_type: str,
         razorpay_subscription_id: Optional[str] = None,
+        razorpay_payment_id: Optional[str] = None,
         period_months: int = 1
     ) -> Tuple[bool, str]:
         """Create or update user subscription"""
@@ -567,6 +568,189 @@ class BillingService:
         except Exception as e:
             # If initialization fails, return default values
             return {'balance': 0, 'lifetime_purchased': 0, 'lifetime_spent': 0}
+
+    
+    async def deduct_credits(
+        self,
+        user_id: str,
+        amount: Decimal,
+        description: Optional[str] = None,
+        scan_type: Optional[str] = None,
+        scan_count: Optional[int] = None
+    ) -> Tuple[bool, str, Optional[Dict]]:
+        """Deduct credits from user wallet"""
+        try:
+            # Get current balance
+            response = self.supabase.table('user_credits').select('*').eq('user_id', user_id).single().execute()
+            
+            if not response.data:
+                return False, "User credits not found", None
+            
+            current_balance = Decimal(str(response.data['balance']))
+            
+            if current_balance < amount:
+                return False, f"Insufficient balance. Required: {amount}, Available: {current_balance}", None
+            
+            # Calculate new balance
+            new_balance = current_balance - amount
+            
+            # Update user credits
+            self.supabase.table('user_credits').update({
+                'balance': float(new_balance),
+                'lifetime_spent': float(Decimal(str(response.data['lifetime_spent'])) + amount),
+                'updated_at': datetime.now().isoformat()
+            }).eq('user_id', user_id).execute()
+            
+            # Record transaction
+            self.supabase.table('credit_transactions').insert({
+                'user_id': user_id,
+                'transaction_type': 'debit',
+                'amount': float(amount),
+                'balance_before': float(current_balance),
+                'balance_after': float(new_balance),
+                'description': description or f"Usage deduction: {amount} credits",
+                'scan_type': scan_type,
+                'scan_count': scan_count,
+                'metadata': {'action': 'usage_deduction'}
+            }).execute()
+            
+            return True, f"Deducted {amount} credits", {'balance': float(new_balance)}
+            
+        except Exception as e:
+            return False, f"Failed to deduct credits: {str(e)}", None
+    
+    
+    async def get_today_usage(self, user_id: str) -> TodayUsage:
+        """Get today's usage for a user"""
+        try:
+            today = date.today().isoformat()
+            
+            response = self.supabase.table('usage_logs').select('*').eq('user_id', user_id).eq('usage_date', today).execute()
+            
+            # Initialize usage counters
+            stock_scans = 0
+            option_scans = 0
+            bulk_scans = 0
+            chart_scans = 0
+            
+            # Sum up today's usage by type
+            for usage in response.data:
+                scan_type = usage['scan_type']
+                count = usage['count']
+                
+                if scan_type == 'stock_scan':
+                    stock_scans += count
+                elif scan_type == 'option_scan':
+                    option_scans += count
+                elif scan_type == 'bulk_scan':
+                    bulk_scans += count
+                elif scan_type == 'chart_scan':
+                    chart_scans += count
+            
+            return TodayUsage(
+                stock_scans=stock_scans,
+                option_scans=option_scans,
+                bulk_scans=bulk_scans,
+                chart_scans=chart_scans,
+                total_scans=stock_scans + option_scans + bulk_scans + chart_scans
+            )
+            
+        except Exception as e:
+            # Return zero usage on error
+            return TodayUsage(
+                stock_scans=0,
+                option_scans=0, 
+                bulk_scans=0,
+                chart_scans=0,
+                total_scans=0
+            )
+    
+    
+    async def record_usage(
+        self,
+        user_id: str,
+        scan_type: str,
+        count: int = 1
+    ) -> bool:
+        """Record usage in usage_logs table"""
+        try:
+            today = date.today().isoformat()
+            
+            # Upsert usage log (increment if exists)
+            self.supabase.table('usage_logs').upsert({
+                'user_id': user_id,
+                'scan_type': scan_type,
+                'count': count,
+                'usage_date': today,
+                'metadata': {'recorded_at': datetime.now().isoformat()}
+            }, on_conflict='user_id,scan_type,usage_date').execute()
+            
+            return True
+            
+        except Exception as e:
+            print(f"Failed to record usage: {e}")
+            return False
+    
+    
+    async def extend_subscription(
+        self, 
+        user_id: str, 
+        months: int = 1
+    ) -> Tuple[bool, str]:
+        """Extend subscription period by specified months"""
+        try:
+            # Get current subscription
+            response = self.supabase.table('user_subscriptions').select('*').eq('user_id', user_id).single().execute()
+            
+            if not response.data:
+                return False, "No subscription found to extend"
+            
+            subscription = response.data
+            
+            # Parse current period end
+            current_end = datetime.fromisoformat(subscription['current_period_end'].replace('Z', '+00:00'))
+            
+            # Calculate new end date
+            new_end = current_end + timedelta(days=30 * months)
+            
+            # Update subscription
+            self.supabase.table('user_subscriptions').update({
+                'current_period_end': new_end.isoformat(),
+                'status': 'active',
+                'updated_at': datetime.now().isoformat()
+            }).eq('user_id', user_id).execute()
+            
+            return True, f"Subscription extended by {months} month(s)"
+            
+        except Exception as e:
+            return False, f"Failed to extend subscription: {str(e)}"
+    
+    
+    async def cancel_subscription_by_razorpay_id(
+        self, 
+        razorpay_subscription_id: str
+    ) -> Tuple[bool, str]:
+        """Cancel subscription by Razorpay subscription ID"""
+        try:
+            # Find subscription by Razorpay ID
+            response = self.supabase.table('user_subscriptions').select('*').eq('razorpay_subscription_id', razorpay_subscription_id).single().execute()
+            
+            if not response.data:
+                return False, f"No subscription found with Razorpay ID: {razorpay_subscription_id}"
+            
+            subscription = response.data
+            
+            # Update subscription status
+            self.supabase.table('user_subscriptions').update({
+                'status': 'cancelled',
+                'cancelled_at': datetime.now().isoformat(),
+                'updated_at': datetime.now().isoformat()
+            }).eq('id', subscription['id']).execute()
+            
+            return True, f"Subscription cancelled: {razorpay_subscription_id}"
+            
+        except Exception as e:
+            return False, f"Failed to cancel subscription: {str(e)}"
 
 
 # Global instance

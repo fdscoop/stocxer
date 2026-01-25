@@ -1,0 +1,223 @@
+"""
+Token Billing Middleware
+Pre-API validation for token balance and usage deduction
+"""
+from fastapi import HTTPException, Header
+from typing import Optional, Dict
+from decimal import Decimal
+from enum import Enum
+
+from src.services.billing_service import billing_service
+
+
+class ScanType(str, Enum):
+    """Types of scans with different token costs"""
+    STOCK_SCAN = "stock_scan"
+    OPTION_SCAN = "option_scan"
+    CHART_SCAN = "chart_scan"
+    BULK_SCAN = "bulk_scan"
+
+
+# Token costs per action (configurable)
+TOKEN_COSTS = {
+    ScanType.STOCK_SCAN: Decimal("1.0"),     # 1 token per stock scan
+    ScanType.OPTION_SCAN: Decimal("2.0"),    # 2 tokens per option scan  
+    ScanType.CHART_SCAN: Decimal("0.5"),     # 0.5 tokens per chart
+    ScanType.BULK_SCAN: Decimal("5.0")       # 5 tokens per bulk scan
+}
+
+
+class TokenValidationResult:
+    """Result of token validation check"""
+    def __init__(self, allowed: bool, message: str, balance_after: Optional[Decimal] = None):
+        self.allowed = allowed
+        self.message = message
+        self.balance_after = balance_after
+
+
+async def validate_and_deduct_tokens(
+    user_id: str, 
+    scan_type: ScanType,
+    scan_count: int = 1
+) -> TokenValidationResult:
+    """
+    Validate user has sufficient tokens and deduct if allowed
+    
+    Logic:
+    1. If user has active subscription, check limits first
+    2. If subscription limit exceeded OR no subscription, use wallet
+    3. Block request if insufficient wallet balance
+    
+    Args:
+        user_id: User ID
+        scan_type: Type of scan being performed
+        scan_count: Number of scans (for bulk operations)
+    
+    Returns:
+        TokenValidationResult with allowed status and message
+    """
+    try:
+        # Get user billing status
+        billing_status = await billing_service.get_user_billing_status(user_id)
+        
+        # Calculate token cost
+        token_cost = TOKEN_COSTS[scan_type] * scan_count
+        
+        # Check if user has active subscription
+        if billing_status.subscription_active:
+            # Check subscription limits first
+            can_use_subscription = await check_subscription_limits(
+                user_id, 
+                scan_type, 
+                scan_count,
+                billing_status
+            )
+            
+            if can_use_subscription:
+                # Use subscription - no token deduction needed
+                await record_subscription_usage(user_id, scan_type, scan_count)
+                return TokenValidationResult(
+                    allowed=True,
+                    message=f"Using subscription ({billing_status.plan_type})",
+                    balance_after=billing_status.credit_balance
+                )
+        
+        # Use wallet (either no subscription or limits exceeded)
+        if billing_status.credit_balance < token_cost:
+            # Insufficient balance - block request
+            return TokenValidationResult(
+                allowed=False,
+                message=f"""Token balance insufficient. Required: {token_cost}, Available: {billing_status.credit_balance}. 
+                
+Please:
+• Subscribe to a plan
+• Or use pay-as-you-go  
+• Or add tokens to your wallet"""
+            )
+        
+        # Deduct tokens from wallet
+        success, message, balance_data = await billing_service.deduct_credits(
+            user_id=user_id,
+            amount=token_cost,
+            description=f"{scan_type.value}: {scan_count} scan(s)",
+            scan_type=scan_type.value,
+            scan_count=scan_count
+        )
+        
+        if not success:
+            return TokenValidationResult(
+                allowed=False,
+                message=f"Failed to deduct tokens: {message}"
+            )
+        
+        return TokenValidationResult(
+            allowed=True,
+            message=f"Deducted {token_cost} tokens from wallet",
+            balance_after=balance_data.get('balance', billing_status.credit_balance)
+        )
+        
+    except Exception as e:
+        return TokenValidationResult(
+            allowed=False,
+            message=f"Token validation failed: {str(e)}"
+        )
+
+
+async def check_subscription_limits(
+    user_id: str,
+    scan_type: ScanType, 
+    scan_count: int,
+    billing_status
+) -> bool:
+    """Check if user can use subscription for this scan"""
+    
+    # Get today's usage
+    today_usage = await billing_service.get_today_usage(user_id)
+    
+    # Get plan limits
+    plan_limits = await billing_service.get_plan_limits(billing_status.plan_type)
+    
+    if not plan_limits:
+        return False
+    
+    # Check specific limits based on scan type
+    if scan_type == ScanType.STOCK_SCAN:
+        daily_limit = plan_limits.daily_stock_scans
+        current_usage = today_usage.stock_scans
+        
+    elif scan_type == ScanType.OPTION_SCAN:
+        daily_limit = plan_limits.daily_option_scans
+        current_usage = today_usage.option_scans
+        
+    elif scan_type == ScanType.BULK_SCAN:
+        daily_limit = plan_limits.daily_bulk_scans
+        current_usage = today_usage.bulk_scans
+        
+    elif scan_type == ScanType.CHART_SCAN:
+        # Charts typically unlimited for subscribers
+        return True
+        
+    else:
+        return False
+    
+    # Check if within limits (None means unlimited)
+    if daily_limit is None:
+        return True
+        
+    return (current_usage + scan_count) <= daily_limit
+
+
+async def record_subscription_usage(
+    user_id: str,
+    scan_type: ScanType,
+    scan_count: int
+):
+    """Record usage for subscription users"""
+    await billing_service.record_usage(
+        user_id=user_id,
+        scan_type=scan_type.value,
+        count=scan_count
+    )
+
+
+# Middleware decorator for API endpoints
+def require_tokens(scan_type: ScanType, scan_count: int = 1):
+    """
+    Decorator to validate tokens before API execution
+    
+    Usage:
+    @require_tokens(ScanType.STOCK_SCAN)
+    async def stock_scan_endpoint(...)
+    """
+    def decorator(func):
+        async def wrapper(*args, **kwargs):
+            # Extract user_id from authorization header
+            authorization = kwargs.get('authorization')
+            if not authorization:
+                raise HTTPException(status_code=401, detail="Authorization required")
+            
+            from src.services.auth_service import auth_service
+            user_data = await auth_service.verify_token(authorization.replace('Bearer ', ''))
+            user_id = user_data['user_id']
+            
+            # Validate and deduct tokens
+            validation_result = await validate_and_deduct_tokens(
+                user_id, 
+                scan_type, 
+                scan_count
+            )
+            
+            if not validation_result.allowed:
+                raise HTTPException(
+                    status_code=402,  # Payment Required
+                    detail=validation_result.message
+                )
+            
+            # Add validation info to kwargs for endpoint use
+            kwargs['token_validation'] = validation_result
+            
+            # Proceed with original function
+            return await func(*args, **kwargs)
+        
+        return wrapper
+    return decorator

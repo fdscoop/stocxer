@@ -3,10 +3,12 @@ Billing API Endpoints
 REST API endpoints for subscription and PAYG billing management
 """
 from fastapi import APIRouter, HTTPException, Header, Request
-from typing import Optional
+from typing import Optional, Dict
 from decimal import Decimal
 import uuid
 import json
+import hmac
+import hashlib
 
 from src.services.billing_service import billing_service
 from src.services.razorpay_service import razorpay_service
@@ -112,19 +114,20 @@ async def create_credit_order(
         
         if not pack:
             raise HTTPException(status_code=404, detail="Credit pack not found")
-        
-        # Create Razorpay order (receipt max 40 chars)
-        # Use short user ID prefix and random string
+
+        # Create Razorpay order with PROJECT IDENTIFIER
         short_user_id = user_id[:8]
-        receipt = f"c_{short_user_id}_{uuid.uuid4().hex[:12]}"
+        receipt = f"stocxer_{short_user_id}_{uuid.uuid4().hex[:12]}"
         success, order_data = razorpay_service.create_order(
             amount_inr=pack.amount_inr,
             receipt=receipt,
             notes={
+                'project': 'stocxer-tradewise',  # 🔑 PROJECT IDENTIFIER
                 'user_id': user_id,
                 'pack_id': pack.id,
                 'credits': str(pack.credits),
-                'bonus_credits': str(pack.bonus_credits)
+                'bonus_credits': str(pack.bonus_credits),
+                'order_type': 'credit'
             }
         )
         
@@ -297,11 +300,13 @@ async def create_subscription_order(
         }
         amount_inr = plan_prices[request.plan_type]
         
-        # Create Razorpay order
-        order = razorpay_service.create_order(
+        # Create Razorpay order with PROJECT IDENTIFIER
+        receipt = f"stocxer_sub_{user_id[:8]}_{uuid.uuid4().hex[:8]}"
+        success, order_data = razorpay_service.create_order(
             amount_inr=amount_inr,
-            currency='INR',
+            receipt=receipt,
             notes={
+                'project': 'stocxer-tradewise',  # 🔑 PROJECT IDENTIFIER
                 'user_id': user_id,
                 'plan_type': request.plan_type,
                 'billing_period': 'monthly',
@@ -459,6 +464,12 @@ async def get_plans():
 async def razorpay_webhook(request: Request):
     """
     Handle Razorpay webhooks for payment/subscription events
+    
+    Supported events:
+    - payment.captured: Add credits to user account
+    - payment.failed: Log failure
+    - subscription.charged: Renew subscription
+    - subscription.cancelled: Cancel subscription
     """
     try:
         # Get raw body and signature
@@ -478,36 +489,212 @@ async def razorpay_webhook(request: Request):
         event_data = json.loads(body)
         event_type = event_data.get('event')
         
+        print(f"📨 Webhook received: {event_type}")
+        
         # Handle different event types
         if event_type == 'payment.captured':
-            # Payment successful - credits should already be added via verify_payment
-            pass
-        
+            await handle_payment_captured(event_data)
+            
         elif event_type == 'payment.failed':
-            # Payment failed - log for debugging
-            payload = event_data.get('payload', {})
-            payment = payload.get('payment', {}).get('entity', {})
-            print(f"Payment failed: {payment.get('id')}")
-        
+            await handle_payment_failed(event_data)
+            
         elif event_type == 'subscription.charged':
-            # Subscription payment successful - renew subscription
-            payload = event_data.get('payload', {})
-            subscription = payload.get('subscription', {}).get('entity', {})
-            # TODO: Update subscription period
-        
+            await handle_subscription_charged(event_data)
+            
         elif event_type == 'subscription.cancelled':
-            # Subscription cancelled
-            payload = event_data.get('payload', {})
-            subscription = payload.get('subscription', {}).get('entity', {})
-            # TODO: Handle subscription cancellation
+            await handle_subscription_cancelled(event_data)
+            
+        else:
+            print(f"⚠️  Unhandled webhook event: {event_type}")
         
         return {'status': 'ok'}
     
     except HTTPException:
         raise
     except Exception as e:
-        print(f"Webhook error: {e}")
+        print(f"❌ Webhook error: {e}")
         raise HTTPException(status_code=500, detail=f"Webhook processing failed: {str(e)}")
+
+
+async def handle_payment_captured(webhook_data: Dict):
+    """
+    Handle successful payment capture
+    Updates user credits and creates transaction record
+    """
+    try:
+        payment_entity = webhook_data.get('payload', {}).get('payment', {}).get('entity', {})
+        
+        payment_id = payment_entity.get('id')
+        order_id = payment_entity.get('order_id')
+        amount_paisa = payment_entity.get('amount', 0)
+        amount_inr = amount_paisa // 100
+        
+        print(f"💰 Processing payment: {payment_id} for ₹{amount_inr}")
+        
+        # Fetch order details to get user_id and pack info
+        success, order_data = razorpay_service.fetch_order(order_id)
+        if not success:
+            print(f"❌ Failed to fetch order: {order_id}")
+            return
+        
+        # Extract notes from order
+        notes = order_data.get('notes', {})
+        
+        # 🔑 CRITICAL: Filter by project identifier
+        project = notes.get('project')
+        if project != 'stocxer-tradewise':
+            print(f"🚫 Ignoring payment from different project: {project or 'unknown'}")
+            return  # Ignore payments from other projects
+        
+        user_id = notes.get('user_id')
+        order_type = notes.get('order_type', 'credit')
+        
+        if not user_id:
+            print(f"❌ No user_id found in order notes for order: {order_id}")
+            return
+        
+        if order_type == 'credit':
+            # Handle credit purchase
+            pack_id = notes.get('pack_id')
+            credits = float(notes.get('credits', 0))
+            bonus_credits = float(notes.get('bonus_credits', 0))
+            total_credits = credits + bonus_credits
+            
+            if total_credits == 0:
+                # Fallback: calculate based on amount
+                total_credits = amount_inr
+            
+            # Add credits to user account
+            success, message, balance_data = await billing_service.add_credits(
+                user_id=user_id,
+                amount=Decimal(str(total_credits)),
+                payment_id=payment_id,
+                description=f"Webhook: Credit purchase ₹{amount_inr}"
+            )
+            
+            if success:
+                print(f"✅ Added {total_credits} credits to user {user_id[:8]}...")
+            else:
+                print(f"❌ Failed to add credits: {message}")
+        
+        elif order_type == 'subscription':
+            # Handle subscription payment
+            plan_type = notes.get('plan_type', 'medium')
+            
+            # Activate/renew subscription
+            success, message = await billing_service.create_subscription(
+                user_id=user_id,
+                plan_type=plan_type,
+                period_months=1,
+                razorpay_payment_id=payment_id
+            )
+            
+            if success:
+                print(f"✅ Activated {plan_type} subscription for user {user_id[:8]}...")
+            else:
+                print(f"❌ Failed to activate subscription: {message}")
+    
+    except Exception as e:
+        print(f"❌ Error handling payment captured: {e}")
+
+
+async def handle_payment_failed(webhook_data: Dict):
+    """
+    Handle failed payment
+    Log the failure for potential retry/support
+    """
+    try:
+        payment_entity = webhook_data.get('payload', {}).get('payment', {}).get('entity', {})
+        
+        payment_id = payment_entity.get('id')
+        order_id = payment_entity.get('order_id')
+        error_code = payment_entity.get('error_code')
+        error_description = payment_entity.get('error_description')
+        
+        print(f"💸 Payment failed: {payment_id}")
+        print(f"   Order: {order_id}")
+        print(f"   Error: {error_code} - {error_description}")
+        
+        # TODO: Log to database for analytics/support
+        # Could also send notification to user about failed payment
+        
+    except Exception as e:
+        print(f"❌ Error handling payment failed: {e}")
+
+
+async def handle_subscription_charged(webhook_data: Dict):
+    """
+    Handle subscription renewal charge
+    Extends subscription period
+    """
+    try:
+        subscription_entity = webhook_data.get('payload', {}).get('subscription', {}).get('entity', {})
+        payment_entity = webhook_data.get('payload', {}).get('payment', {}).get('entity', {})
+        
+        subscription_id = subscription_entity.get('id')
+        payment_id = payment_entity.get('id') if payment_entity else None
+        
+        print(f"🔄 Subscription charged: {subscription_id}")
+        
+        # Find user by subscription ID and extend their subscription
+        # This would require storing razorpay_subscription_id in user_subscriptions table
+        # For now, we'll handle it via payment ID lookup
+        
+        if payment_id:
+            # Fetch payment to get order details
+            success, payment_data = razorpay_service.fetch_payment(payment_id)
+            if success:
+                order_id = payment_data.get('order_id')
+                success, order_data = razorpay_service.fetch_order(order_id)
+                
+                if success:
+                    notes = order_data.get('notes', {})
+                    user_id = notes.get('user_id')
+                    plan_type = notes.get('plan_type', 'medium')
+                    
+                    if user_id:
+                        # Extend subscription
+                        success, message = await billing_service.extend_subscription(
+                            user_id=user_id,
+                            months=1
+                        )
+                        
+                        if success:
+                            print(f"✅ Extended subscription for user {user_id[:8]}...")
+                        else:
+                            print(f"❌ Failed to extend subscription: {message}")
+        
+    except Exception as e:
+        print(f"❌ Error handling subscription charged: {e}")
+
+
+async def handle_subscription_cancelled(webhook_data: Dict):
+    """
+    Handle subscription cancellation
+    Updates subscription status in database
+    """
+    try:
+        subscription_entity = webhook_data.get('payload', {}).get('subscription', {}).get('entity', {})
+        
+        subscription_id = subscription_entity.get('id')
+        
+        print(f"🚫 Subscription cancelled: {subscription_id}")
+        
+        # Find and cancel user subscription
+        # This would require a lookup by razorpay_subscription_id
+        # For now, we'll add this functionality to billing service
+        
+        success, message = await billing_service.cancel_subscription_by_razorpay_id(
+            razorpay_subscription_id=subscription_id
+        )
+        
+        if success:
+            print(f"✅ Cancelled subscription: {subscription_id}")
+        else:
+            print(f"❌ Failed to cancel subscription: {message}")
+        
+    except Exception as e:
+        print(f"❌ Error handling subscription cancelled: {e}")
 
 
 # Export router
