@@ -231,9 +231,3 @@ def require_tokens(scan_type: ScanType, scan_count: int = 1):
         
         return wrapper
     return decorator
-        
-        return wrapper
-    return decorator
-        
-        return wrapper
-    return decorator
