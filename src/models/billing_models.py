@@ -19,6 +19,7 @@ class PlanLimits(BaseModel):
     daily_stock_scans: Optional[int] = None
     bulk_scan_limit: Optional[int] = None
     daily_bulk_scans: Optional[int] = None
+    monthly_scan_limit: Optional[int] = None  # None = unlimited (free/PAYG). Medium: 30k, Pro: 150k
     has_accuracy_tracking: bool = False
     has_priority_support: bool = False
     has_historical_data: bool = False

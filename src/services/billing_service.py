@@ -157,25 +157,33 @@ class BillingService:
         action: str, 
         count: int
     ) -> BillingCheckResult:
-        """Check if subscription user is within their daily limits"""
+        """Check if subscription user is within their limits (monthly quota)"""
         limits = status.limits
+        
+        # Check monthly scan limit first (most important for medium/pro)
+        if limits.monthly_scan_limit is not None:
+            monthly_usage = await self._get_monthly_usage(status.user_id)
+            total_monthly_scans = monthly_usage.get('total', 0)
+            
+            if total_monthly_scans + count > limits.monthly_scan_limit:
+                remaining = limits.monthly_scan_limit - total_monthly_scans
+                return BillingCheckResult(
+                    allowed=False,
+                    reason=f"Monthly scan quota exceeded. Used: {total_monthly_scans}/{limits.monthly_scan_limit}. Remaining: {remaining} scans.",
+                    billing_type="subscription"
+                )
+        
+        # If we have daily limits (shouldn't happen for medium/pro now), check those too
         usage = status.today_usage
         
         if action == 'option_scan':
             limit = limits.daily_option_scans
             current = usage.option_scans
             
-            if limit is None:  # Unlimited
-                return BillingCheckResult(
-                    allowed=True,
-                    reason="Unlimited access",
-                    billing_type="subscription"
-                )
-            
-            if current + count > limit:
+            if limit is not None and current + count > limit:
                 return BillingCheckResult(
                     allowed=False,
-                    reason=f"Daily limit reached ({current}/{limit}). Upgrade or use credits.",
+                    reason=f"Daily limit reached ({current}/{limit}).",
                     billing_type="subscription"
                 )
         
@@ -183,26 +191,19 @@ class BillingService:
             limit = limits.daily_stock_scans
             current = usage.stock_scans
             
-            if limit is None:  # Unlimited
-                return BillingCheckResult(
-                    allowed=True,
-                    reason="Unlimited access",
-                    billing_type="subscription"
-                )
-            
-            if current + count > limit:
+            if limit is not None and current + count > limit:
                 return BillingCheckResult(
                     allowed=False,
-                    reason=f"Daily limit reached ({current}/{limit}). Upgrade or use credits.",
+                    reason=f"Daily limit reached ({current}/{limit}).",
                     billing_type="subscription"
                 )
         
         elif action == 'bulk_scan':
-            scan_limit = limits.bulk_scan_limit or 0
+            scan_limit = limits.bulk_scan_limit
             daily_limit = limits.daily_bulk_scans
             current = usage.bulk_scans
             
-            if count > scan_limit:
+            if scan_limit is not None and count > scan_limit:
                 return BillingCheckResult(
                     allowed=False,
                     reason=f"Bulk scan limited to {scan_limit} stocks. Your plan: {status.plan_type}",
@@ -258,6 +259,46 @@ class BillingService:
             cost=cost,
             remaining_balance=balance - cost
         )
+    
+    
+    async def _get_monthly_usage(self, user_id: str) -> Dict:
+        """
+        Get total monthly usage for current month
+        Returns dict with 'total', 'option_scans', 'stock_scans', 'bulk_scans'
+        """
+        today = date.today()
+        month_start = date(today.year, today.month, 1)
+        
+        try:
+            usage_response = self.supabase.table('usage_logs')\
+                .select('scan_type, count')\
+                .eq('user_id', user_id)\
+                .gte('usage_date', month_start.isoformat())\
+                .lte('usage_date', today.isoformat())\
+                .execute()
+            
+            result = {
+                'total': 0,
+                'option_scans': 0,
+                'stock_scans': 0,
+                'bulk_scans': 0
+            }
+            
+            if usage_response.data:
+                for log in usage_response.data:
+                    count = log.get('count', 1)
+                    result['total'] += count
+                    
+                    if log['scan_type'] == 'option_scan':
+                        result['option_scans'] += count
+                    elif log['scan_type'] == 'stock_scan':
+                        result['stock_scans'] += count
+                    elif log['scan_type'] == 'bulk_scan':
+                        result['bulk_scans'] += count
+            
+            return result
+        except Exception as e:
+            return {'total': 0, 'option_scans': 0, 'stock_scans': 0, 'bulk_scans': 0}
     
     
     # ============================================
