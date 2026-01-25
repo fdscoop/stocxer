@@ -379,6 +379,16 @@ class BillingService:
         Returns: (success, message, new_balance_dict)
         """
         try:
+            # 🔒 PREVENT DOUBLE PROCESSING: Check if payment already processed
+            if payment_id:
+                existing_txn = self.supabase.table('credit_transactions')\
+                    .select('*')\
+                    .eq('razorpay_payment_id', payment_id)\
+                    .execute()
+                
+                if existing_txn.data:
+                    return False, f"Payment {payment_id} already processed", None
+            
             # Get current balance
             credits_response = self.supabase.table('user_credits')\
                 .select('*')\
@@ -408,7 +418,7 @@ class BillingService:
                     'last_topped_up': datetime.now().isoformat()
                 }).eq('user_id', user_id).execute()
             
-            # Log transaction
+            # Log transaction with payment_id for idempotency
             self.supabase.table('credit_transactions').insert({
                 'user_id': user_id,
                 'transaction_type': 'purchase',
@@ -416,7 +426,8 @@ class BillingService:
                 'balance_before': float(current_balance),
                 'balance_after': float(new_balance),
                 'description': description or f"Credit purchase: ₹{amount}",
-                'razorpay_payment_id': payment_id
+                'razorpay_payment_id': payment_id,
+                'metadata': {'source': 'webhook' if 'Webhook:' in (description or '') else 'frontend'}
             }).execute()
             
             return True, f"Added ₹{amount} credits", {

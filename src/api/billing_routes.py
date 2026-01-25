@@ -5,6 +5,7 @@ REST API endpoints for subscription and PAYG billing management
 from fastapi import APIRouter, HTTPException, Header, Request
 from typing import Optional, Dict
 from decimal import Decimal
+from datetime import datetime
 import uuid
 import json
 import hmac
@@ -213,6 +214,91 @@ async def verify_credit_payment(
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to verify payment: {str(e)}")
+
+
+@router.post("/credits/fix-duplicate")
+async def fix_duplicate_credits(authorization: str = Header(None)):
+    """
+    Fix duplicate credit transactions for current user
+    Removes duplicate payments and corrects balance
+    """
+    try:
+        user_id = await get_current_user_id(authorization)
+        
+        # Get all credit transactions for user
+        response = billing_service.supabase.table('credit_transactions')\
+            .select('*')\
+            .eq('user_id', user_id)\
+            .eq('transaction_type', 'purchase')\
+            .order('created_at')\
+            .execute()
+        
+        transactions = response.data or []
+        
+        # Group by payment_id to find duplicates
+        payment_groups = {}
+        for txn in transactions:
+            payment_id = txn.get('razorpay_payment_id')
+            if payment_id:
+                if payment_id not in payment_groups:
+                    payment_groups[payment_id] = []
+                payment_groups[payment_id].append(txn)
+        
+        # Find and remove duplicates
+        removed_count = 0
+        total_removed_amount = 0
+        
+        for payment_id, group in payment_groups.items():
+            if len(group) > 1:
+                # Keep the first transaction, remove others
+                for duplicate_txn in group[1:]:
+                    billing_service.supabase.table('credit_transactions')\
+                        .delete()\
+                        .eq('id', duplicate_txn['id'])\
+                        .execute()
+                    
+                    removed_count += 1
+                    total_removed_amount += duplicate_txn['amount']
+        
+        # Recalculate correct balance
+        if removed_count > 0:
+            # Get current balance
+            credits_response = billing_service.supabase.table('user_credits')\
+                .select('*')\
+                .eq('user_id', user_id)\
+                .single()\
+                .execute()
+            
+            if credits_response.data:
+                current_balance = Decimal(str(credits_response.data['balance']))
+                corrected_balance = current_balance - Decimal(str(total_removed_amount))
+                
+                # Update balance
+                billing_service.supabase.table('user_credits')\
+                    .update({
+                        'balance': float(corrected_balance),
+                        'updated_at': datetime.now().isoformat()
+                    })\
+                    .eq('user_id', user_id)\
+                    .execute()
+                
+                return {
+                    'success': True,
+                    'message': f"Fixed {removed_count} duplicate transactions",
+                    'removed_amount': total_removed_amount,
+                    'corrected_balance': float(corrected_balance)
+                }
+        
+        return {
+            'success': True,
+            'message': "No duplicate transactions found",
+            'removed_count': 0
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to fix duplicates: {str(e)}")
 
 
 @router.get("/credits/packs")
