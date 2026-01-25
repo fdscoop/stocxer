@@ -415,8 +415,11 @@ async def create_subscription_order(
             }
         )
         
+        if not success:
+            raise HTTPException(status_code=500, detail=f"Failed to create order: {order_data.get('error')}")
+        
         return {
-            'order': order,
+            'order': order_data,
             'plan_type': request.plan_type,
             'amount': amount_inr,
             'user_id': user_id
@@ -424,6 +427,9 @@ async def create_subscription_order(
     except HTTPException:
         raise
     except Exception as e:
+        import traceback
+        error_details = traceback.format_exc()
+        print(f"Subscription order creation error: {error_details}")
         raise HTTPException(status_code=500, detail=f"Failed to create subscription order: {str(e)}")
 
 
