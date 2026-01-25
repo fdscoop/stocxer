@@ -43,11 +43,67 @@ interface Transaction {
     balance_after: number
 }
 
+interface PaymentHistory {
+    id: string
+    user_id: string
+    payment_type: string
+    status: string
+    amount_inr: number
+    razorpay_payment_id: string
+    payment_method?: string
+    created_at: string
+    metadata?: any
+    failure_reason?: string
+}
+
+interface CombinedTransaction {
+    id: string
+    type: 'credit' | 'payment'
+    transaction_type: string
+    payment_type?: string
+    status?: string
+    amount: number
+    description: string
+    created_at: string
+    balance_after?: number
+    payment_method?: string
+    razorpay_payment_id?: string
+    failure_reason?: string
+}
+
+interface PaymentHistory {
+    id: string
+    user_id: string
+    payment_type: string
+    status: string
+    amount_inr: number
+    razorpay_payment_id: string
+    payment_method?: string
+    created_at: string
+    metadata?: any
+    failure_reason?: string
+}
+
+interface CombinedTransaction {
+    id: string
+    type: 'credit' | 'payment'
+    transaction_type: string
+    payment_type?: string
+    status?: string
+    amount: number
+    description: string
+    created_at: string
+    balance_after?: number
+    payment_method?: string
+    razorpay_payment_id?: string
+    failure_reason?: string
+}
+
 export default function BillingDashboard() {
     const router = useRouter()
     const [billingStatus, setBillingStatus] = useState<BillingStatus | null>(null)
     const [creditPacks, setCreditPacks] = useState<CreditPack[]>([])
-    const [transactions, setTransactions] = useState<Transaction[]>([])
+    const [transactions, setTransactions] = useState<CombinedTransaction[]>([])
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState('')
 
@@ -129,15 +185,18 @@ export default function BillingDashboard() {
                 console.error('Failed to fetch credit packs:', packsResponse.status)
             }
 
-            // Fetch transactions
-            const transactionsResponse = await fetch(`${apiBase}/api/billing/credits/transactions`, {
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                }
-            })
+            // Fetch both credit transactions and payment history
+            const [transactionsResponse, paymentHistoryResponse] = await Promise.all([
+                fetch(`${apiBase}/api/billing/credits/transactions`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                }),
+                fetch(`${apiBase}/api/billing/payments/history?limit=20`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                })
+            ])
             
-            if (transactionsResponse.status === 401) {
-                console.error('Unauthorized on transactions - session expired')
+            if (transactionsResponse.status === 401 || paymentHistoryResponse.status === 401) {
+                console.error('Unauthorized - session expired')
                 localStorage.removeItem('auth_token')
                 localStorage.removeItem('token')
                 localStorage.removeItem('jwt_token')
@@ -149,12 +208,52 @@ export default function BillingDashboard() {
                 return
             }
             
+            // Combine credit transactions and payment history
+            const combinedTransactions: CombinedTransaction[] = []
+            
+            // Add credit transactions
             if (transactionsResponse.ok) {
-                const txns = await transactionsResponse.json()
-                setTransactions(txns)
-            } else {
-                console.error('Failed to fetch transactions:', transactionsResponse.status)
+                const creditTxns: Transaction[] = await transactionsResponse.json()
+                creditTxns.forEach(txn => {
+                    combinedTransactions.push({
+                        id: txn.id,
+                        type: 'credit',
+                        transaction_type: txn.transaction_type,
+                        amount: txn.amount,
+                        description: txn.description,
+                        created_at: txn.created_at,
+                        balance_after: txn.balance_after
+                    })
+                })
             }
+            
+            // Add payment history
+            if (paymentHistoryResponse.ok) {
+                const paymentData = await paymentHistoryResponse.json()
+                const paymentHistory: PaymentHistory[] = paymentData.payment_history || []
+                paymentHistory.forEach(payment => {
+                    combinedTransactions.push({
+                        id: payment.id,
+                        type: 'payment',
+                        transaction_type: payment.payment_type,
+                        payment_type: payment.payment_type,
+                        status: payment.status,
+                        amount: payment.amount_inr,
+                        description: `${payment.payment_type} payment - ${payment.status}`,
+                        created_at: payment.created_at,
+                        payment_method: payment.payment_method,
+                        razorpay_payment_id: payment.razorpay_payment_id,
+                        failure_reason: payment.failure_reason
+                    })
+                })
+            }
+            
+            // Sort combined transactions by date (newest first)
+            combinedTransactions.sort((a, b) => 
+                new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+            )
+            
+            setTransactions(combinedTransactions)
 
             setLoading(false)
         } catch (err) {
@@ -240,10 +339,18 @@ export default function BillingDashboard() {
                         })
 
                         if (verifyResponse.ok) {
-                            alert('Payment successful! Credits added to your account.')
-                            // Refresh billing data
-                            fetchBillingData()
+                            const result = await verifyResponse.json()
+                            if (result.success) {
+                                alert(result.message || 'Payment successful! Credits added to your account.')
+                                // Refresh billing data
+                                fetchBillingData()
+                            } else {
+                                console.error('Payment verification failed:', result)
+                                alert('Payment verification failed. Please contact support.')
+                            }
                         } else {
+                            const errorText = await verifyResponse.text()
+                            console.error('Payment verification HTTP error:', errorText)
                             alert('Payment verification failed. Please contact support.')
                         }
                     } catch (error) {
@@ -431,30 +538,68 @@ export default function BillingDashboard() {
                                             <tr key={txn.id}>
                                                 <td className="px-6 py-4 whitespace-nowrap">
                                                     <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${
-                                                        txn.transaction_type === 'purchase' ? 'bg-green-500/20 text-green-400' :
-                                                        txn.transaction_type === 'debit' ? 'bg-red-500/20 text-red-400' :
+                                                        // Credit transactions
+                                                        txn.type === 'credit' && txn.transaction_type === 'purchase' ? 'bg-green-500/20 text-green-400' :
+                                                        txn.type === 'credit' && txn.transaction_type === 'debit' ? 'bg-red-500/20 text-red-400' :
+                                                        // Payment history - subscription
+                                                        txn.type === 'payment' && txn.payment_type === 'subscription' && txn.status === 'captured' ? 'bg-purple-500/20 text-purple-400' :
+                                                        txn.type === 'payment' && txn.payment_type === 'subscription' && txn.status === 'failed' ? 'bg-red-500/20 text-red-400' :
+                                                        // Payment history - credits
+                                                        txn.type === 'payment' && txn.payment_type === 'credits' && txn.status === 'captured' ? 'bg-green-500/20 text-green-400' :
+                                                        txn.type === 'payment' && txn.payment_type === 'credits' && txn.status === 'failed' ? 'bg-red-500/20 text-red-400' :
                                                         'bg-blue-500/20 text-blue-400'
                                                     }`}>
-                                                        {txn.transaction_type === 'purchase' && <CheckCircle className="w-3 h-3" />}
+                                                        {(txn.transaction_type === 'purchase' || (txn.status === 'captured' && txn.payment_type === 'credits')) && <CheckCircle className="w-3 h-3" />}
                                                         {txn.transaction_type === 'debit' && <AlertCircle className="w-3 h-3" />}
-                                                        {txn.transaction_type.charAt(0).toUpperCase() + txn.transaction_type.slice(1)}
+                                                        {txn.status === 'captured' && txn.payment_type === 'subscription' && <TrendingUp className="w-3 h-3" />}
+                                                        {txn.status === 'failed' && <AlertCircle className="w-3 h-3" />}
+                                                        {txn.type === 'credit' ? 
+                                                            (txn.transaction_type.charAt(0).toUpperCase() + txn.transaction_type.slice(1)) :
+                                                            `${txn.payment_type?.charAt(0).toUpperCase()}${txn.payment_type?.slice(1)} ${txn.status?.charAt(0).toUpperCase()}${txn.status?.slice(1)}`
+                                                        }
                                                     </span>
                                                 </td>
                                                 <td className="px-6 py-4">
-                                                    <div className="text-sm text-white">{txn.description}</div>
+                                                    <div className="text-sm">
+                                                        <div className="text-white">{txn.description}</div>
+                                                        {txn.type === 'payment' && txn.payment_method && (
+                                                            <div className="text-xs text-gray-400 mt-1">
+                                                                Via {txn.payment_method}
+                                                                {txn.razorpay_payment_id && (
+                                                                    <span className="ml-2">ID: {txn.razorpay_payment_id.slice(-8)}</span>
+                                                                )}
+                                                            </div>
+                                                        )}
+                                                        {txn.failure_reason && (
+                                                            <div className="text-xs text-red-400 mt-1">{txn.failure_reason}</div>
+                                                        )}
+                                                    </div>
                                                 </td>
                                                 <td className="px-6 py-4 whitespace-nowrap">
                                                     <span className={`text-sm font-medium ${
-                                                        txn.transaction_type === 'purchase' || txn.transaction_type === 'bonus' 
-                                                            ? 'text-green-400' 
-                                                            : 'text-red-400'
+                                                        // Credit transactions
+                                                        txn.type === 'credit' && txn.transaction_type === 'purchase' ? 'text-green-400' :
+                                                        txn.type === 'credit' && txn.transaction_type === 'debit' ? 'text-red-400' :
+                                                        // Payment history - successful
+                                                        txn.type === 'payment' && txn.status === 'captured' ? 'text-green-400' :
+                                                        // Payment history - failed
+                                                        txn.type === 'payment' && txn.status === 'failed' ? 'text-red-400' :
+                                                        'text-white'
                                                     }`}>
-                                                        {txn.transaction_type === 'purchase' || txn.transaction_type === 'bonus' ? '+' : '-'}
-                                                        ₹{Math.abs(txn.amount).toFixed(2)}
+                                                        {txn.type === 'credit' ? (
+                                                            `${txn.transaction_type === 'purchase' ? '+' : '-'}${txn.amount} credits`
+                                                        ) : (
+                                                            `₹${txn.amount}`
+                                                        )}
                                                     </span>
                                                 </td>
                                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-400">
-                                                    ₹{txn.balance_after.toFixed(2)}
+                                                    {txn.type === 'credit' && txn.balance_after !== undefined ? 
+                                                        `${txn.balance_after} credits` : 
+                                                        txn.type === 'payment' && txn.payment_type === 'subscription' ? 
+                                                            (txn.status === 'captured' ? 'Subscription Active' : 'Failed') :
+                                                            '-'
+                                                    }
                                                 </td>
                                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-400">
                                                     {new Date(txn.created_at).toLocaleDateString()}

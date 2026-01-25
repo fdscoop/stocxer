@@ -355,6 +355,42 @@ class AuthService:
         except Exception as e:
             logger.error(f"Delete Fyers token error: {str(e)}")
             raise HTTPException(status_code=400, detail="Failed to delete token")
+    
+    
+    async def get_user_email(self, user_id: str) -> Optional[str]:
+        """Get user email from auth.users table"""
+        try:
+            # Query auth.users table directly
+            response = self.supabase_admin.auth.admin.get_user_by_id(user_id)
+            
+            if response and response.user:
+                return response.user.email
+            
+            return None
+            
+        except Exception as e:
+            logger.error(f"Failed to get user email: {str(e)}")
+            return None
+    
+    
+    async def get_user_name(self, user_id: str) -> Optional[str]:
+        """Get user name from public.users table"""
+        try:
+            response = self.supabase.table("users").select("full_name").eq("id", user_id).single().execute()
+            
+            if response.data and response.data.get('full_name'):
+                return response.data['full_name']
+            
+            # Fallback to email prefix if no full name
+            email = await self.get_user_email(user_id)
+            if email:
+                return email.split('@')[0]
+            
+            return None
+            
+        except Exception as e:
+            logger.error(f"Failed to get user name: {str(e)}")
+            return None
 
 
 # Create auth service instance

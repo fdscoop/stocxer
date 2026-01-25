@@ -364,7 +364,136 @@ class BillingService:
     
     
     # ============================================
-    # CREDIT MANAGEMENT
+    # PAYMENT HISTORY TRACKING
+    # ============================================
+    
+    async def log_payment_event(
+        self, 
+        user_id: str,
+        payment_type: str,  # 'subscription', 'credits', 'refund'
+        status: str,        # 'created', 'pending', 'captured', 'failed', 'refunded'
+        amount_inr: int,
+        razorpay_payment_id: Optional[str] = None,
+        razorpay_order_id: Optional[str] = None,
+        razorpay_signature: Optional[str] = None,
+        payment_method: Optional[str] = None,
+        failure_reason: Optional[str] = None,
+        metadata: Optional[Dict] = None
+    ) -> Tuple[bool, str]:
+        """
+        Log payment event in payment_history table for audit trail
+        This provides complete payment lifecycle tracking separate from business logic
+        """
+        try:
+            payment_data = {
+                'user_id': user_id,
+                'payment_type': payment_type,
+                'status': status,
+                'amount_inr': amount_inr,
+                'razorpay_payment_id': razorpay_payment_id,
+                'razorpay_order_id': razorpay_order_id,
+                'razorpay_signature': razorpay_signature,
+                'payment_method': payment_method,
+                'failure_reason': failure_reason,
+                'metadata': metadata or {},
+                'created_at': datetime.now().isoformat(),
+                'updated_at': datetime.now().isoformat()
+            }
+            
+            # Insert or update payment record
+            if razorpay_payment_id:
+                # Check if payment already exists
+                existing = self.supabase.table('payment_history')\
+                    .select('*')\
+                    .eq('razorpay_payment_id', razorpay_payment_id)\
+                    .execute()
+                
+                if existing.data:
+                    # Update existing payment
+                    self.supabase.table('payment_history')\
+                        .update({
+                            'status': status,
+                            'payment_method': payment_method,
+                            'failure_reason': failure_reason,
+                            'metadata': metadata or {},
+                            'updated_at': datetime.now().isoformat()
+                        })\
+                        .eq('razorpay_payment_id', razorpay_payment_id)\
+                        .execute()
+                else:
+                    # Insert new payment
+                    self.supabase.table('payment_history').insert(payment_data).execute()
+            else:
+                # Insert new payment (for cases without razorpay_payment_id)
+                self.supabase.table('payment_history').insert(payment_data).execute()
+            
+            return True, f"Payment event logged: {status}"
+            
+        except Exception as e:
+            print(f"Failed to log payment event: {e}")
+            return False, f"Failed to log payment event: {str(e)}"
+    
+    
+    async def get_payment_history(
+        self, 
+        user_id: str, 
+        limit: int = 20,
+        payment_type: Optional[str] = None
+    ) -> List[Dict]:
+        """Get payment history for user"""
+        try:
+            query = self.supabase.table('payment_history')\
+                .select('*')\
+                .eq('user_id', user_id)\
+                .order('created_at', desc=True)\
+                .limit(limit)
+            
+            if payment_type:
+                query = query.eq('payment_type', payment_type)
+            
+            response = query.execute()
+            return response.data or []
+            
+        except Exception as e:
+            print(f"Failed to get payment history: {e}")
+            return []
+    
+    
+    async def update_payment_status(
+        self,
+        razorpay_payment_id: str,
+        status: str,
+        payment_method: Optional[str] = None,
+        failure_reason: Optional[str] = None,
+        metadata: Optional[Dict] = None
+    ) -> Tuple[bool, str]:
+        """Update payment status in payment_history"""
+        try:
+            update_data = {
+                'status': status,
+                'updated_at': datetime.now().isoformat()
+            }
+            
+            if payment_method:
+                update_data['payment_method'] = payment_method
+            if failure_reason:
+                update_data['failure_reason'] = failure_reason  
+            if metadata:
+                update_data['metadata'] = metadata
+            
+            self.supabase.table('payment_history')\
+                .update(update_data)\
+                .eq('razorpay_payment_id', razorpay_payment_id)\
+                .execute()
+            
+            return True, f"Payment status updated to: {status}"
+            
+        except Exception as e:
+            return False, f"Failed to update payment status: {str(e)}"
+
+
+    # ============================================
+    # CREDIT MANAGEMENT  
     # ============================================
     
     async def add_credits(

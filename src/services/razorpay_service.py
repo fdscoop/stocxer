@@ -401,6 +401,229 @@ class RazorpayService:
             return False, {'error': str(e)}
     
     
+    # ============================================
+    # SUBSCRIPTION MANAGEMENT
+    # ============================================
+    
+    def create_subscription_plan(
+        self, 
+        name: str,
+        amount_inr: int,
+        interval: str = "monthly"
+    ) -> Tuple[bool, Dict]:
+        """
+        Create a subscription plan in Razorpay
+        
+        Args:
+            name: Plan display name
+            amount_inr: Monthly amount in INR
+            interval: Billing interval ('monthly', 'yearly')
+        
+        Returns:
+            (success, plan_data)
+        """
+        if not self.client:
+            return False, {'error': 'Razorpay not configured'}
+        
+        try:
+            plan_data = {
+                'item': {
+                    'name': name,
+                    'amount': amount_inr * 100,  # Convert to paisa
+                    'currency': 'INR'
+                },
+                'period': interval,
+                'interval': 1,
+                'notes': {
+                    'project': 'stocxer-tradewise'
+                }
+            }
+            
+            plan = self.client.plan.create(plan_data)
+            
+            return True, {
+                'plan_id': plan['id'],
+                'name': plan['item']['name'],
+                'amount': plan['item']['amount'],
+                'interval': plan['period'],
+                'created_at': plan.get('created_at'),
+                'status': 'created'
+            }
+        
+        except Exception as e:
+            return False, {'error': str(e)}
+    
+    
+    def create_subscription(
+        self, 
+        plan_id: str,
+        customer_email: str,
+        customer_name: str,
+        user_id: str,
+        total_count: Optional[int] = 120  # Default: 10 years (120 months)
+    ) -> Tuple[bool, Dict]:
+        """
+        Create a subscription for a user
+        
+        Args:
+            plan_id: Razorpay plan ID
+            customer_email: User email
+            customer_name: User name  
+            user_id: Internal user ID
+            total_count: Total billing cycles (None for infinite)
+        
+        Returns:
+            (success, subscription_data)
+        """
+        if not self.client:
+            return False, {'error': 'Razorpay not configured'}
+        
+        try:
+            subscription_data = {
+                'plan_id': plan_id,
+                'customer_notify': 1,
+                'total_count': total_count,
+                'notes': {
+                    'project': 'stocxer-tradewise',
+                    'user_id': user_id,
+                    'customer_email': customer_email,
+                    'customer_name': customer_name
+                }
+            }
+            
+            subscription = self.client.subscription.create(subscription_data)
+            
+            return True, {
+                'subscription_id': subscription['id'],
+                'plan_id': subscription['plan_id'], 
+                'status': subscription['status'],
+                'auth_transaction': subscription.get('auth_transaction', {}),
+                'short_url': subscription.get('short_url'),
+                'current_start': subscription.get('current_start'),
+                'current_end': subscription.get('current_end'),
+                'notes': subscription.get('notes', {})
+            }
+        
+        except Exception as e:
+            return False, {'error': str(e)}
+    
+    
+    def fetch_subscription(self, subscription_id: str) -> Tuple[bool, Dict]:
+        """
+        Fetch subscription details
+        
+        Args:
+            subscription_id: Razorpay subscription ID
+        
+        Returns:
+            (success, subscription_data)
+        """
+        if not self.client:
+            return False, {'error': 'Razorpay not configured'}
+        
+        try:
+            subscription = self.client.subscription.fetch(subscription_id)
+            
+            return True, {
+                'subscription_id': subscription['id'],
+                'plan_id': subscription['plan_id'],
+                'status': subscription['status'],
+                'current_start': subscription.get('current_start'),
+                'current_end': subscription.get('current_end'),
+                'created_at': subscription['created_at'],
+                'notes': subscription.get('notes', {}),
+                'customer': subscription.get('customer', {})
+            }
+        
+        except Exception as e:
+            return False, {'error': str(e)}
+    
+    
+    def cancel_subscription(self, subscription_id: str, cancel_at_cycle_end: bool = True) -> Tuple[bool, Dict]:
+        """
+        Cancel a subscription
+        
+        Args:
+            subscription_id: Razorpay subscription ID  
+            cancel_at_cycle_end: If True, cancel at end of current cycle
+        
+        Returns:
+            (success, cancellation_data)
+        """
+        if not self.client:
+            return False, {'error': 'Razorpay not configured'}
+        
+        try:
+            if cancel_at_cycle_end:
+                result = self.client.subscription.cancel(subscription_id, data={'cancel_at_cycle_end': 1})
+            else:
+                result = self.client.subscription.cancel(subscription_id)
+            
+            return True, {
+                'subscription_id': result['id'],
+                'status': result['status'],
+                'ended_at': result.get('ended_at'),
+                'cancelled_at': result.get('cancelled_at')
+            }
+        
+        except Exception as e:
+            return False, {'error': str(e)}
+    
+    
+    def pause_subscription(self, subscription_id: str, pause_at: str = "now") -> Tuple[bool, Dict]:
+        """
+        Pause a subscription
+        
+        Args:
+            subscription_id: Razorpay subscription ID
+            pause_at: When to pause ('now' or specific timestamp)
+        
+        Returns:
+            (success, pause_data)
+        """
+        if not self.client:
+            return False, {'error': 'Razorpay not configured'}
+        
+        try:
+            result = self.client.subscription.pause(subscription_id, data={'pause_at': pause_at})
+            
+            return True, {
+                'subscription_id': result['id'],
+                'status': result['status'],
+                'paused_at': result.get('paused_at')
+            }
+        
+        except Exception as e:
+            return False, {'error': str(e)}
+    
+    
+    def resume_subscription(self, subscription_id: str, resume_at: str = "now") -> Tuple[bool, Dict]:
+        """
+        Resume a paused subscription
+        
+        Args:
+            subscription_id: Razorpay subscription ID
+            resume_at: When to resume ('now' or specific timestamp)
+        
+        Returns:
+            (success, resume_data)
+        """
+        if not self.client:
+            return False, {'error': 'Razorpay not configured'}
+        
+        try:
+            result = self.client.subscription.resume(subscription_id, data={'resume_at': resume_at})
+            
+            return True, {
+                'subscription_id': result['id'],
+                'status': result['status'],
+                'resumed_at': result.get('resumed_at')
+            }
+        
+        except Exception as e:
+            return False, {'error': str(e)}
+    
+    
     def fetch_refund(self, refund_id: str) -> Tuple[bool, Dict]:
         """
         Fetch refund details

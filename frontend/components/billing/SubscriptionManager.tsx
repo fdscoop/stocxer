@@ -239,7 +239,7 @@ export default function SubscriptionManager() {
 
             const apiBase = getApiUrl()
 
-            // Create subscription order
+            // Create subscription order (regular payment, not recurring)
             const orderResponse = await fetch(`${apiBase}/api/billing/subscription/create-order`, {
                 method: 'POST',
                 headers: {
@@ -253,7 +253,8 @@ export default function SubscriptionManager() {
             })
 
             if (!orderResponse.ok) {
-                throw new Error('Failed to create subscription order')
+                const errorData = await orderResponse.json()
+                throw new Error(errorData.detail || 'Failed to create subscription order')
             }
 
             const { order } = await orderResponse.json()
@@ -294,9 +295,17 @@ export default function SubscriptionManager() {
                         })
 
                         if (verifyResponse.ok) {
-                            alert('Subscription activated successfully!')
-                            fetchSubscriptionData()
+                            const result = await verifyResponse.json()
+                            if (result.success) {
+                                alert(result.message || 'Subscription activated successfully!')
+                                fetchSubscriptionData()
+                            } else {
+                                console.error('Subscription verification failed:', result)
+                                alert('Payment verification failed. Please contact support.')
+                            }
                         } else {
+                            const errorText = await verifyResponse.text()
+                            console.error('Subscription verification HTTP error:', errorText)
                             alert('Payment verification failed. Please contact support.')
                         }
                     } catch (error) {
@@ -316,8 +325,8 @@ export default function SubscriptionManager() {
             rzp.open()
 
         } catch (err) {
-            console.error('Upgrade error:', err)
-            alert('Failed to initiate subscription upgrade')
+            console.error('Subscription creation error:', err)
+            alert(err instanceof Error ? err.message : 'Failed to create subscription')
         }
     }
 

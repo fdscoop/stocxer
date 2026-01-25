@@ -75,6 +75,9 @@ async def get_billing_dashboard(authorization: str = Header(None)):
         # Get recent transactions
         transactions = await billing_service.get_transactions(user_id, limit=20)
         
+        # Get recent payment history
+        payment_history = await billing_service.get_payment_history(user_id, limit=10)
+        
         # Get available credit packs
         credit_packs = await billing_service.get_credit_packs()
         
@@ -82,7 +85,7 @@ async def get_billing_dashboard(authorization: str = Header(None)):
             billing_status=status,
             recent_transactions=transactions,
             available_credit_packs=credit_packs,
-            recent_payments=[],  # TODO: Add payment history
+            recent_payments=payment_history,
             usage_history=[]  # TODO: Add usage history
         )
         
@@ -91,6 +94,48 @@ async def get_billing_dashboard(authorization: str = Header(None)):
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to get dashboard: {str(e)}")
+
+
+@router.get("/payments/history")
+async def get_payment_history(
+    limit: int = 20,
+    payment_type: Optional[str] = None,
+    authorization: str = Header(None)
+):
+    """
+    Get user's payment history from payment_history table
+    Shows complete audit trail of all payment gateway interactions
+    
+    Args:
+        limit: Max number of records to return (default: 20)
+        payment_type: Filter by type ('credits', 'subscription', 'refund')
+    """
+    try:
+        user_id = await get_current_user_id(authorization)
+        
+        # Validate payment_type if provided
+        if payment_type and payment_type not in ['credits', 'subscription', 'refund']:
+            raise HTTPException(status_code=400, detail="Invalid payment_type")
+        
+        payment_history = await billing_service.get_payment_history(
+            user_id=user_id,
+            limit=min(limit, 100),  # Cap at 100
+            payment_type=payment_type
+        )
+        
+        return {
+            'success': True,
+            'payment_history': payment_history,
+            'count': len(payment_history),
+            'filters': {
+                'payment_type': payment_type,
+                'limit': limit
+            }
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to get payment history: {str(e)}")
 
 
 # ============================================
@@ -134,6 +179,25 @@ async def create_credit_order(
         
         if not success:
             raise HTTPException(status_code=500, detail=f"Failed to create order: {order_data.get('error')}")
+        
+        # 📊 LOG ORDER CREATION IN PAYMENT HISTORY
+        await billing_service.log_payment_event(
+            user_id=user_id,
+            payment_type='credits',
+            status='created',
+            amount_inr=pack.amount_inr,
+            razorpay_order_id=order_data.get('id'),
+            metadata={
+                'order_created_at': datetime.now().isoformat(),
+                'pack_id': pack.id,
+                'pack_name': pack.name,
+                'credits': pack.credits,
+                'bonus_credits': pack.bonus_credits,
+                'total_credits': pack.total_credits,
+                'receipt': receipt,
+                'source': 'frontend_order_creation'
+            }
+        )
         
         return {
             'order': order_data,
@@ -203,16 +267,18 @@ async def verify_credit_payment(
         # If payment already processed, that's OK - don't treat as error
         if not success and "already processed" in message:
             # Payment was already processed via webhook, just return current balance
+            print(f"✅ Payment {verification.razorpay_payment_id} already processed via webhook for user {user_id[:8]}")
             billing_status = await billing_service.get_user_billing_status(user_id)
             return {
                 'success': True,
-                'message': "Payment already processed via webhook",
-                'credits_added': 0,
+                'message': "Payment successful! Credits were already added via webhook.",
+                'credits_added': float(credits_to_add),  # Show what would have been added
                 'new_balance': float(billing_status.credit_balance),
                 'payment_id': verification.razorpay_payment_id
             }
         
         if not success:
+            print(f"❌ Failed to add credits for payment {verification.razorpay_payment_id}: {message}")
             raise HTTPException(status_code=500, detail=message)
         
         return {
@@ -385,7 +451,7 @@ async def create_subscription_order(
     authorization: str = Header(None)
 ):
     """
-    Create Razorpay order for subscription payment
+    Create Razorpay order for subscription payment (manual monthly payments)
     """
     try:
         user_id = await get_current_user_id(authorization)
@@ -418,6 +484,22 @@ async def create_subscription_order(
         if not success:
             raise HTTPException(status_code=500, detail=f"Failed to create order: {order_data.get('error')}")
         
+        # 📊 LOG SUBSCRIPTION ORDER CREATION IN PAYMENT HISTORY
+        await billing_service.log_payment_event(
+            user_id=user_id,
+            payment_type='subscription',
+            status='created',
+            amount_inr=amount_inr,
+            razorpay_order_id=order_data.get('id'),
+            metadata={
+                'order_created_at': datetime.now().isoformat(),
+                'plan_type': request.plan_type,
+                'billing_period': 'monthly',
+                'receipt': receipt,
+                'source': 'frontend_subscription_order'
+            }
+        )
+        
         return {
             'order': order_data,
             'plan_type': request.plan_type,
@@ -439,7 +521,7 @@ async def verify_subscription_payment(
     authorization: str = Header(None)
 ):
     """
-    Verify subscription payment and activate subscription
+    Verify subscription payment and activate subscription for 1 month
     """
     try:
         user_id = await get_current_user_id(authorization)
@@ -457,19 +539,37 @@ async def verify_subscription_payment(
         # Get plan type from request body
         plan_type = verification.plan_type or 'medium'
         
-        # Activate subscription
+        # Activate subscription for 1 month
         success, message = await billing_service.create_subscription(
             user_id=user_id,
             plan_type=plan_type,
+            razorpay_payment_id=verification.razorpay_payment_id,
             period_months=1
         )
         
         if not success:
             raise HTTPException(status_code=500, detail=message)
         
+        # 📊 LOG SUBSCRIPTION ACTIVATION IN PAYMENT HISTORY
+        await billing_service.log_payment_event(
+            user_id=user_id,
+            payment_type='subscription',
+            status='captured',
+            amount_inr=4999 if plan_type == 'medium' else 9999,
+            razorpay_payment_id=verification.razorpay_payment_id,
+            razorpay_order_id=verification.razorpay_order_id,
+            razorpay_signature=verification.razorpay_signature,
+            metadata={
+                'payment_verified_at': datetime.now().isoformat(),
+                'plan_type': plan_type,
+                'subscription_period': '1_month',
+                'source': 'frontend_verification'
+            }
+        )
+        
         return {
             'success': True,
-            'message': 'Subscription activated successfully',
+            'message': f'{plan_type.title()} subscription activated for 1 month!',
             'plan_type': plan_type,
             'payment_id': verification.razorpay_payment_id
         }
@@ -570,13 +670,11 @@ async def get_plans():
 @router.post("/webhooks/razorpay")
 async def razorpay_webhook(request: Request):
     """
-    Handle Razorpay webhooks for payment/subscription events
+    Handle Razorpay webhooks for payment events
     
     Supported events:
-    - payment.captured: Add credits to user account
-    - payment.failed: Log failure
-    - subscription.charged: Renew subscription
-    - subscription.cancelled: Cancel subscription
+    - payment.captured: Add credits or activate subscription for successful payments
+    - payment.failed: Log payment failures for support/retry
     """
     try:
         # Get raw body and signature
@@ -605,12 +703,6 @@ async def razorpay_webhook(request: Request):
         elif event_type == 'payment.failed':
             await handle_payment_failed(event_data)
             
-        elif event_type == 'subscription.charged':
-            await handle_subscription_charged(event_data)
-            
-        elif event_type == 'subscription.cancelled':
-            await handle_subscription_cancelled(event_data)
-            
         else:
             print(f"⚠️  Unhandled webhook event: {event_type}")
         
@@ -626,7 +718,7 @@ async def razorpay_webhook(request: Request):
 async def handle_payment_captured(webhook_data: Dict):
     """
     Handle successful payment capture
-    Updates user credits and creates transaction record
+    Updates user credits and creates transaction record + payment history
     """
     try:
         payment_entity = webhook_data.get('payload', {}).get('payment', {}).get('entity', {})
@@ -635,8 +727,9 @@ async def handle_payment_captured(webhook_data: Dict):
         order_id = payment_entity.get('order_id')
         amount_paisa = payment_entity.get('amount', 0)
         amount_inr = amount_paisa // 100
+        payment_method = payment_entity.get('method')  # e.g., 'card', 'upi', 'netbanking'
         
-        print(f"💰 Processing payment: {payment_id} for ₹{amount_inr}")
+        print(f"💰 Processing payment: {payment_id} for ₹{amount_inr} via {payment_method}")
         
         # Fetch order details to get user_id and pack info
         success, order_data = razorpay_service.fetch_order(order_id)
@@ -659,6 +752,24 @@ async def handle_payment_captured(webhook_data: Dict):
         if not user_id:
             print(f"❌ No user_id found in order notes for order: {order_id}")
             return
+        
+        # 📊 LOG PAYMENT EVENT IN HISTORY
+        payment_type = 'credits' if order_type == 'credit' else 'subscription'
+        await billing_service.log_payment_event(
+            user_id=user_id,
+            payment_type=payment_type,
+            status='captured',
+            amount_inr=amount_inr,
+            razorpay_payment_id=payment_id,
+            razorpay_order_id=order_id,
+            payment_method=payment_method,
+            metadata={
+                'webhook_processed_at': datetime.now().isoformat(),
+                'order_notes': notes,
+                'amount_paisa': amount_paisa,
+                'source': 'webhook'
+            }
+        )
         
         if order_type == 'credit':
             # Handle credit purchase
@@ -685,10 +796,10 @@ async def handle_payment_captured(webhook_data: Dict):
                 print(f"❌ Failed to add credits: {message}")
         
         elif order_type == 'subscription':
-            # Handle subscription payment
+            # Handle subscription payment (monthly payment)
             plan_type = notes.get('plan_type', 'medium')
             
-            # Activate/renew subscription
+            # Activate/renew subscription for 1 month
             success, message = await billing_service.create_subscription(
                 user_id=user_id,
                 plan_type=plan_type,
@@ -708,100 +819,58 @@ async def handle_payment_captured(webhook_data: Dict):
 async def handle_payment_failed(webhook_data: Dict):
     """
     Handle failed payment
-    Log the failure for potential retry/support
+    Log the failure for potential retry/support in payment_history
     """
     try:
         payment_entity = webhook_data.get('payload', {}).get('payment', {}).get('entity', {})
         
         payment_id = payment_entity.get('id')
         order_id = payment_entity.get('order_id')
+        amount_paisa = payment_entity.get('amount', 0)
+        amount_inr = amount_paisa // 100
         error_code = payment_entity.get('error_code')
         error_description = payment_entity.get('error_description')
+        payment_method = payment_entity.get('method')
         
-        print(f"💸 Payment failed: {payment_id}")
+        print(f"💸 Payment failed: {payment_id} for ₹{amount_inr}")
         print(f"   Order: {order_id}")
         print(f"   Error: {error_code} - {error_description}")
         
-        # TODO: Log to database for analytics/support
-        # Could also send notification to user about failed payment
+        # Fetch order details to get user_id
+        success, order_data = razorpay_service.fetch_order(order_id)
+        if success:
+            notes = order_data.get('notes', {})
+            user_id = notes.get('user_id')
+            order_type = notes.get('order_type', 'credit')
+            
+            # Skip if not our project
+            if notes.get('project') != 'stocxer-tradewise':
+                return
+            
+            if user_id:
+                # 📊 LOG FAILED PAYMENT IN HISTORY
+                payment_type = 'credits' if order_type == 'credit' else 'subscription'
+                await billing_service.log_payment_event(
+                    user_id=user_id,
+                    payment_type=payment_type,
+                    status='failed',
+                    amount_inr=amount_inr,
+                    razorpay_payment_id=payment_id,
+                    razorpay_order_id=order_id,
+                    payment_method=payment_method,
+                    failure_reason=f"{error_code}: {error_description}",
+                    metadata={
+                        'webhook_processed_at': datetime.now().isoformat(),
+                        'error_code': error_code,
+                        'error_description': error_description,
+                        'amount_paisa': amount_paisa,
+                        'source': 'webhook'
+                    }
+                )
+                print(f"📊 Logged failed payment in history for user {user_id[:8]}")
         
     except Exception as e:
         print(f"❌ Error handling payment failed: {e}")
-
-
-async def handle_subscription_charged(webhook_data: Dict):
-    """
-    Handle subscription renewal charge
-    Extends subscription period
-    """
-    try:
-        subscription_entity = webhook_data.get('payload', {}).get('subscription', {}).get('entity', {})
-        payment_entity = webhook_data.get('payload', {}).get('payment', {}).get('entity', {})
-        
-        subscription_id = subscription_entity.get('id')
-        payment_id = payment_entity.get('id') if payment_entity else None
-        
-        print(f"🔄 Subscription charged: {subscription_id}")
-        
-        # Find user by subscription ID and extend their subscription
-        # This would require storing razorpay_subscription_id in user_subscriptions table
-        # For now, we'll handle it via payment ID lookup
-        
-        if payment_id:
-            # Fetch payment to get order details
-            success, payment_data = razorpay_service.fetch_payment(payment_id)
-            if success:
-                order_id = payment_data.get('order_id')
-                success, order_data = razorpay_service.fetch_order(order_id)
-                
-                if success:
-                    notes = order_data.get('notes', {})
-                    user_id = notes.get('user_id')
-                    plan_type = notes.get('plan_type', 'medium')
-                    
-                    if user_id:
-                        # Extend subscription
-                        success, message = await billing_service.extend_subscription(
-                            user_id=user_id,
-                            months=1
-                        )
-                        
-                        if success:
-                            print(f"✅ Extended subscription for user {user_id[:8]}...")
-                        else:
-                            print(f"❌ Failed to extend subscription: {message}")
-        
-    except Exception as e:
-        print(f"❌ Error handling subscription charged: {e}")
-
-
-async def handle_subscription_cancelled(webhook_data: Dict):
-    """
-    Handle subscription cancellation
-    Updates subscription status in database
-    """
-    try:
-        subscription_entity = webhook_data.get('payload', {}).get('subscription', {}).get('entity', {})
-        
-        subscription_id = subscription_entity.get('id')
-        
-        print(f"🚫 Subscription cancelled: {subscription_id}")
-        
-        # Find and cancel user subscription
-        # This would require a lookup by razorpay_subscription_id
-        # For now, we'll add this functionality to billing service
-        
-        success, message = await billing_service.cancel_subscription_by_razorpay_id(
-            razorpay_subscription_id=subscription_id
-        )
-        
-        if success:
-            print(f"✅ Cancelled subscription: {subscription_id}")
-        else:
-            print(f"❌ Failed to cancel subscription: {message}")
-        
-    except Exception as e:
-        print(f"❌ Error handling subscription cancelled: {e}")
 
 
 # Export router

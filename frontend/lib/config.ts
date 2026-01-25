@@ -4,7 +4,7 @@
 export function getApiUrl(): string {
   if (typeof window === 'undefined') {
     // Server-side: use env variable
-    return process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
+    return process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8001'
   }
 
   const hostname = window.location.hostname
@@ -12,7 +12,7 @@ export function getApiUrl(): string {
   // Determine API URL based on current hostname
   if (hostname === 'localhost' || hostname === '127.0.0.1') {
     // Local development
-    return 'http://localhost:8000'
+    return 'http://localhost:8001'
   } else if (hostname.includes('onrender.com')) {
     // Render deployment - API is on same origin
     return window.location.origin
