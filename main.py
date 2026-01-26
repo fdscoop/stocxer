@@ -24,6 +24,7 @@ from src.analytics.stock_screener import get_stock_screener
 from src.trading.signal_generator import signal_generator, risk_manager
 from src.services.auth_service import auth_service
 from src.services.screener_service import screener_service
+from src.services.billing_service import billing_service
 from src.models.auth_models import UserRegister, UserLogin, FyersTokenStore
 from src.middleware.token_middleware import require_tokens, ScanType
 from src.middleware.refund_decorator import with_refund_on_failure
