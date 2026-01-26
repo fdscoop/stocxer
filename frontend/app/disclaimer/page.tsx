@@ -35,10 +35,10 @@ export default function DisclaimerPage() {
                 <div className="mb-8 p-6 rounded-2xl bg-gradient-to-b from-red-500/10 to-orange-500/10 border border-red-500/30">
                     <h2 className="text-xl font-bold text-red-400 mb-4">⚠️ Not Investment Advice</h2>
                     <p className="text-gray-300 leading-relaxed text-lg">
-                        Stocxer AI is a data analysis tool providing probability-based market data patterns for
-                        <strong className="text-yellow-400"> analytical, research, and informational purposes only</strong>.
-                        It does <strong className="text-red-400">NOT</strong> provide investment advice, trading recommendations,
-                        or guarantees of profit.
+                        Stocxer AI provides algorithmic analysis and trading signals for
+                        <strong className="text-yellow-400"> educational and informational purposes only</strong>.
+                        These signals are <strong className="text-red-400">NOT personalized investment advice</strong> and
+                        should not be considered as such. We do not guarantee profit or trading success.
                     </p>
                 </div>
 
@@ -59,7 +59,7 @@ export default function DisclaimerPage() {
                         <ul className="text-gray-400 leading-relaxed space-y-3">
                             <li className="flex items-start gap-3">
                                 <span className="text-red-500 mt-1">•</span>
-                                <span>Stocxer AI and FDS COOP LLP are <strong className="text-red-400">NOT registered
+                                <span>Stocxer AI and Cadreago De Private Limited are <strong className="text-red-400">NOT registered
                                     as SEBI investment advisers</strong>.</span>
                             </li>
                             <li className="flex items-start gap-3">
@@ -139,7 +139,7 @@ export default function DisclaimerPage() {
                     <section>
                         <h2 className="text-xl font-semibold text-white mb-4">Limitation of Liability</h2>
                         <p className="text-gray-400 leading-relaxed">
-                            Under no circumstances shall FDS COOP LLP, its directors, employees, or
+                            Under no circumstances shall Cadreago De Private Limited, its directors, employees, or
                             affiliates be liable for any direct, indirect, incidental, consequential, special, or
                             exemplary damages arising from the use of the Platform, including but not limited to
                             trading losses, lost profits, or any other financial loss.
@@ -152,7 +152,7 @@ export default function DisclaimerPage() {
                             If you have any questions about this Disclaimer, please contact us:
                         </p>
                         <div className="p-4 rounded-xl bg-white/5 border border-white/10">
-                            <p className="text-white font-semibold">FDS COOP LLP</p>
+                            <p className="text-white font-semibold">Cadreago De Private Limited</p>
                             <p className="text-gray-400">Email: cadreagode@gmx.com</p>
                             <p className="text-gray-400">Country: India</p>
                         </div>

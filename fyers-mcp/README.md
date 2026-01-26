@@ -267,7 +267,7 @@ Issues or questions?
 
 ## 📝 License
 
-Part of Stocxer AI - FDS COOP LLP
+Part of Stocxer AI - Cadreago De Private Limited
 
 ---
 

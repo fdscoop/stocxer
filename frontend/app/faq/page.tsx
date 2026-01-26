@@ -17,7 +17,7 @@ const faqs = [
             },
             {
                 question: 'Is Stocxer AI a SEBI registered investment advisor?',
-                answer: 'No. Stocxer AI and FDS COOP LLP are NOT registered as SEBI investment advisers. The platform provides analytical tools for informational and educational purposes only. It does not constitute investment advice.'
+                answer: 'No. Stocxer AI and Cadreago De Private Limited are NOT registered as SEBI investment advisers. The platform provides analytical tools for informational and educational purposes only. It does not constitute investment advice.'
             },
             {
                 question: 'Who can use Stocxer AI?',

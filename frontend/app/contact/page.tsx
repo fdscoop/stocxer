@@ -102,7 +102,7 @@ export default function ContactPage() {
                     </h3>
                     <div className="grid md:grid-cols-2 gap-8">
                         <div>
-                            <h4 className="text-lg font-semibold text-white mb-4">FDS COOP LLP</h4>
+                            <h4 className="text-lg font-semibold text-white mb-4">Cadreago De Private Limited</h4>
                             <div className="space-y-3 text-gray-300">
                                 <div>
                                     <p className="text-sm text-gray-400">Registered Office</p>

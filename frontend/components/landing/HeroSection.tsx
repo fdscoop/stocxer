@@ -51,17 +51,19 @@ export default function HeroSection() {
                 </p>
 
                 {/* Fyers Account Requirement */}
-                <div className="flex items-center justify-center gap-2 mb-6">
-                    <div className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-500/10 border border-blue-500/20">
-                        <AlertCircle className="w-4 h-4 text-blue-400" />
-                        <span className="text-sm text-gray-300">
-                            <span className="text-blue-400 font-medium">Fyers trading account</span> required to access market data
-                        </span>
+                <div className="flex items-center justify-center gap-2 mb-6 px-2">
+                    <div className="inline-flex flex-col sm:flex-row items-center gap-2 sm:gap-3 px-4 py-3 rounded-lg bg-blue-500/10 border border-blue-500/20 max-w-full">
+                        <div className="flex items-center gap-2">
+                            <AlertCircle className="w-4 h-4 text-blue-400 flex-shrink-0" />
+                            <span className="text-sm text-gray-300 text-center sm:text-left">
+                                <span className="text-blue-400 font-medium">Fyers trading account</span> required
+                            </span>
+                        </div>
                         <Link
                             href="https://fyers.in"
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="inline-flex items-center gap-1 text-xs text-blue-400 hover:text-blue-300 transition-colors underline underline-offset-2"
+                            className="inline-flex items-center gap-1 px-3 py-1 text-xs text-blue-400 hover:text-blue-300 bg-blue-500/20 hover:bg-blue-500/30 rounded-md transition-colors font-medium"
                         >
                             Open Account
                             <ExternalLink className="w-3 h-3" />
@@ -70,9 +72,9 @@ export default function HeroSection() {
                 </div>
 
                 {/* Educational Purpose Disclaimer */}
-                <div className="inline-flex items-center gap-2 px-4 py-2 mb-8 rounded-lg bg-yellow-500/10 border border-yellow-500/20">
-                    <span className="text-sm text-yellow-400 font-medium">� For analytical, research & informational purposes only</span>
-                    <span className="text-sm text-gray-500">— Not investment advice</span>
+                <div className="inline-flex flex-col sm:flex-row items-center gap-1 sm:gap-2 px-4 py-2 mb-8 rounded-lg bg-yellow-500/10 border border-yellow-500/20 mx-2">
+                    <span className="text-xs sm:text-sm text-yellow-400 font-medium text-center">📚 For analytical, research & informational purposes only</span>
+                    <span className="text-xs sm:text-sm text-gray-500 text-center">— Not investment advice</span>
                 </div>
 
                 {/* CTAs */}

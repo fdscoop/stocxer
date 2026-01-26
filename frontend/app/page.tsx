@@ -1007,32 +1007,32 @@ export default function DashboardPage() {
               )}
 
               {/* Targets & Stop Loss - Easy to understand */}
-              <div className="grid grid-cols-4 gap-2">
-                <div className="p-3 bg-green-500/10 rounded-lg border border-green-500/30 text-center">
-                  <div className="text-green-500 text-xs font-medium mb-1">🎯 TARGET 1</div>
-                  <div className="text-lg font-bold text-green-500">₹{tradingSignal.target_1.toFixed(0)}</div>
-                  <div className="text-xs text-green-400">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                <div className="p-2 sm:p-3 bg-green-500/10 rounded-lg border border-green-500/30 text-center">
+                  <div className="text-green-500 text-[10px] sm:text-xs font-medium mb-1">🎯 TARGET 1</div>
+                  <div className="text-base sm:text-lg font-bold text-green-500">₹{tradingSignal.target_1.toFixed(0)}</div>
+                  <div className="text-[10px] sm:text-xs text-green-400">
                     +{Math.round(((tradingSignal.target_1 - tradingSignal.entry_price) / tradingSignal.entry_price) * 100)}%
                   </div>
                 </div>
-                <div className="p-3 bg-green-600/10 rounded-lg border border-green-600/30 text-center">
-                  <div className="text-green-500 text-xs font-medium mb-1">🎯 TARGET 2</div>
-                  <div className="text-lg font-bold text-green-500">₹{tradingSignal.target_2.toFixed(0)}</div>
-                  <div className="text-xs text-green-400">
+                <div className="p-2 sm:p-3 bg-green-600/10 rounded-lg border border-green-600/30 text-center">
+                  <div className="text-green-500 text-[10px] sm:text-xs font-medium mb-1">🎯 TARGET 2</div>
+                  <div className="text-base sm:text-lg font-bold text-green-500">₹{tradingSignal.target_2.toFixed(0)}</div>
+                  <div className="text-[10px] sm:text-xs text-green-400">
                     +{Math.round(((tradingSignal.target_2 - tradingSignal.entry_price) / tradingSignal.entry_price) * 100)}%
                   </div>
                 </div>
-                <div className="p-3 bg-red-500/10 rounded-lg border border-red-500/30 text-center">
-                  <div className="text-red-500 text-xs font-medium mb-1">🛑 STOP LOSS</div>
-                  <div className="text-lg font-bold text-red-500">₹{tradingSignal.stop_loss.toFixed(0)}</div>
-                  <div className="text-xs text-red-400">
+                <div className="p-2 sm:p-3 bg-red-500/10 rounded-lg border border-red-500/30 text-center">
+                  <div className="text-red-500 text-[10px] sm:text-xs font-medium mb-1">🛑 STOP LOSS</div>
+                  <div className="text-base sm:text-lg font-bold text-red-500">₹{tradingSignal.stop_loss.toFixed(0)}</div>
+                  <div className="text-[10px] sm:text-xs text-red-400">
                     -{Math.round(((tradingSignal.entry_price - tradingSignal.stop_loss) / tradingSignal.entry_price) * 100)}%
                   </div>
                 </div>
-                <div className="p-3 bg-yellow-500/10 rounded-lg border border-yellow-500/30 text-center">
-                  <div className="text-yellow-500 text-xs font-medium mb-1">⚖️ RISK:REWARD</div>
-                  <div className="text-lg font-bold text-yellow-500">{tradingSignal.risk_reward}</div>
-                  <div className="text-xs text-yellow-400">Favorable</div>
+                <div className="p-2 sm:p-3 bg-yellow-500/10 rounded-lg border border-yellow-500/30 text-center">
+                  <div className="text-yellow-500 text-[10px] sm:text-xs font-medium mb-1">⚖️ R:R</div>
+                  <div className="text-base sm:text-lg font-bold text-yellow-500">{tradingSignal.risk_reward}</div>
+                  <div className="text-[10px] sm:text-xs text-yellow-400">Favorable</div>
                 </div>
               </div>
 

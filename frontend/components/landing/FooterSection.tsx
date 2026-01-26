@@ -146,7 +146,7 @@ export default function FooterSection() {
                 <div className="pt-8 border-t border-white/5">
                     <div className="flex flex-col md:flex-row items-center justify-between gap-4">
                         <p className="text-gray-500 text-sm text-center md:text-left">
-                            © {new Date().getFullYear()} FDS COOP LLP. All rights reserved.
+                            © {new Date().getFullYear()} Cadreago De Private Limited. All rights reserved.
                         </p>
 
                         <div className="flex items-center gap-4 text-xs text-gray-500">
