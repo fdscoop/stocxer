@@ -58,7 +58,7 @@ export default function FooterSection() {
                         <div className="space-y-3 text-sm">
                             <div className="flex items-center gap-2 text-gray-400">
                                 <Building2 className="w-4 h-4 text-purple-400" />
-                                <span>FDS COOP LLP</span>
+                                <span>Cadreago De Private Limited</span>
                             </div>
                             <div className="flex items-center gap-2 text-gray-400">
                                 <MapPin className="w-4 h-4 text-purple-400" />
@@ -66,8 +66,8 @@ export default function FooterSection() {
                             </div>
                             <div className="flex items-center gap-2 text-gray-400">
                                 <Mail className="w-4 h-4 text-purple-400" />
-                                <a href="mailto:help@stocxer.in" className="hover:text-purple-400 transition-colors">
-                                    help@stocxer.in
+                                <a href="mailto:cadreagode@gmx.com" className="hover:text-purple-400 transition-colors">
+                                    cadreagode@gmx.com
                                 </a>
                             </div>
                         </div>

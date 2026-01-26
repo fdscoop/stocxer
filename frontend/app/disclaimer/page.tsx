@@ -153,7 +153,7 @@ export default function DisclaimerPage() {
                         </p>
                         <div className="p-4 rounded-xl bg-white/5 border border-white/10">
                             <p className="text-white font-semibold">FDS COOP LLP</p>
-                            <p className="text-gray-400">Email: help@stocxer.in</p>
+                            <p className="text-gray-400">Email: cadreagode@gmx.com</p>
                             <p className="text-gray-400">Country: India</p>
                         </div>
                     </section>

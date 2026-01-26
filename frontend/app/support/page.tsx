@@ -76,7 +76,7 @@ export default function SupportPage() {
                             </p>
                         </div>
                         <a
-                            href="mailto:help@stocxer.in"
+                            href="mailto:cadreagode@gmx.com"
                             className="inline-flex items-center gap-3 px-8 py-4 rounded-xl bg-purple-600 text-white font-semibold hover:bg-purple-500 transition-all hover:scale-105"
                         >
                             <Mail className="w-5 h-5" />
@@ -86,7 +86,7 @@ export default function SupportPage() {
                     <div className="mt-6 pt-6 border-t border-white/10 flex flex-wrap items-center gap-6 text-sm">
                         <div className="flex items-center gap-2 text-gray-400">
                             <Mail className="w-4 h-4 text-purple-400" />
-                            <span>help@stocxer.in</span>
+                            <span>cadreagode@gmx.com</span>
                         </div>
                         <div className="flex items-center gap-2 text-gray-400">
                             <Clock className="w-4 h-4 text-purple-400" />
@@ -112,7 +112,7 @@ export default function SupportPage() {
                             return (
                                 <a
                                     key={i}
-                                    href={`mailto:help@stocxer.in?subject=${encodeURIComponent(category.title)}`}
+                                    href={`mailto:cadreagode@gmx.com?subject=${encodeURIComponent(category.title)}`}
                                     className="p-5 rounded-xl bg-white/5 border border-white/10 hover:border-purple-500/30 transition-all hover:bg-white/[0.07] group"
                                 >
                                     <div className={`w-12 h-12 rounded-lg ${classes} flex items-center justify-center mb-4`}>
@@ -185,8 +185,8 @@ export default function SupportPage() {
                 <section className="p-6 rounded-2xl bg-white/5 border border-white/10">
                     <h2 className="text-xl font-bold text-white mb-4">Company Information</h2>
                     <div className="space-y-3 text-gray-400">
-                        <p><span className="text-white font-semibold">Company:</span> FDS COOP LLP</p>
-                        <p><span className="text-white font-semibold">Email:</span> help@stocxer.in</p>
+                        <p><span className="text-white font-semibold">Company:</span> Cadreago De Private Limited</p>
+                        <p><span className="text-white font-semibold">Email:</span> cadreagode@gmx.com</p>
                         <p><span className="text-white font-semibold">Country:</span> India</p>
                     </div>
                     <div className="mt-6 pt-6 border-t border-white/10">

@@ -106,7 +106,7 @@ const faqs = [
         questions: [
             {
                 question: 'How do I contact support?',
-                answer: 'You can reach our support team at help@stocxer.in. We typically respond within 24-48 hours during business days.'
+                answer: 'You can reach our support team at cadreagode@gmx.com. We typically respond within 24-48 hours during business days.'
             },
             {
                 question: 'What browsers are supported?',

@@ -108,7 +108,7 @@ export default function FAQSection() {
                 <div className="mt-12 text-center p-6 rounded-2xl bg-gradient-to-r from-purple-500/10 to-blue-500/10 border border-purple-500/20">
                     <p className="text-gray-300 mb-4">Still have questions?</p>
                     <a
-                        href="mailto:help@stocxer.in"
+                        href="mailto:cadreagode@gmx.com"
                         className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 rounded-xl text-white font-semibold transition-all duration-300"
                     >
                         Contact Support

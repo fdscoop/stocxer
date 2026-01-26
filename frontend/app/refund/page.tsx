@@ -107,7 +107,7 @@ export default function RefundPage() {
                             To request a refund:
                         </p>
                         <ol className="text-gray-400 leading-relaxed list-decimal pl-6 space-y-2">
-                            <li>Email us at <span className="text-purple-400">help@stocxer.in</span></li>
+                            <li>Email us at <span className="text-purple-400">cadreagode@gmx.com</span></li>
                             <li>Include your registered email address and subscription details</li>
                             <li>Provide the reason for your refund request</li>
                             <li>Allow 3-5 business days for review and processing</li>
@@ -133,7 +133,7 @@ export default function RefundPage() {
                             <li>Log into your account dashboard</li>
                             <li>Navigate to subscription settings</li>
                             <li>Click &quot;Cancel Subscription&quot;</li>
-                            <li>Alternatively, email us at help@stocxer.in</li>
+                            <li>Alternatively, email us at cadreagode@gmx.com</li>
                         </ul>
                         <div className="mt-4 p-4 rounded-xl bg-green-500/10 border border-green-500/20">
                             <p className="text-green-300 text-sm">
@@ -158,8 +158,8 @@ export default function RefundPage() {
                             For refund requests or questions about this policy:
                         </p>
                         <div className="p-4 rounded-xl bg-white/5 border border-white/10">
-                            <p className="text-white font-semibold">FDS COOP LLP</p>
-                            <p className="text-gray-400">Email: help@stocxer.in</p>
+                            <p className="text-white font-semibold">Cadreago De Private Limited</p>
+                            <p className="text-gray-400">Email: cadreagode@gmx.com</p>
                             <p className="text-gray-400">Subject: Refund Request</p>
                             <p className="text-gray-400">Country: India</p>
                         </div>
