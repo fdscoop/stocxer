@@ -4877,6 +4877,7 @@ async def scan_options(
     strategy: str = Query("all", description="all, momentum, reversal, volatility"),
     include_probability: bool = Query(True, description="Include constituent stock probability analysis"),
     authorization: str = Header(None, description="Bearer token (required)"),
+    token_validation: dict = None,
 ):
     """
     Scan index options for trading opportunities with integrated probability analysis
