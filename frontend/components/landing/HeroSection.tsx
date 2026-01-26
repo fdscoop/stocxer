@@ -33,21 +33,21 @@ export default function HeroSection() {
 
                 {/* Main Headline */}
                 <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold mb-6 leading-tight">
-                    <span className="text-white">Intuitive </span>
+                    <span className="text-white">Best </span>
                     <span className="bg-gradient-to-r from-purple-400 via-blue-400 to-cyan-400 bg-clip-text text-transparent">
-                        AI-Powered
+                        AI Stock Analysis
                     </span>
                     <br />
-                    <span className="text-white">Market Data Analysis Tool</span>
+                    <span className="text-white">Tool in India</span>
                 </h1>
 
                 {/* Sub-headline */}
                 <p className="text-lg sm:text-xl text-gray-400 max-w-3xl mx-auto mb-6 leading-relaxed">
-                    An AI-based data analysis software for{' '}
+                    Advanced AI-based market data analysis software for{' '}
                     <span className="text-purple-400 font-semibold">analytical</span>,{' '}
                     <span className="text-blue-400 font-semibold">research</span>, and{' '}
                     <span className="text-cyan-400 font-semibold">informational</span> purposes 
-                    — combining Smart Money Concepts, ML models, and News Sentiment.
+                    — combining Smart Money Concepts, ML models, and News Sentiment analysis.
                 </p>
 
                 {/* Fyers Account Requirement */}

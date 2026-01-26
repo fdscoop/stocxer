@@ -11,7 +11,7 @@ export const metadata: Metadata = {
     template: '%s | Stocxer AI'
   },
   description: 'Stocxer AI is an intuitive AI-based data analysis software for analytical, research, and informational purposes. Combines ICT Smart Money Concepts, ML models, and News Sentiment.',
-  keywords: ['Stocxer AI', 'ICT analysis India', 'Smart Money Concepts', 'Options Greeks', 'NIFTY analysis', 'BANKNIFTY scanner', 'Watchman AI', 'market data analysis', 'trading analytics India', 'stock screener India', 'options analysis'],
+  keywords: ['best stock analysis tool India', 'AI stock analysis software', 'stock market analysis tool', 'best trading analysis software India', 'AI market analysis India', 'stock analysis platform India', 'automated stock analysis', 'AI trading analytics', 'stock screener India', 'option analysis tool India', 'NIFTY analysis tool', 'BANKNIFTY analysis software', 'ICT analysis India', 'Smart Money Concepts', 'Options Greeks calculator', 'Watchman AI', 'market data analysis tool', 'stock research tool India', 'technical analysis software India', 'Indian stock market analysis'],
   authors: [{ name: 'Cadreago De Private Limited' }],
   creator: 'Cadreago De Private Limited',
   publisher: 'Cadreago De Private Limited',
@@ -89,7 +89,7 @@ export default function RootLayout({
             __html: JSON.stringify({
               '@context': 'https://schema.org',
               '@type': 'SoftwareApplication',
-              name: 'Stocxer AI',
+              name: 'Stocxer AI - Best Stock Analysis Tool India',
               applicationCategory: 'FinanceApplication',
               operatingSystem: 'Web',
               offers: {
@@ -102,12 +102,24 @@ export default function RootLayout({
                 ratingValue: '4.8',
                 ratingCount: '150',
               },
-              description: 'AI-powered market data analysis tool for analytical, research, and informational purposes.',
+              description: 'Best AI stock analysis software in India. Advanced market data analysis tool with Smart Money Concepts, ML models, and News Sentiment for analytical and research purposes.',
+              keywords: 'best stock analysis tool India, AI stock analysis software, stock market analysis tool, trading analytics India',
+              targetCountry: 'IN',
+              inLanguage: 'en-IN',
               publisher: {
                 '@type': 'Organization',
                 name: 'Cadreago De Private Limited',
                 email: 'cadreagode@gmx.com',
               },
+              featureList: [
+                'ICT Smart Money Concepts',
+                'ML-powered market analysis',
+                'News sentiment analysis',
+                'Options Greeks calculator',
+                'Stock screener',
+                'NIFTY & BANKNIFTY analysis',
+                'Watchman AI v3.5'
+              ],
             }),
           }}
         />
