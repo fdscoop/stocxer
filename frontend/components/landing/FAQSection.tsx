@@ -38,7 +38,7 @@ const faqs = [
     },
     {
         question: 'Is Stocxer SEBI registered?',
-        answer: 'No. Stocxer is a data analysis tool for analytical, research, and informational purposes only. We do not provide investment advice or trading recommendations.',
+        answer: 'No. Stocxer AI is a data analysis tool for analytical, research, and informational purposes only — not a replacement for your own research and judgment. We do not provide investment advice or trading recommendations. Always do your due diligence and consider consulting a SEBI-registered financial advisor before making investment decisions.',
     },
     {
         question: 'Do credits expire?',
