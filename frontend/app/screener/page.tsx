@@ -184,7 +184,13 @@ export default function ScreenerPage() {
         message = `You are about to scan ${costData.stock_count} stock${costData.stock_count !== 1 ? 's' : ''}.\n\n`
         message += `✅ This scan will use your ${costData.subscription_info.plan_type} subscription.\n`
         message += `📊 Scans remaining today: ${costData.subscription_info.scans_remaining} of ${costData.subscription_info.daily_limit}\n\n`
-        message += 'Click OK to proceed.'
+        
+        // Add note about individual scanning for custom selections
+        if (scanMode === 'custom' && costData.stock_count > 1) {
+          message += `💡 Tip: You can also scan these stocks individually from the "Options Scanner" tab if you prefer to analyze one at a time.\n\n`
+        }
+        
+        message += 'Click OK to proceed with bulk scan.'
       } else {
         message = `You are about to scan ${costData.stock_count} stock${costData.stock_count !== 1 ? 's' : ''}.\n\n`
         message += `💰 Total cost: ₹${costData.total_cost.toFixed(2)} (₹${costData.per_stock_cost} per stock)\n`
@@ -197,7 +203,15 @@ export default function ScreenerPage() {
         }
         
         message += '✅ Amount will be deducted from your wallet.\n\n'
-        message += 'Click OK to proceed with the scan.'
+        
+        // Add note about individual scanning for custom selections
+        if (scanMode === 'custom' && costData.stock_count > 1) {
+          message += `💡 Alternative: You can scan these ${costData.stock_count} stocks individually from the "Options Scanner" tab.\n`
+          message += `   • Bulk scan: ₹${costData.total_cost.toFixed(2)} now\n`
+          message += `   • Individual scans: ₹${costData.per_stock_cost} per stock (pay as you go)\n\n`
+        }
+        
+        message += 'Click OK to proceed with bulk scan.'
       }
 
       if (!confirm(message)) {
