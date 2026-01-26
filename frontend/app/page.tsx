@@ -703,15 +703,41 @@ export default function DashboardPage() {
               backendSignal.confidence === 'MODERATE' ? 55 :
                 backendSignal.confidence === 'MEDIUM' ? 50 : 35)
 
+        // Get entry price - prefer best_entry_price from discount zone analysis
+        const entryPrice = backendSignal.entry.best_entry_price || backendSignal.entry.price
+        
+        // CRITICAL FIX: Ensure stop_loss is ALWAYS below entry_price for BUY positions
+        // If backend sends invalid stop_loss (>= entry), recalculate it
+        let stopLoss = backendSignal.targets.stop_loss
+        let stopLossCorrected = false
+        if (stopLoss >= entryPrice) {
+          console.warn(`⚠️ Invalid stop_loss (${stopLoss}) >= entry (${entryPrice}). Recalculating...`)
+          // Calculate 15% below entry price as safety
+          stopLoss = Math.round(entryPrice * 0.85 * 100) / 100
+          stopLossCorrected = true
+          console.log(`   Corrected stop_loss to ${stopLoss}`)
+        }
+        
+        // Recalculate risk/reward if stop_loss was corrected
+        let riskReward = backendSignal.risk_reward?.ratio_1 ? `1:${typeof backendSignal.risk_reward.ratio_1 === 'number' ? backendSignal.risk_reward.ratio_1.toFixed(1) : backendSignal.risk_reward.ratio_1}` : '1:2'
+        if (stopLossCorrected) {
+          const risk = entryPrice - stopLoss
+          const target1 = backendSignal.targets.target_1
+          const reward = target1 - entryPrice
+          if (risk > 0) {
+            riskReward = `1:${(reward / risk).toFixed(1)}`
+          }
+        }
+
         const tradingSignal: TradingSignal = {
           action: backendSignal.action,
           strike: backendSignal.option.strike,
           type: backendSignal.option.type,
-          entry_price: backendSignal.entry.best_entry_price || backendSignal.entry.price,
+          entry_price: entryPrice,
           target_1: backendSignal.targets.target_1,
           target_2: backendSignal.targets.target_2,
-          stop_loss: backendSignal.targets.stop_loss,
-          risk_reward: backendSignal.risk_reward?.ratio_1 ? `1:${typeof backendSignal.risk_reward.ratio_1 === 'number' ? backendSignal.risk_reward.ratio_1.toFixed(1) : backendSignal.risk_reward.ratio_1}` : '1:2',
+          stop_loss: stopLoss,
+          risk_reward: riskReward,
           confidence: numericConfidence,
           direction: backendSignal.signal_type || 'NEUTRAL',
           trading_symbol: backendSignal.option.symbol,
