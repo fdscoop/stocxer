@@ -33,13 +33,25 @@ from src.middleware.refund_decorator import with_refund_on_failure
 from src.api.billing_routes import router as billing_router
 
 # News sentiment service for market analysis
+# Primary: Tradient API (free, 50+ articles, pre-computed sentiment)
+# Fallback: Marketaux API (100 requests/day limit)
 try:
-    from src.services.news_service import news_service, MarketauxNewsService
+    from src.services.tradient_news_service import tradient_news_service as news_service, TradientNewsService
     NEWS_SERVICE_AVAILABLE = True
+    NEWS_SERVICE_TYPE = "tradient"
+    logging.info("✅ Tradient news service loaded (with Marketaux fallback)")
 except ImportError as e:
-    NEWS_SERVICE_AVAILABLE = False
-    news_service = None
-    logging.warning(f"News service not available: {e}")
+    # Fallback to old service if new one not available
+    try:
+        from src.services.news_service import news_service, MarketauxNewsService
+        NEWS_SERVICE_AVAILABLE = True
+        NEWS_SERVICE_TYPE = "marketaux"
+        logging.warning(f"⚠️ Using legacy Marketaux news service: {e}")
+    except ImportError as e2:
+        NEWS_SERVICE_AVAILABLE = False
+        NEWS_SERVICE_TYPE = None
+        news_service = None
+        logging.warning(f"News service not available: {e2}")
 
 # IST timezone utilities for consistent time handling across geographies
 from src.utils.ist_utils import now_ist, get_ist_time, ist_timestamp, is_market_open, get_session_info as get_ist_session_info
@@ -174,13 +186,13 @@ async def auto_scan_options():
 
 async def fetch_market_news():
     """
-    Background task to fetch news from Marketaux API every 15 minutes.
+    Background task to fetch news from Marketaux API every 1 hour.
     Stores news in Supabase for sentiment analysis.
     
     Rate limits:
     - 100 requests/day
     - 3 articles per request
-    - Fetch every 15 minutes = ~96 requests/day (safe margin)
+    - Fetch every 1 hour = ~24 requests/day (safe margin)
     
     Fetches 24/7 to keep news updated at all times.
     """
@@ -293,13 +305,13 @@ async def load_fyers_token_from_db():
     # The scan is now only triggered on-demand from the frontend
     logger.info("ℹ️ Auto options scanner disabled - scans are on-demand only")
     
-    # Start news fetch scheduler (every 15 minutes)
+    # Start news fetch scheduler (every 1 hour)
     if NEWS_SERVICE_AVAILABLE and news_service:
         try:
-            # Add news fetch job - runs every 15 minutes
+            # Add news fetch job - runs every 1 hour
             scheduler.add_job(
                 fetch_market_news,
-                IntervalTrigger(minutes=15),
+                IntervalTrigger(hours=1),
                 id="news_fetch_job",
                 name="Fetch Market News from Marketaux",
                 replace_existing=True
@@ -310,7 +322,7 @@ async def load_fyers_token_from_db():
                 scheduler.start()
                 logger.info("✅ Background scheduler started")
             
-            logger.info("📰 News fetch scheduler configured - will fetch every 15 minutes")
+            logger.info("📰 News fetch scheduler configured - will fetch every 1 hour")
             
             # Fetch news immediately on startup
             logger.info("📰 Fetching initial news on startup...")
@@ -406,13 +418,78 @@ async def fyers_callback_page():
 # Health check
 @app.get("/health")
 async def health_check():
-    """API health check"""
+    """API health check with scheduler status and news service info"""
+    scheduler_status = "running" if scheduler.running else "stopped"
+    scheduler_jobs = []
+    
+    if scheduler.running:
+        for job in scheduler.get_jobs():
+            scheduler_jobs.append({
+                "id": job.id,
+                "name": job.name,
+                "next_run": job.next_run_time.isoformat() if job.next_run_time else None
+            })
+    
+    # Get news service status
+    news_status = {
+        "available": NEWS_SERVICE_AVAILABLE,
+        "type": NEWS_SERVICE_TYPE if NEWS_SERVICE_AVAILABLE else None
+    }
+    
+    if NEWS_SERVICE_AVAILABLE and hasattr(news_service, 'get_service_status'):
+        news_status.update(news_service.get_service_status())
+    
     return {
         "status": "online",
         "service": "TradeWise API",
         "version": "1.0.0",
-        "timestamp": datetime.now().isoformat()
+        "timestamp": datetime.now().isoformat(),
+        "scheduler": {
+            "status": scheduler_status,
+            "jobs": scheduler_jobs
+        },
+        "news_service": news_status
     }
+
+
+@app.get("/fetch-news")
+async def trigger_news_fetch():
+    """
+    Public endpoint to trigger news fetch - can be called by external cron services.
+    
+    Uses Tradient API as primary source (free, 50+ articles with pre-computed sentiment).
+    Falls back to Marketaux API if Tradient is unavailable.
+    """
+    if not NEWS_SERVICE_AVAILABLE or not news_service:
+        raise HTTPException(
+            status_code=503,
+            detail="News service not available"
+        )
+    
+    try:
+        logger.info("📰 News fetch triggered via /fetch-news endpoint")
+        articles_stored = await news_service.fetch_and_store_news()
+        
+        # Get service status for response
+        service_status = {}
+        if hasattr(news_service, 'get_service_status'):
+            service_status = news_service.get_service_status()
+        
+        return {
+            "success": True,
+            "articles_stored": articles_stored,
+            "timestamp": datetime.now().isoformat(),
+            "message": f"Successfully fetched and stored {articles_stored} articles",
+            "source": service_status.get("primary_source", "unknown"),
+            "using_fallback": service_status.get("using_fallback", False),
+            "service_status": service_status
+        }
+    except Exception as e:
+        logger.error(f"❌ Error in /fetch-news endpoint: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to fetch news: {str(e)}"
+        )
 
 
 # Authentication endpoints
@@ -3093,8 +3170,19 @@ def _generate_actionable_signal(mtf_result, session_info, chain_data, historical
         iv = chain_data.get("atm_iv", 15) / 100 if chain_data.get("atm_iv") else 0.15
         dte = chain_data.get("days_to_expiry", 7)
         
-        # Adaptive profit targets based on strategic entry price
-        entry_for_calc = strategic_entry_price
+        # CRITICAL: Use the ACTUAL displayed entry price for calculations
+        # If discount_zone provides a best_entry_price, use that; otherwise use current LTP
+        # This ensures stop_loss is ALWAYS below the displayed entry price
+        best_entry_from_discount = None
+        if discount_zone_analysis:
+            best_entry_from_discount = discount_zone_analysis.get('best_entry_price')
+        
+        # Use the lowest reasonable entry price to ensure stop loss is valid
+        entry_for_calc = min(
+            strategic_entry_price,
+            current_ltp,
+            best_entry_from_discount if best_entry_from_discount else current_ltp
+        )
         
         # INTRADAY TARGETS: Lower profit expectations, tighter stops
         if entry_for_calc <= 20:  # Cheap options

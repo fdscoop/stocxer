@@ -3,7 +3,7 @@ News and Sentiment Analysis Module
 Fetches market news and performs sentiment analysis
 for trading signal enhancement.
 
-This module integrates with Marketaux API via news_service for real news data
+This module integrates with news service (Tradient primary, Marketaux fallback)
 and provides sentiment analysis for options/stock scanning signals.
 """
 from dataclasses import dataclass
@@ -17,13 +17,24 @@ import asyncio
 logger = logging.getLogger(__name__)
 
 # Try to import news service for real data
+# Primary: Tradient (free, 50+ articles, pre-computed sentiment)
+# Fallback: Marketaux (100 requests/day limit)
 try:
-    from src.services.news_service import news_service, MarketauxNewsService
+    from src.services.tradient_news_service import tradient_news_service as news_service, TradientNewsService
     NEWS_SERVICE_AVAILABLE = True
+    NEWS_SERVICE_TYPE = "tradient"
+    logger.info("✅ Using Tradient news service for sentiment analysis")
 except ImportError:
-    NEWS_SERVICE_AVAILABLE = False
-    news_service = None
-    logger.warning("News service not available. Using simulated data.")
+    try:
+        from src.services.news_service import news_service, MarketauxNewsService
+        NEWS_SERVICE_AVAILABLE = True
+        NEWS_SERVICE_TYPE = "marketaux"
+        logger.warning("⚠️ Using legacy Marketaux news service")
+    except ImportError:
+        NEWS_SERVICE_AVAILABLE = False
+        NEWS_SERVICE_TYPE = None
+        news_service = None
+        logger.warning("News service not available. Using simulated data.")
 
 
 @dataclass
