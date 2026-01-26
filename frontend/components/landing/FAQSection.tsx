@@ -17,8 +17,8 @@ const faqs = [
         answer: 'We calculate Delta, Gamma, Theta, Vega, Rho, and Implied Volatility using Black-Scholes models.',
     },
     {
-        question: 'Do you have risk management tools?',
-        answer: 'Yes. We provide position sizing calculator and stop-loss suggestions based on your capital and risk tolerance.',
+        question: 'Do you have risk assessment tools?',
+        answer: 'Yes. We provide educational position sizing calculators and risk analysis tools for informational purposes.',
     },
     {
         question: 'Which brokers do you support?',
@@ -26,7 +26,7 @@ const faqs = [
     },
     {
         question: 'Is Stocxer SEBI registered?',
-        answer: 'No. Stocxer is a market analytics tool for informational and educational purposes only. We do not provide investment advice or trading recommendations.',
+        answer: 'No. Stocxer is a data analysis tool for analytical, research, and informational purposes only. We do not provide investment advice or trading recommendations.',
     },
     {
         question: 'Do credits expire?',

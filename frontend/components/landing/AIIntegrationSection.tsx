@@ -55,7 +55,7 @@ export default function AIIntegrationSection() {
               {/* User Message */}
               <div className="flex justify-end">
                 <div className="bg-blue-600 text-white px-6 py-3 rounded-2xl rounded-tr-sm max-w-md">
-                  <p className="text-sm">Should I buy RELIANCE today?</p>
+                  <p className="text-sm">What does RELIANCE analysis show?</p>
                 </div>
               </div>
 
@@ -63,16 +63,17 @@ export default function AIIntegrationSection() {
               <div className="flex justify-start">
                 <div className="bg-gray-800 text-gray-200 px-6 py-4 rounded-2xl rounded-tl-sm max-w-md">
                   <div className="flex items-center gap-2 mb-2">
-                    <TrendingUp className="w-4 h-4 text-green-400" />
-                    <p className="text-sm font-semibold text-green-400">BUY Signal</p>
+                    <TrendingUp className="w-4 h-4 text-blue-400" />
+                    <p className="text-sm font-semibold text-blue-400">Analysis Summary</p>
                   </div>
-                  <p className="text-sm mb-2">RELIANCE shows bullish momentum:</p>
+                  <p className="text-sm mb-2">RELIANCE technical indicators:</p>
                   <ul className="text-sm space-y-1 text-gray-300">
-                    <li>• Entry: ₹2,845</li>
-                    <li>• Target: ₹2,920</li>
-                    <li>• Stop Loss: ₹2,810</li>
-                    <li>• Confidence: 78%</li>
+                    <li>• Current Price: ₹2,845</li>
+                    <li>• ICT Order Block: Near ₹2,800</li>
+                    <li>• FVG Zone: ₹2,820 - ₹2,850</li>
+                    <li>• Sentiment: Neutral</li>
                   </ul>
+                  <p className="text-xs text-gray-500 mt-2 italic">*For educational purposes only</p>
                 </div>
               </div>
             </div>
@@ -98,10 +99,10 @@ export default function AIIntegrationSection() {
               <Brain className="w-8 h-8 text-purple-400" />
             </div>
             <h3 className="text-xl font-semibold text-white mb-2">
-              Smart Insights
+              Educational Insights
             </h3>
             <p className="text-gray-400">
-              AI understands context and provides actionable trading recommendations.
+              AI helps explain market patterns and technical indicators in plain language.
             </p>
           </div>
 

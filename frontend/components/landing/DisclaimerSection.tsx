@@ -1,11 +1,38 @@
 'use client'
 
-import { AlertTriangle, Info } from 'lucide-react'
+import { AlertTriangle, Info, ExternalLink, Shield } from 'lucide-react'
+import Link from 'next/link'
 
 export default function DisclaimerSection() {
     return (
         <section className="py-16 px-4 sm:px-6 lg:px-8 bg-gradient-to-b from-[#0a0a0f] to-[#0a0a12]">
             <div className="max-w-4xl mx-auto">
+                {/* Fyers Account Requirement */}
+                <div className="mb-8 rounded-2xl bg-gradient-to-b from-blue-500/5 to-cyan-500/5 border border-blue-500/20 p-6">
+                    <div className="flex items-start gap-4">
+                        <div className="p-2 rounded-lg bg-blue-500/20 flex-shrink-0">
+                            <Shield className="w-6 h-6 text-blue-400" />
+                        </div>
+                        <div>
+                            <h3 className="text-xl font-bold text-white mb-2">Fyers Trading Account Required</h3>
+                            <p className="text-gray-400 mb-4">
+                                Stocxer AI requires an active <strong className="text-blue-400">Fyers trading account</strong> to 
+                                access live market data and portfolio information. We use Fyers API for secure, 
+                                read-only access to market data.
+                            </p>
+                            <Link
+                                href="https://fyers.in"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-2 px-4 py-2 bg-blue-500/20 hover:bg-blue-500/30 border border-blue-500/30 rounded-lg text-blue-400 text-sm font-medium transition-colors"
+                            >
+                                Open Fyers Account
+                                <ExternalLink className="w-4 h-4" />
+                            </Link>
+                        </div>
+                    </div>
+                </div>
+
                 {/* Main Disclaimer Card */}
                 <div className="rounded-2xl bg-gradient-to-b from-yellow-500/5 to-orange-500/5 border border-yellow-500/20 p-8">
                     {/* Header */}
@@ -19,19 +46,22 @@ export default function DisclaimerSection() {
                     {/* Main Disclaimer Text */}
                     <div className="space-y-4 text-gray-300 leading-relaxed">
                         <p>
-                            <strong className="text-white">Stocxer AI</strong> provides analytical tools and probability-based
-                            market insights for <strong className="text-yellow-400">informational and educational purposes only</strong>.
+                            <strong className="text-white">Stocxer AI</strong> is an intuitive AI-based data analysis 
+                            software that displays technical indicators and probability models for <strong className="text-yellow-400">analytical, 
+                            research, and informational purposes only</strong>.
                         </p>
 
                         <p>
-                            It does <strong className="text-red-400">not</strong> provide investment advice, trading recommendations,
-                            or guarantees of profit. All analysis is based on historical data and mathematical models,
-                            which may not accurately reflect future market conditions.
+                            The platform does <strong className="text-red-400">not</strong> provide investment advice, 
+                            stock recommendations, buy/sell signals, or guarantees of profit. All displayed data is 
+                            derived from historical patterns and mathematical models, which may not accurately 
+                            reflect future market conditions.
                         </p>
 
                         <p>
-                            Users are fully responsible for their own trading and investment decisions.
-                            Past performance of any analytical model is not indicative of future results.
+                            Users are <strong className="text-white">fully responsible</strong> for their own trading 
+                            and investment decisions. We strongly recommend consulting with a SEBI-registered 
+                            investment adviser before making any financial decisions.
                         </p>
                     </div>
 
@@ -40,32 +70,47 @@ export default function DisclaimerSection() {
                         <div className="flex items-start gap-3">
                             <Info className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
                             <div>
-                                <p className="text-red-400 font-semibold mb-1">Regulatory Notice</p>
+                                <p className="text-red-400 font-semibold mb-1">SEBI Regulatory Notice</p>
                                 <p className="text-gray-400 text-sm">
-                                    Stocxer AI and FDS COOP LLP are <strong className="text-red-300">not registered
-                                        as SEBI investment advisers</strong>. The platform provides market analytics tools only
-                                    and should not be construed as personalized investment advice.
+                                    Stocxer AI and FDS COOP LLP are <strong className="text-red-300">not registered 
+                                    with SEBI as investment advisers or research analysts</strong>. This platform 
+                                    is a technology tool for market data visualization and educational analytics. 
+                                    No content on this platform should be construed as personalized investment 
+                                    advice or stock recommendations.
                                 </p>
                             </div>
                         </div>
                     </div>
 
+                    {/* Compliance Statement */}
+                    <div className="mt-6 p-4 rounded-xl bg-purple-500/10 border border-purple-500/20">
+                        <p className="text-purple-300 text-sm">
+                            <strong>Compliance Statement:</strong> Stocxer AI is a data analysis tool designed 
+                            for analytical, research, and informational purposes. It adheres to SEBI content 
+                            guidelines and refrains from providing any form of investment recommendations, 
+                            stock tips, or trading signals. Users utilize this software for their own 
+                            independent research and analysis.
+                        </p>
+                    </div>
+
                     {/* Risk Warning */}
                     <div className="mt-6 p-4 rounded-xl bg-orange-500/10 border border-orange-500/20">
                         <p className="text-orange-300 text-sm">
-                            <strong>Risk Warning:</strong> Trading in stocks and derivatives involves substantial risk
-                            of loss and is not suitable for all investors. Please consult with a qualified financial
-                            advisor before making any investment decisions.
+                            <strong>Risk Warning:</strong> Trading in stocks, derivatives, and F&O involves 
+                            substantial risk of loss and is not suitable for all investors. Past performance 
+                            of any analytical model is not indicative of future results. Please consult with 
+                            a SEBI-registered financial advisor before making any investment decisions.
                         </p>
                     </div>
                 </div>
 
                 {/* Quick Legal Points */}
-                <div className="mt-8 grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div className="mt-8 grid grid-cols-1 sm:grid-cols-4 gap-4">
                     {[
-                        { title: 'No Guaranteed Returns', desc: 'All insights are probabilistic, not certain' },
-                        { title: 'Educational Purpose', desc: 'Information provided for learning only' },
+                        { title: 'Data Analysis Tool', desc: 'Software for analytical & research use' },
+                        { title: 'Informational Only', desc: 'Not investment advice or recommendations' },
                         { title: 'User Responsibility', desc: 'You make your own trading decisions' },
+                        { title: 'Fyers Account Required', desc: 'Requires active Fyers trading account' },
                     ].map((point, i) => (
                         <div
                             key={i}

@@ -20,7 +20,7 @@ const benefits = [
     {
         icon: Layout,
         title: 'Clean Data Presentation',
-        description: 'View processed, relevant insights in an intuitive interface designed for quick decision-making.',
+        description: 'View processed, relevant insights in an intuitive interface designed for efficient research.',
         features: ['Visual dashboards', 'Real-time updates', 'Organized layouts'],
     },
     {
@@ -68,7 +68,7 @@ export default function BenefitsSection() {
                         </span>
                     </h2>
                     <p className="text-gray-400 text-lg max-w-2xl mx-auto">
-                        Why traders choose Stocxer AI for their market analytics needs
+                        Why researchers choose Stocxer AI for their market data analysis needs
                     </p>
                 </div>
 

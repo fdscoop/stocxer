@@ -8,7 +8,7 @@ const features = [
     { name: 'News Sentiment Analysis', stocxer: 'yes', sensibull: 'no', quantsapp: 'limited', opstra: 'no' },
     { name: 'Options Greeks Calculator', stocxer: 'yes', sensibull: 'yes', quantsapp: 'yes', opstra: 'yes' },
     { name: 'OI / IV / PCR Analysis', stocxer: 'yes', sensibull: 'yes', quantsapp: 'yes', opstra: 'yes' },
-    { name: 'Risk Management Tools', stocxer: 'yes', sensibull: 'limited', quantsapp: 'no', opstra: 'no' },
+    { name: 'Risk Assessment Tools', stocxer: 'yes', sensibull: 'limited', quantsapp: 'no', opstra: 'no' },
     { name: 'Composite Analysis Score', stocxer: 'yes', sensibull: 'no', quantsapp: 'no', opstra: 'no' },
     { name: 'Processed Data (No Clutter)', stocxer: 'yes', sensibull: 'no', quantsapp: 'no', opstra: 'no' },
     { name: 'Pay As You Go Pricing', stocxer: 'yes', sensibull: 'no', quantsapp: 'no', opstra: 'no' },
@@ -39,7 +39,7 @@ export default function CompetitorComparison() {
                         </span>
                     </h2>
                     <p className="text-gray-400 text-lg max-w-2xl mx-auto">
-                        Feature-by-feature comparison with leading Indian trading platforms
+                        Feature-by-feature comparison with leading Indian data analysis platforms
                     </p>
                 </div>
 

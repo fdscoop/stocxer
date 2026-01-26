@@ -42,7 +42,7 @@ const plans = [
         name: 'Medium',
         price: '₹4,999',
         period: '/month',
-        description: 'Perfect for active traders',
+        description: 'Perfect for active researchers',
         icon: Zap,
         features: [
             '30,000 scans/month',
@@ -89,7 +89,7 @@ export default function PricingSection() {
                         </span>
                     </h2>
                     <p className="text-gray-400 text-lg max-w-2xl mx-auto">
-                        Choose the plan that fits your trading style. No hidden fees, cancel anytime.
+                        Choose the plan that fits your research needs. No hidden fees, cancel anytime.
                     </p>
                 </div>
 

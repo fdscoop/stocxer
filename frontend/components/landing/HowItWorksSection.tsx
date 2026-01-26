@@ -42,7 +42,7 @@ export default function HowItWorksSection() {
                         </span>
                     </h2>
                     <p className="text-gray-400 text-lg max-w-2xl mx-auto">
-                        Three steps to smarter analysis
+                        Three steps to comprehensive data analysis
                     </p>
                 </div>
 

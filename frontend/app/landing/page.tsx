@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import RegulatoryBanner from '@/components/landing/RegulatoryBanner'
 import HeroSection from '@/components/landing/HeroSection'
 import FeaturesSection from '@/components/landing/FeaturesSection'
 import HowItWorksSection from '@/components/landing/HowItWorksSection'
@@ -12,8 +13,8 @@ import DisclaimerSection from '@/components/landing/DisclaimerSection'
 import FooterSection from '@/components/landing/FooterSection'
 
 export const metadata: Metadata = {
-    title: 'Stocxer AI - India\'s First ICT + AI Market Analysis Platform',
-    description: 'Stop interpreting raw data. Get consolidated probability analysis powered by Smart Money Concepts, Machine Learning, and News Sentiment for informed decision-making.',
+    title: 'Stocxer AI - AI-Powered Market Data Analysis Tool',
+    description: 'Stocxer AI is an intuitive AI-based data analysis software for analytical, research, and informational purposes. Combines ICT Smart Money Concepts, ML models, and News Sentiment. Requires Fyers trading account.',
     keywords: [
         'ICT analysis India',
         'Smart Money Concepts',
@@ -27,16 +28,16 @@ export const metadata: Metadata = {
         'Options analysis India',
     ],
     openGraph: {
-        title: 'Stocxer AI - India\'s First ICT + AI Market Analysis Platform',
-        description: 'ICT + ML + Sentiment analysis combined. No other Indian platform offers this.',
+        title: 'Stocxer AI - AI-Powered Market Data Analysis Tool',
+        description: 'An intuitive AI-based data analysis software for analytical, research, and informational purposes.',
         type: 'website',
         locale: 'en_IN',
         siteName: 'Stocxer AI',
     },
     twitter: {
         card: 'summary_large_image',
-        title: 'Stocxer AI - India\'s First ICT + AI Platform',
-        description: 'Smart Money Concepts + Machine Learning + News Sentiment Analysis',
+        title: 'Stocxer AI - AI-Powered Data Analysis Tool',
+        description: 'Intuitive AI-based market data analysis software for research and informational purposes.',
     },
     robots: {
         index: true,
@@ -47,6 +48,9 @@ export const metadata: Metadata = {
 export default function LandingPage() {
     return (
         <main className="min-h-screen bg-[#0a0a0f]">
+            {/* Regulatory Banner - SEBI Compliance */}
+            <RegulatoryBanner />
+
             {/* Hero Section - Above the Fold */}
             <HeroSection />
 

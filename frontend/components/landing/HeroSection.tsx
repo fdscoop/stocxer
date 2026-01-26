@@ -1,6 +1,6 @@
 'use client'
 
-import { ArrowRight, BarChart3, Sparkles, TrendingUp } from 'lucide-react'
+import { ArrowRight, BarChart3, Sparkles, TrendingUp, ExternalLink, AlertCircle } from 'lucide-react'
 import Link from 'next/link'
 
 export default function HeroSection() {
@@ -33,21 +33,47 @@ export default function HeroSection() {
 
                 {/* Main Headline */}
                 <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold mb-6 leading-tight">
-                    <span className="text-white">India's First </span>
+                    <span className="text-white">Intuitive </span>
                     <span className="bg-gradient-to-r from-purple-400 via-blue-400 to-cyan-400 bg-clip-text text-transparent">
-                        ICT + AI
+                        AI-Powered
                     </span>
                     <br />
-                    <span className="text-white">Market Analysis Platform</span>
+                    <span className="text-white">Market Data Analysis Tool</span>
                 </h1>
 
                 {/* Sub-headline */}
-                <p className="text-lg sm:text-xl text-gray-400 max-w-3xl mx-auto mb-10 leading-relaxed">
-                    Stop interpreting raw data. Get consolidated probability analysis powered by{' '}
-                    <span className="text-purple-400 font-semibold">Smart Money Concepts</span>,{' '}
-                    <span className="text-blue-400 font-semibold">Machine Learning</span>, and{' '}
-                    <span className="text-cyan-400 font-semibold">News Sentiment</span> — for informed decision-making.
+                <p className="text-lg sm:text-xl text-gray-400 max-w-3xl mx-auto mb-6 leading-relaxed">
+                    An AI-based data analysis software for{' '}
+                    <span className="text-purple-400 font-semibold">analytical</span>,{' '}
+                    <span className="text-blue-400 font-semibold">research</span>, and{' '}
+                    <span className="text-cyan-400 font-semibold">informational</span> purposes 
+                    — combining Smart Money Concepts, ML models, and News Sentiment.
                 </p>
+
+                {/* Fyers Account Requirement */}
+                <div className="flex items-center justify-center gap-2 mb-6">
+                    <div className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-500/10 border border-blue-500/20">
+                        <AlertCircle className="w-4 h-4 text-blue-400" />
+                        <span className="text-sm text-gray-300">
+                            <span className="text-blue-400 font-medium">Fyers trading account</span> required to access market data
+                        </span>
+                        <Link
+                            href="https://fyers.in"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1 text-xs text-blue-400 hover:text-blue-300 transition-colors underline underline-offset-2"
+                        >
+                            Open Account
+                            <ExternalLink className="w-3 h-3" />
+                        </Link>
+                    </div>
+                </div>
+
+                {/* Educational Purpose Disclaimer */}
+                <div className="inline-flex items-center gap-2 px-4 py-2 mb-8 rounded-lg bg-yellow-500/10 border border-yellow-500/20">
+                    <span className="text-sm text-yellow-400 font-medium">� For analytical, research & informational purposes only</span>
+                    <span className="text-sm text-gray-500">— Not investment advice</span>
+                </div>
 
                 {/* CTAs */}
                 <div className="flex flex-col sm:flex-row gap-4 justify-center mb-12">
@@ -56,7 +82,7 @@ export default function HeroSection() {
                         className="group relative inline-flex items-center justify-center gap-2 px-8 py-4 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 rounded-xl text-white font-semibold text-lg transition-all duration-300 shadow-lg shadow-purple-500/25 hover:shadow-purple-500/40 hover:scale-105"
                     >
                         <BarChart3 className="w-5 h-5" />
-                        Start Free — 100 Credits
+                        Try Free — 100 Credits
                         <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
                     </Link>
                     <Link
@@ -72,14 +98,14 @@ export default function HeroSection() {
                 <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-16 max-w-4xl mx-auto">
                     {[
                         'ICT Order Block & FVG Detection',
-                        'ML-Powered Probability Assessment',
-                        'Real-time News Sentiment Scoring'
+                        'ML-Powered Probability Models',
+                        'Real-time News Sentiment Tracking'
                     ].map((badge, i) => (
                         <div
                             key={i}
                             className="flex items-center gap-2 px-4 py-2 rounded-lg bg-white/5 border border-white/10 backdrop-blur-sm"
                         >
-                            <span className="text-green-400 text-lg">✓</span>
+                            <span className="text-blue-400 text-lg">📊</span>
                             <span className="text-sm text-gray-300">{badge}</span>
                         </div>
                     ))}

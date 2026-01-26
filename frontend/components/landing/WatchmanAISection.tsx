@@ -31,7 +31,7 @@ const capabilities = [
     {
         icon: Target,
         title: 'Risk Analysis',
-        description: 'Position sizing and stop-loss suggestions',
+        description: 'Educational position sizing calculators',
     },
 ]
 
@@ -102,14 +102,14 @@ export default function WatchmanAISection() {
                         {/* Description */}
                         <p className="text-lg text-gray-400 mb-8 leading-relaxed">
                             Watchman AI is Stocxer&apos;s proprietary analysis engine. It combines multiple analytical 
-                            methods to generate probability-based insights for informed decision-making.
+                            methods to generate probability-based data patterns for research and informational purposes.
                         </p>
 
                         {/* Important Note */}
                         <div className="p-4 rounded-xl bg-purple-500/10 border border-purple-500/20 mb-8">
                             <p className="text-sm text-purple-300">
-                                <strong>Compliance Note:</strong> Watchman AI provides analysis and probability assessments for 
-                                informational purposes only, not guaranteed predictions.
+                                <strong>Compliance Note:</strong> Watchman AI provides data analysis and probability models for 
+                                analytical, research, and informational purposes only.
                             </p>
                         </div>
 

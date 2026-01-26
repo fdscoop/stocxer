@@ -20,8 +20,8 @@ const features = [
     },
     {
         icon: Brain,
-        title: 'ML Probability Engine',
-        description: 'XGBoost, LightGBM, Random Forest models provide probability-weighted market analysis trained on Indian data.',
+        title: 'ML Probability Models',
+        description: 'XGBoost, LightGBM, Random Forest models display probability-based patterns trained on Indian market data.',
         color: 'from-purple-500 to-pink-500',
         bgColor: 'bg-purple-500/10',
         borderColor: 'border-purple-500/20',
@@ -44,8 +44,8 @@ const features = [
     },
     {
         icon: Shield,
-        title: 'Risk Management Tools',
-        description: 'Position sizing calculator and stop-loss suggestions based on your capital and risk tolerance.',
+        title: 'Risk Assessment Tools',
+        description: 'Position sizing calculator and educational risk analysis based on capital parameters.',
         color: 'from-cyan-500 to-blue-500',
         bgColor: 'bg-cyan-500/10',
         borderColor: 'border-cyan-500/20',
@@ -67,13 +67,13 @@ export default function FeaturesSection() {
                 {/* Section Header */}
                 <div className="text-center mb-16">
                     <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold mb-4">
-                        <span className="text-white">Why Traders Choose </span>
+                        <span className="text-white">Why Researchers Choose </span>
                         <span className="bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent">
                             Stocxer AI
                         </span>
                     </h2>
                     <p className="text-gray-400 text-lg max-w-2xl mx-auto">
-                        Unique features that set us apart from other Indian trading platforms
+                        Powerful data analysis features for market research and analytics
                     </p>
                 </div>
 
@@ -106,7 +106,7 @@ export default function FeaturesSection() {
                 {/* Bottom Note */}
                 <div className="mt-12 text-center">
                     <p className="text-gray-500 text-sm">
-                        All features designed for <span className="text-purple-400">informational and educational</span> purposes
+                        All features designed for <span className="text-purple-400">analytical, research & informational</span> purposes only
                     </p>
                 </div>
             </div>
