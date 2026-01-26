@@ -4318,12 +4318,15 @@ async def get_stock_list():
 
 
 @app.get("/screener/scan")
+@require_tokens(ScanType.STOCK_SCAN)
+@with_refund_on_failure(ScanType.STOCK_SCAN)
 async def scan_stocks(
     limit: int = Query(50, description="Number of stocks to scan (faster with lower numbers)"),
     min_confidence: float = Query(60.0, description="Minimum confidence level (0-100)"),
     randomize: bool = Query(True, description="Randomly sample stocks for variety"),
     symbols: str = Query(None, description="Optional: comma-separated list of symbols to scan (e.g., 'NSE:RELIANCE-EQ,NSE:TCS-EQ')"),
     authorization: str = Header(None, description="Bearer token (required)"),
+    token_validation: dict = None,
 ):
     """
     Scan NSE stocks for high-confidence trading signals (Authentication Required)
@@ -4512,11 +4515,98 @@ async def scan_stocks(
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@app.post("/api/screener/calculate-cost")
+async def calculate_scan_cost(
+    request: Request,
+    authorization: str = Header(None, description="Bearer token (required)"),
+):
+    """
+    Calculate the cost of a stock scan before executing it
+    
+    Returns:
+        - total_cost: Total token cost for the scan
+        - per_stock_cost: Cost per stock
+        - stock_count: Number of stocks to be scanned
+        - has_subscription: Whether user has active subscription
+        - subscription_available: Whether subscription can be used
+        - will_use_subscription: Whether this scan will use subscription
+        - wallet_balance: Current PAYG wallet balance
+    """
+    try:
+        # Authenticate user
+        if not authorization:
+            raise HTTPException(status_code=401, detail="Authorization required")
+        
+        token = authorization.replace("Bearer ", "")
+        user = await auth_service.get_current_user(token)
+        
+        # Parse request body
+        body = await request.json()
+        symbols = body.get('symbols')
+        limit = body.get('limit', 50)
+        
+        # Calculate stock count
+        if symbols:
+            stock_count = len([s.strip() for s in symbols.split(',') if s.strip()])
+        else:
+            stock_count = limit
+        
+        # Get token cost per stock
+        from src.middleware.token_middleware import TOKEN_COSTS, ScanType
+        per_stock_cost = TOKEN_COSTS[ScanType.STOCK_SCAN]
+        total_cost = per_stock_cost * stock_count
+        
+        # Get user billing status
+        billing_status = await billing_service.get_user_billing_status(user.id)
+        
+        # Check if subscription can be used
+        will_use_subscription = False
+        subscription_info = None
+        
+        if billing_status.subscription_active:
+            # Check subscription limits
+            today_usage = await billing_service.get_today_usage(user.id)
+            plan_limits = await billing_service.get_plan_limits(billing_status.plan_type)
+            
+            if plan_limits:
+                # Check if within daily scan limit
+                daily_scans_used = today_usage.get('scans_today', 0)
+                daily_limit = plan_limits.get('daily_scans', 0)
+                
+                if daily_scans_used < daily_limit:
+                    will_use_subscription = True
+                    subscription_info = {
+                        'plan_type': billing_status.plan_type,
+                        'scans_used_today': daily_scans_used,
+                        'daily_limit': daily_limit,
+                        'scans_remaining': daily_limit - daily_scans_used
+                    }
+        
+        return {
+            "stock_count": stock_count,
+            "per_stock_cost": float(per_stock_cost),
+            "total_cost": float(total_cost),
+            "has_subscription": billing_status.subscription_active,
+            "will_use_subscription": will_use_subscription,
+            "subscription_info": subscription_info,
+            "wallet_balance": float(billing_status.credits_balance),
+            "sufficient_balance": billing_status.credits_balance >= total_cost or will_use_subscription,
+            "payment_method": "subscription" if will_use_subscription else "wallet"
+        }
+        
+    except Exception as e:
+        logger.error(f"Error calculating scan cost: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 # Also support POST with /api/ prefix for frontend compatibility
 @app.post("/api/screener/scan")
+@require_tokens(ScanType.STOCK_SCAN)
+@with_refund_on_failure(ScanType.STOCK_SCAN)
 async def scan_stocks_post(
     request: Request,
     authorization: str = Header(None, description="Bearer token (required)"),
+    token_validation: dict = None,
 ):
     """
     POST endpoint for stock screener (frontend compatibility)

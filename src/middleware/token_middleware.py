@@ -197,6 +197,10 @@ def require_tokens(scan_type: ScanType, scan_count: int = 1):
     Usage:
     @require_tokens(ScanType.STOCK_SCAN)
     async def stock_scan_endpoint(...)
+    
+    For stock scans, scan_count is calculated dynamically based on:
+    - Number of symbols if provided
+    - Limit parameter if randomizing
     """
     def decorator(func):
         from functools import wraps
@@ -215,14 +219,49 @@ def require_tokens(scan_type: ScanType, scan_count: int = 1):
             except Exception as e:
                 raise HTTPException(status_code=401, detail="Invalid token")
             
-            # Extract metadata from kwargs (set by endpoint before middleware runs)
-            metadata = kwargs.get('scan_metadata')
+            # Calculate dynamic scan count for stock scans
+            actual_scan_count = scan_count
+            if scan_type == ScanType.STOCK_SCAN:
+                # Check if this is a POST request with body
+                request = kwargs.get('request')
+                if request:
+                    try:
+                        # Read and cache body
+                        body_bytes = await request.body()
+                        body = body_bytes.decode('utf-8')
+                        import json
+                        body_data = json.loads(body)
+                        
+                        symbols = body_data.get('symbols')
+                        limit = body_data.get('limit', 50)
+                        
+                        if symbols:
+                            # Count comma-separated symbols
+                            actual_scan_count = len([s.strip() for s in symbols.split(',') if s.strip()])
+                        else:
+                            # Use limit for random scans
+                            actual_scan_count = limit
+                    except:
+                        pass
+                else:
+                    # GET request - check symbols or limit param
+                    symbols = kwargs.get('symbols')
+                    limit = kwargs.get('limit', 50)
+                    
+                    if symbols:
+                        actual_scan_count = len([s.strip() for s in symbols.split(',') if s.strip()])
+                    else:
+                        actual_scan_count = limit
+            
+            # Extract metadata from kwargs
+            metadata = kwargs.get('scan_metadata', {})
+            metadata['calculated_scan_count'] = actual_scan_count
             
             # Validate and deduct tokens
             validation_result = await validate_and_deduct_tokens(
                 user_id, 
                 scan_type, 
-                scan_count,
+                actual_scan_count,
                 metadata
             )
             

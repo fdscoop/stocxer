@@ -134,6 +134,86 @@ export default function ScreenerPage() {
   }
 
   const runScan = async () => {
+    // First, calculate the cost
+    await calculateAndConfirmCost()
+  }
+
+  const calculateAndConfirmCost = async () => {
+    const apiUrl = getApiUrl()
+    const token = localStorage.getItem('token') || localStorage.getItem('auth_token')
+    
+    if (!token) {
+      setScanError('Please login to scan stocks')
+      return
+    }
+
+    try {
+      // Build request body for cost calculation
+      const requestBody: any = {
+        min_confidence: parseInt(confidence),
+        action,
+      }
+      
+      if (scanMode === 'custom' && selectedStocks.length > 0) {
+        requestBody.symbols = selectedStocks.join(',')
+        requestBody.limit = selectedStocks.length
+      } else {
+        requestBody.limit = parseInt(limit)
+      }
+
+      // Calculate cost
+      const costResponse = await fetch(`${apiUrl}/api/screener/calculate-cost`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(requestBody),
+      })
+
+      if (!costResponse.ok) {
+        throw new Error('Failed to calculate scan cost')
+      }
+
+      const costData = await costResponse.json()
+      console.log('[Screener] Cost calculation:', costData)
+
+      // Show confirmation dialog
+      let message = ''
+      if (costData.will_use_subscription) {
+        message = `You are about to scan ${costData.stock_count} stock${costData.stock_count !== 1 ? 's' : ''}.\n\n`
+        message += `✅ This scan will use your ${costData.subscription_info.plan_type} subscription.\n`
+        message += `📊 Scans remaining today: ${costData.subscription_info.scans_remaining} of ${costData.subscription_info.daily_limit}\n\n`
+        message += 'Click OK to proceed.'
+      } else {
+        message = `You are about to scan ${costData.stock_count} stock${costData.stock_count !== 1 ? 's' : ''}.\n\n`
+        message += `💰 Total cost: ₹${costData.total_cost.toFixed(2)} (₹${costData.per_stock_cost} per stock)\n`
+        message += `💳 Your wallet balance: ₹${costData.wallet_balance.toFixed(2)}\n\n`
+        
+        if (!costData.sufficient_balance) {
+          message += '❌ Insufficient balance. Please add credits to your wallet or subscribe to a plan.'
+          alert(message)
+          return
+        }
+        
+        message += '✅ Amount will be deducted from your wallet.\n\n'
+        message += 'Click OK to proceed with the scan.'
+      }
+
+      if (!confirm(message)) {
+        return
+      }
+
+      // User confirmed, proceed with scan
+      await performScan(requestBody)
+
+    } catch (error) {
+      console.error('[Screener] Cost calculation error:', error)
+      setScanError('Failed to calculate scan cost. Please try again.')
+    }
+  }
+
+  const performScan = async (requestBody: any) => {
     setLoading(true)
     setProgress(0)
     setSignals([])
@@ -255,6 +335,14 @@ export default function ScreenerPage() {
         // If not Fyers auth, it's a session issue
         alert('Your session has expired. Please login again.')
         window.location.href = '/login'
+      } else if (response.status === 402) {
+        // Payment Required - insufficient credits or subscription limit reached
+        const errorData = await response.json().catch(() => ({}))
+        const errorMessage = errorData.detail || 'Insufficient credits or subscription limit reached'
+        
+        alert(`❌ Payment Required\n\n${errorMessage}\n\nPlease:\n• Subscribe to a plan, or\n• Add credits to your PAYG wallet`)
+        setScanError(errorMessage)
+        setScanStatus('❌ Payment required to complete scan.')
       } else {
         const errorText = await response.text().catch(() => response.statusText)
         console.error('[Screener] Scan failed:', response.status, errorText)
