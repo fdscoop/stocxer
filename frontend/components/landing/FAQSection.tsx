@@ -5,6 +5,18 @@ import { ChevronDown } from 'lucide-react'
 
 const faqs = [
     {
+        question: 'What features are included in Stocxer AI?',
+        answer: 'All plans include: Stock Dashboard, Stock Screener, Options Scanner, Index Analyzer, live market data, technical analysis, probability scores, and AI-powered insights via Watchman AI v3.5. All users get the same features — differences are only in rate limits and bulk scan limits.',
+    },
+    {
+        question: 'Is Watchman AI v3.5 available in the free trial?',
+        answer: 'Yes! Watchman AI v3.5 is available in all plans including the free trial. When you sign up, you receive 100 token credits to explore all features at no cost.',
+    },
+    {
+        question: 'What\'s the difference between plans?',
+        answer: 'All plans provide access to the same features as the Pro plan. The main differences are rate limits (scans per month), bulk scan limits (stocks per scan), and support priority. Even free trial users get full feature access with 100 credits.',
+    },
+    {
         question: 'How is Stocxer different from Sensibull?',
         answer: 'Sensibull focuses on option chain data and strategy building. Stocxer provides automated ICT/Smart Money pattern detection, ML probability models, and news sentiment analysis — features no other Indian platform offers.',
     },
