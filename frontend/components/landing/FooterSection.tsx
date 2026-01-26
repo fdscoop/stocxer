@@ -50,8 +50,8 @@ export default function FooterSection() {
                         </div>
 
                         <p className="text-gray-400 text-sm mb-6 max-w-sm">
-                            Data-driven market analytics platform providing probability-based insights
-                            for informed trading decisions.
+                            AI-powered data analysis tool providing probability-based patterns
+                            for analytical and research purposes.
                         </p>
 
                         {/* Company Info */}
@@ -158,9 +158,9 @@ export default function FooterSection() {
 
                     {/* Final Disclaimer */}
                     <p className="mt-6 text-center text-xs text-gray-600 max-w-3xl mx-auto">
-                        Stocxer AI is a market analytics tool for informational purposes only.
-                        It does not constitute investment advice. Trading involves risk.
-                        Please consult a qualified financial advisor.
+                        Stocxer AI is a data analysis tool for analytical, research, and informational purposes only.
+                        It does not constitute investment advice or recommendations. Trading and investing involve risk.
+                        Please consult a SEBI-registered financial advisor before making any financial decisions.
                     </p>
                 </div>
             </div>

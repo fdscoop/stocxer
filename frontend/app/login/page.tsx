@@ -291,8 +291,8 @@ export default function LoginPage() {
         {/* Features */}
         <div className="mt-6 md:mt-8 text-center space-y-2">
           <p className="text-xs md:text-sm text-muted-foreground">🤖 Powered by Watchman AI v3.5</p>
-          <p className="text-xs md:text-sm text-muted-foreground">📊 Probability-Based Market Insights</p>
-          <p className="text-xs md:text-sm text-muted-foreground">🎯 Deep Analysis & Decision Support</p>
+          <p className="text-xs md:text-sm text-muted-foreground">📊 Probability-Based Data Analysis</p>
+          <p className="text-xs md:text-sm text-muted-foreground">🎯 For Research & Analytical Purposes</p>
         </div>
       </div>
     </div>

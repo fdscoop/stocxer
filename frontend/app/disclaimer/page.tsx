@@ -35,8 +35,8 @@ export default function DisclaimerPage() {
                 <div className="mb-8 p-6 rounded-2xl bg-gradient-to-b from-red-500/10 to-orange-500/10 border border-red-500/30">
                     <h2 className="text-xl font-bold text-red-400 mb-4">⚠️ Not Investment Advice</h2>
                     <p className="text-gray-300 leading-relaxed text-lg">
-                        Stocxer AI provides analytical tools and probability-based market insights for
-                        <strong className="text-yellow-400"> informational and educational purposes only</strong>.
+                        Stocxer AI is a data analysis tool providing probability-based market data patterns for
+                        <strong className="text-yellow-400"> analytical, research, and informational purposes only</strong>.
                         It does <strong className="text-red-400">NOT</strong> provide investment advice, trading recommendations,
                         or guarantees of profit.
                     </p>

@@ -45,14 +45,14 @@ export default function TermsPage() {
                     <section>
                         <h2 className="text-xl font-semibold text-white mb-4">2. Description of Service</h2>
                         <p className="text-gray-400 leading-relaxed">
-                            Stocxer AI is a market analytics platform that provides data analysis, probability-based insights,
-                            and decision-support tools for Indian stock market instruments. The platform includes features
+                            Stocxer AI is a data analysis platform that provides market data analytics, probability-based patterns,
+                            and analytical tools for Indian stock market instruments. The platform includes features
                             powered by Watchman AI v3.5, our proprietary analytical engine.
                         </p>
                         <div className="mt-4 p-4 rounded-xl bg-yellow-500/10 border border-yellow-500/20">
                             <p className="text-yellow-300 text-sm">
-                                <strong>Important:</strong> Stocxer AI provides analytical tools and market insights for
-                                informational and educational purposes only. It does NOT provide investment advice,
+                                <strong>Important:</strong> Stocxer AI provides data analysis tools for analytical, research,
+                                and informational purposes only. It does NOT provide investment advice,
                                 trading recommendations, or guarantees of profit.
                             </p>
                         </div>
