@@ -14,6 +14,7 @@ const footerLinks = {
         { name: 'Billing & Credits', href: '/billing' },
         { name: 'Subscription', href: '/subscription' },
         { name: 'Support', href: '/support' },
+        { name: 'Contact Us', href: '/contact' },
     ],
     resources: [
         { name: 'How It Works', href: '#how-it-works' },
@@ -23,8 +24,9 @@ const footerLinks = {
     legal: [
         { name: 'Privacy Policy', href: '/privacy' },
         { name: 'Terms & Conditions', href: '/terms' },
-        { name: 'Disclaimer', href: '/disclaimer' },
+        { name: 'Service Delivery Policy', href: '/shipping' },
         { name: 'Refund Policy', href: '/refund' },
+        { name: 'Disclaimer', href: '/disclaimer' },
     ],
 }
 
