@@ -2,7 +2,7 @@
 
 import * as React from 'react'
 import Link from 'next/link'
-import { Header } from '@/components/layout/header'
+import { DashboardLayout } from '@/components/layout/dashboard-layout'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -17,7 +17,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { Target, ArrowLeft, Search, Loader2, TrendingUp, TrendingDown } from 'lucide-react'
+import { Target, Search, Loader2, TrendingUp, TrendingDown } from 'lucide-react'
 
 interface OptionResult {
   strike: number
@@ -85,33 +85,18 @@ export default function OptionsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <Header
-        user={user}
-        selectedIndex={selectedIndex}
-        onIndexChange={setSelectedIndex}
-        onLogout={handleLogout}
-      />
-
-      <main className="container mx-auto px-3 md:px-4 py-4 md:py-6 space-y-4 md:space-y-6">
-        {/* Page Header */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
-          <div>
-            <h1 className="text-xl md:text-2xl font-bold flex items-center gap-2">
-              <Target className="w-6 h-6 text-purple-500" />
-              Options Scanner
-            </h1>
-            <p className="text-xs md:text-sm text-muted-foreground">
-              Find high-probability option trades with constituent analysis
-            </p>
-          </div>
-          <Link href="/">
-            <Button variant="outline" size="sm">
-              <ArrowLeft className="w-4 h-4 mr-1" />
-              Dashboard
-            </Button>
-          </Link>
-        </div>
+    <DashboardLayout
+      user={user}
+      selectedIndex={selectedIndex}
+      onIndexChange={setSelectedIndex}
+      onLogout={handleLogout}
+      pageTitle="Options Scanner"
+    >
+      <div className="container mx-auto px-3 md:px-4 py-4 md:py-6 space-y-4 md:space-y-6">
+        {/* Page Description */}
+        <p className="text-sm text-muted-foreground">
+          Find high-probability option trades with constituent analysis
+        </p>
 
         {/* Scanner Controls */}
         <Card>
@@ -310,7 +295,7 @@ export default function OptionsPage() {
             </CardContent>
           </Card>
         )}
-      </main>
-    </div>
+      </div>
+    </DashboardLayout>
   )
 }

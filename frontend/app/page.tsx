@@ -2,7 +2,7 @@
 
 import * as React from 'react'
 import { useRouter } from 'next/navigation'
-import { Header } from '@/components/layout/header'
+import { DashboardLayout } from '@/components/layout/dashboard-layout'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -769,15 +769,14 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <Header
-        user={user}
-        selectedIndex={selectedIndex}
-        onIndexChange={setSelectedIndex}
-        onLogout={handleLogout}
-      />
-
-      <main className="container mx-auto px-3 md:px-4 py-4 md:py-6 space-y-4 md:space-y-6">
+    <DashboardLayout
+      user={user}
+      selectedIndex={selectedIndex}
+      onIndexChange={setSelectedIndex}
+      onLogout={handleLogout}
+      showBackButton={false}
+    >
+      <div className="container mx-auto px-3 md:px-4 py-4 md:py-6 space-y-4 md:space-y-6">
         {/* User Dashboard Header */}
         <Card className="bg-gradient-to-r from-primary/10 to-purple-500/10 border-primary/30">
           <CardContent className="p-4 md:p-6">
@@ -1788,7 +1787,7 @@ export default function DashboardPage() {
             </Card>
           </TabsContent>
         </Tabs>
-      </main>
+      </div>
 
       {/* Loading handled by LoadingModal component below */}
 
@@ -1806,6 +1805,6 @@ export default function DashboardPage() {
         progress={loadingProgress}
         steps={loadingSteps}
       />
-    </div>
+    </DashboardLayout>
   )
 }

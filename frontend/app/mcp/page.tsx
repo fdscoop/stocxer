@@ -1,7 +1,7 @@
 'use client'
 
 import * as React from 'react'
-import { Header } from '@/components/layout/header'
+import { DashboardLayout } from '@/components/layout/dashboard-layout'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -20,10 +20,11 @@ export default function MCPIntegrationPage() {
   const oneLineInstall = `curl -fsSL https://raw.githubusercontent.com/fdscoop/stocxer-mcp/main/install.sh | bash`
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-background to-muted/20">
-      <Header />
-      
-      <main className="container mx-auto px-4 py-8 max-w-6xl">
+    <DashboardLayout
+      showIndexSelector={false}
+      pageTitle="AI Integration"
+    >
+      <div className="container mx-auto px-4 py-8 max-w-6xl">
         {/* Hero Section */}
         <div className="text-center mb-12">
           <Badge className="mb-4" variant="secondary">
@@ -254,13 +255,8 @@ export default function MCPIntegrationPage() {
               Get Started
             </Button>
           </Link>
-          <Link href="/">
-            <Button size="lg" variant="outline">
-              Back to Dashboard
-            </Button>
-          </Link>
         </div>
-      </main>
-    </div>
+      </div>
+    </DashboardLayout>
   )
 }

@@ -2,7 +2,7 @@
 
 import * as React from 'react'
 import Link from 'next/link'
-import { Header } from '@/components/layout/header'
+import { DashboardLayout } from '@/components/layout/dashboard-layout'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -19,7 +19,7 @@ import {
 import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
 import { Checkbox } from '@/components/ui/checkbox'
-import { Search, ArrowLeft, RefreshCw, Loader2, X, ChevronDown, ChevronUp } from 'lucide-react'
+import { Search, RefreshCw, Loader2, X, ChevronDown, ChevronUp } from 'lucide-react'
 import { getApiUrl } from '@/lib/api'
 
 interface StockOption {
@@ -400,45 +400,13 @@ export default function ScreenerPage() {
       : '--'
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="sticky top-0 z-40 border-b border-border bg-background/95 backdrop-blur">
-        <div className="container mx-auto px-4 py-3">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
-            <div>
-              <h1 className="text-xl md:text-2xl font-bold flex items-center gap-2">
-                <span>📊</span>
-                Stock Screener
-              </h1>
-              <p className="text-xs md:text-sm text-muted-foreground">
-                High-confidence signals for your portfolio
-              </p>
-            </div>
-            <div className="flex items-center gap-2 flex-wrap">
-              {user && (
-                <div className="flex items-center gap-2">
-                  <span className="text-xs md:text-sm text-primary">{user.email}</span>
-                  <Button variant="destructive" size="sm" onClick={handleLogout}>
-                    Logout
-                  </Button>
-                </div>
-              )}
-              {!user && (
-                <Link href="/login">
-                  <Button size="sm">Login</Button>
-                </Link>
-              )}
-              <Link href="/">
-                <Button variant="outline" size="sm">
-                  <ArrowLeft className="w-4 h-4 mr-1" />
-                  Dashboard
-                </Button>
-              </Link>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <main className="container mx-auto px-3 md:px-4 py-4 md:py-6 space-y-4 md:space-y-6">
+    <DashboardLayout
+      user={user}
+      onLogout={handleLogout}
+      showIndexSelector={false}
+      pageTitle="Stock Screener"
+    >
+      <div className="container mx-auto px-3 md:px-4 py-4 md:py-6 space-y-4 md:space-y-6">
         {/* User Banner */}
         {user && (
           <Card className="bg-gradient-to-r from-cyan-900/30 to-blue-900/30 border-cyan-500/30">
@@ -800,7 +768,7 @@ export default function ScreenerPage() {
             )}
           </CardContent>
         </Card>
-      </main>
+      </div>
 
       {/* Loading Modal */}
       <LoadingModal
@@ -829,6 +797,6 @@ export default function ScreenerPage() {
           },
         ]}
       />
-    </div>
+    </DashboardLayout>
   )
 }

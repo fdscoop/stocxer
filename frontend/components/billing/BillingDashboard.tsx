@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import { DashboardLayout } from '@/components/layout/dashboard-layout'
 import { CreditCard, Zap, TrendingUp, Clock, ShoppingCart, CheckCircle, AlertCircle } from 'lucide-react'
 import { getApiUrl } from '@/lib/config'
 
@@ -407,39 +408,39 @@ export default function BillingDashboard() {
 
     if (loading) {
         return (
-            <div className="flex items-center justify-center min-h-screen bg-[#0a0a0f]">
-                <div className="text-white text-xl">Loading billing data...</div>
-            </div>
+            <DashboardLayout showIndexSelector={false} pageTitle="Billing & Credits">
+                <div className="flex items-center justify-center py-20">
+                    <div className="text-xl">Loading billing data...</div>
+                </div>
+            </DashboardLayout>
         )
     }
 
     if (error) {
         return (
-            <div className="flex flex-col items-center justify-center min-h-screen bg-[#0a0a0f] p-4">
-                <div className="max-w-md w-full bg-white/5 border border-red-500/30 rounded-2xl p-8 text-center">
-                    <div className="w-16 h-16 rounded-full bg-red-500/20 flex items-center justify-center mx-auto mb-4">
-                        <AlertCircle className="w-8 h-8 text-red-400" />
+            <DashboardLayout showIndexSelector={false} pageTitle="Billing & Credits">
+                <div className="flex flex-col items-center justify-center py-20 px-4">
+                    <div className="max-w-md w-full bg-card border border-red-500/30 rounded-2xl p-8 text-center">
+                        <div className="w-16 h-16 rounded-full bg-red-500/20 flex items-center justify-center mx-auto mb-4">
+                            <AlertCircle className="w-8 h-8 text-red-400" />
+                        </div>
+                        <h2 className="text-2xl font-bold mb-2">Authentication Required</h2>
+                        <p className="text-red-400 mb-6">{error}</p>
+                        <button
+                            onClick={() => router.push('/login?redirect=/billing')}
+                            className="w-full py-3 rounded-xl bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 text-white font-semibold transition-all"
+                        >
+                            Go to Login
+                        </button>
                     </div>
-                    <h2 className="text-2xl font-bold text-white mb-2">Authentication Required</h2>
-                    <p className="text-red-400 mb-6">{error}</p>
-                    <button
-                        onClick={() => router.push('/login?redirect=/billing')}
-                        className="w-full py-3 rounded-xl bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 text-white font-semibold transition-all"
-                    >
-                        Go to Login
-                    </button>
                 </div>
-            </div>
+            </DashboardLayout>
         )
     }
 
     return (
-        <div className="min-h-screen bg-[#0a0a0f] text-white p-6">
-            <div className="max-w-7xl mx-auto">
-                <h1 className="text-4xl font-bold mb-8 bg-gradient-to-r from-purple-400 to-cyan-400 bg-clip-text text-transparent">
-                    Billing & Credits
-                </h1>
-
+        <DashboardLayout showIndexSelector={false} pageTitle="Billing & Credits">
+            <div className="container mx-auto px-4 py-6">
                 {/* Current Plan Section */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
                     {/* Plan Card */}
@@ -675,6 +676,6 @@ export default function BillingDashboard() {
                     </div>
                 </div>
             </div>
-        </div>
+        </DashboardLayout>
     )
 }

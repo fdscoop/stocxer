@@ -2,7 +2,7 @@
 
 import * as React from 'react'
 import Link from 'next/link'
-import { Header } from '@/components/layout/header'
+import { DashboardLayout } from '@/components/layout/dashboard-layout'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -78,38 +78,23 @@ export default function AnalyzerPage() {
   const maxPutStrike = optionChain.find((r) => r.putOI === maxPutOI)?.strike
 
   return (
-    <div className="min-h-screen bg-background">
-      <Header
-        user={user}
-        selectedIndex={selectedIndex}
-        onIndexChange={setSelectedIndex}
-        onLogout={handleLogout}
-      />
-
-      <main className="container mx-auto px-3 md:px-4 py-4 md:py-6 space-y-4 md:space-y-6">
-        {/* Page Header */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
-          <div>
-            <h1 className="text-xl md:text-2xl font-bold flex items-center gap-2">
-              <BarChart3 className="w-6 h-6 text-primary" />
-              Index Analyzer
-            </h1>
-            <p className="text-xs md:text-sm text-muted-foreground">
-              Deep analysis of {selectedIndex} option chain
-            </p>
-          </div>
-          <div className="flex gap-2">
-            <Button variant="outline" size="sm">
-              <RefreshCw className="w-4 h-4 mr-1" />
-              Refresh
-            </Button>
-            <Link href="/">
-              <Button variant="outline" size="sm">
-                <ArrowLeft className="w-4 h-4 mr-1" />
-                Dashboard
-              </Button>
-            </Link>
-          </div>
+    <DashboardLayout
+      user={user}
+      selectedIndex={selectedIndex}
+      onIndexChange={setSelectedIndex}
+      onLogout={handleLogout}
+      pageTitle="Index Analyzer"
+    >
+      <div className="container mx-auto px-3 md:px-4 py-4 md:py-6 space-y-4 md:space-y-6">
+        {/* Page Description */}
+        <div className="flex items-center justify-between">
+          <p className="text-sm text-muted-foreground">
+            Deep analysis of {selectedIndex} option chain
+          </p>
+          <Button variant="outline" size="sm">
+            <RefreshCw className="w-4 h-4 mr-1" />
+            Refresh
+          </Button>
         </div>
 
         {/* Market Summary */}
@@ -298,7 +283,7 @@ export default function AnalyzerPage() {
             </Card>
           </TabsContent>
         </Tabs>
-      </main>
-    </div>
+      </div>
+    </DashboardLayout>
   )
 }
