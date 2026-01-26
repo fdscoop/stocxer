@@ -27,16 +27,24 @@ export default function MCPIntegrationPage() {
       <div className="container mx-auto px-4 py-8 max-w-6xl">
         {/* Hero Section */}
         <div className="text-center mb-12">
-          <Badge className="mb-4" variant="secondary">
-            <Bot className="w-3 h-3 mr-1" />
-            AI Assistant Integration
-          </Badge>
+          <div className="flex justify-center items-center gap-2 mb-4">
+            <Badge className="bg-orange-100 text-orange-800 border-orange-200">
+              <Bot className="w-3 h-3 mr-1" />
+              AI Assistant Integration - BETA
+            </Badge>
+          </div>
           <h1 className="text-4xl font-bold mb-4">
             Connect Stocxer to Your AI Assistant
           </h1>
-          <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
+          <p className="text-xl text-muted-foreground max-w-2xl mx-auto mb-4">
             Access your trading portfolio, get market analysis, and receive actionable signals through natural conversation with Claude, Cursor, or Windsurf.
           </p>
+          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 max-w-2xl mx-auto">
+            <p className="text-sm text-yellow-800">
+              <strong>Beta Notice:</strong> This feature is currently in beta testing and may work differently across operating systems. 
+              Compatibility has been verified on macOS and Linux. Windows support is experimental.
+            </p>
+          </div>
         </div>
 
         {/* Quick Install */}
@@ -47,7 +55,7 @@ export default function MCPIntegrationPage() {
               Quick Install (Recommended)
             </CardTitle>
             <CardDescription>
-              One command to install and configure everything
+              One command to install and configure everything (macOS/Linux)
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -61,9 +69,12 @@ export default function MCPIntegrationPage() {
                 {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
               </Button>
             </div>
-            <p className="text-sm text-muted-foreground">
-              Then restart Claude Desktop and you're ready to go!
-            </p>
+            <div className="space-y-2 text-sm text-muted-foreground">
+              <p>Then restart Claude Desktop and you're ready to go!</p>
+              <p className="text-xs text-yellow-600">
+                💡 <strong>Windows users:</strong> Manual installation may be required. Please check our documentation for Windows-specific instructions.
+              </p>
+            </div>
           </CardContent>
         </Card>
 

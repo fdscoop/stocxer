@@ -32,7 +32,7 @@ const navigation = [
   { name: 'Stock Screener', href: '/screener', icon: Search, description: 'Scan stocks for signals' },
   { name: 'Index Analyzer', href: '/analyzer', icon: BarChart3, description: 'Deep option chain analysis' },
   { name: 'Options Scanner', href: '/options', icon: Target, description: 'Find optimal options' },
-  { name: 'AI Integration', href: '/mcp', icon: Bot, description: 'Connect with AI assistants' },
+  { name: 'AI Integration', href: '/mcp', icon: Bot, description: 'Connect with AI assistants (Beta)', beta: true },
   { name: 'Subscription', href: '/subscription', icon: Star, description: 'Manage your plan' },
   { name: 'Billing & Credits', href: '/billing', icon: CreditCard, description: 'View usage & credits' },
 ]
@@ -125,8 +125,18 @@ export function Sidebar({ user, onLogout, collapsed = false, onToggleCollapse }:
                   )}
                 >
                   <Icon className="h-5 w-5 flex-shrink-0" />
-                  <div className="flex flex-col">
-                    <span>{item.name}</span>
+                  <div className="flex flex-col flex-1">
+                    <div className="flex items-center gap-2">
+                      <span>{item.name}</span>
+                      {(item as any).beta && (
+                        <span className={cn(
+                          "text-xs px-1.5 py-0.5 rounded text-orange-600 bg-orange-100 border border-orange-200",
+                          isActive && "text-orange-800 bg-orange-200"
+                        )}>
+                          Beta
+                        </span>
+                      )}
+                    </div>
                     <span className={cn(
                       "text-xs",
                       isActive ? "text-primary-foreground/70" : "text-muted-foreground"

@@ -237,7 +237,14 @@ export function DashboardLayout({
                   )}
                 >
                   <span className="text-lg">{item.icon}</span>
-                  {item.name}
+                  <div className="flex items-center gap-2">
+                    {item.name}
+                    {item.name === 'AI Integration' && (
+                      <span className="text-xs px-1.5 py-0.5 rounded text-orange-600 bg-orange-100 border border-orange-200">
+                        Beta
+                      </span>
+                    )}
+                  </div>
                 </Link>
               ))}
             </nav>
