@@ -10,6 +10,7 @@ import { Label } from '@/components/ui/label'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Cpu, Loader2, ArrowLeft } from 'lucide-react'
 import { getApiUrl } from '@/lib/api'
+import { updateLastLoginTime } from '@/lib/supabase'
 
 export default function LoginPage() {
   const router = useRouter()
@@ -46,6 +47,9 @@ export default function LoginPage() {
         localStorage.setItem('jwt_token', data.access_token)
         localStorage.setItem('auth_token', data.access_token) // For compatibility with old frontend
         localStorage.setItem('userEmail', loginEmail)
+        
+        // ✅ Record login time for daily session tracking
+        updateLastLoginTime()
         
         // Store refresh token if provided
         if (data.refresh_token) {

@@ -15,6 +15,7 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 import { RefreshCw, TrendingUp, TrendingDown, BarChart3, Target, Users, Zap, ArrowUp, ArrowDown, Minus, Loader2 } from 'lucide-react'
 import Link from 'next/link'
 import { getApiUrl, clearAuthData } from '@/lib/api'
+import { checkDailySessionReset, signOut } from '@/lib/supabase'
 
 // Types for scan results
 interface ProbabilityAnalysis {
@@ -313,6 +314,16 @@ export default function DashboardPage() {
     const timer = setInterval(() => {
       setCurrentTime(new Date().toLocaleTimeString('en-IN'))
     }, 60000)
+
+    // ✅ Check if daily session reset is needed (7 AM IST)
+    if (checkDailySessionReset()) {
+      // Time to logout - session expired based on daily 7 AM rule
+      signOut()
+      clearAuthData()
+      setToast({ message: 'Daily session expired. Please login again.', type: 'error' })
+      setTimeout(() => router.push('/landing'), 2000)
+      return
+    }
 
     // Check for auth token - redirect to landing if not logged in
     // Use helper to check all possible token keys
