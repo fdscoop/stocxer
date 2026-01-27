@@ -156,9 +156,6 @@ export default function DashboardPage() {
   const [expiry, setExpiry] = React.useState('weekly')
   const [expiryDates, setExpiryDates] = React.useState<ExpiryData | null>(null)
   const [loadingExpiries, setLoadingExpiries] = React.useState(false)
-  const [expiry, setExpiry] = React.useState('weekly')
-  const [expiryDates, setExpiryDates] = React.useState<ExpiryData | null>(null)
-  const [loadingExpiries, setLoadingExpiries] = React.useState(false)
   const [loadingMessage, setLoadingMessage] = React.useState('Loading Data...')
   const [loadingProgress, setLoadingProgress] = React.useState(0)
   const [loadingSteps, setLoadingSteps] = React.useState<Array<{ id: string; label: string; status: 'pending' | 'loading' | 'complete' | 'error' }>>([
