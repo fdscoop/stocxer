@@ -532,7 +532,8 @@ class IndexOptionsAnalyzer:
                     "next_weekly": next_weekly.strftime("%Y-%m-%d"),
                     "next_weekly_days": (next_weekly - today).days,
                     "monthly": monthly_expiry.strftime("%Y-%m-%d"),
-                    "monthly_days": (monthly_expiry - today).days
+                    "monthly_days": (monthly_expiry - today).days,
+                    "all_expiries": [exp.strftime("%Y-%m-%d") for exp in sorted_expiries]
                 }
             else:
                 raise ValueError("No expiry dates found in option chain")
@@ -712,8 +713,28 @@ class IndexOptionsAnalyzer:
             
             # Get expiry dates
             expiries = self.get_expiry_dates(index)
-            expiry_date = expiries["weekly"] if expiry_type == "weekly" else expiries["monthly"]
-            days_to_expiry = expiries["weekly_days"] if expiry_type == "weekly" else expiries["monthly_days"]
+            
+            # Handle both keywords ("weekly", "monthly", "next_weekly") and actual dates
+            if expiry_type == "weekly":
+                expiry_date = expiries["weekly"]
+                days_to_expiry = expiries["weekly_days"]
+            elif expiry_type == "monthly":
+                expiry_date = expiries["monthly"]
+                days_to_expiry = expiries["monthly_days"]
+            elif expiry_type == "next_weekly":
+                expiry_date = expiries["next_weekly"]
+                days_to_expiry = expiries["next_weekly_days"]
+            else:
+                # Assume it's an actual date string (YYYY-MM-DD)
+                try:
+                    expiry_date_obj = datetime.strptime(expiry_type, "%Y-%m-%d")
+                    expiry_date = expiry_type
+                    days_to_expiry = (expiry_date_obj - datetime.now()).days
+                except ValueError:
+                    # Invalid format, fallback to weekly
+                    logger.warning(f"Invalid expiry format: {expiry_type}, using weekly")
+                    expiry_date = expiries["weekly"]
+                    days_to_expiry = expiries["weekly_days"]
             
             # Calculate ATM strike
             strike_gap = config["strike_gap"]

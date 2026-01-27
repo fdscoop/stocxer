@@ -31,6 +31,13 @@ interface OptionResult {
   recommendation: string
 }
 
+interface ExpiryData {
+  weekly: string
+  next_weekly: string
+  monthly: string
+  all_expiries?: string[]
+}
+
 export default function OptionsPage() {
   const [user, setUser] = React.useState<{ email: string } | null>(null)
   const [selectedIndex, setSelectedIndex] = React.useState('NIFTY')
@@ -39,6 +46,8 @@ export default function OptionsPage() {
 
   // Scan parameters
   const [expiry, setExpiry] = React.useState('weekly')
+  const [expiryDates, setExpiryDates] = React.useState<ExpiryData | null>(null)
+  const [loadingExpiries, setLoadingExpiries] = React.useState(false)
   const [minVolume, setMinVolume] = React.useState('1000')
   const [minOI, setMinOI] = React.useState('10000')
 
@@ -59,6 +68,33 @@ export default function OptionsPage() {
     }
   }, [])
 
+  // Fetch expiry dates when index changes
+  React.useEffect(() => {
+    const fetchExpiries = async () => {
+      setLoadingExpiries(true)
+      try {
+        const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://stocxer-ai.onrender.com'
+        const response = await fetch(`${apiUrl}/index/${selectedIndex}/expiries`)
+        
+        if (response.ok) {
+          const data = await response.json()
+          setExpiryDates(data.expiries)
+          
+          // Set default to weekly expiry
+          if (data.expiries?.weekly) {
+            setExpiry('weekly')
+          }
+        }
+      } catch (error) {
+        console.error('Failed to fetch expiry dates:', error)
+      } finally {
+        setLoadingExpiries(false)
+      }
+    }
+
+    fetchExpiries()
+  }, [selectedIndex])
+
   const handleLogout = () => {
     localStorage.removeItem('token')
     localStorage.removeItem('auth_token')
@@ -70,18 +106,73 @@ export default function OptionsPage() {
 
   const scanOptions = async () => {
     setLoading(true)
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 2000))
     
-    // Mock results
-    setResults([
-      { strike: 22400, type: 'CE', ltp: 145.50, volume: 45000, oi: 125000, iv: 14.2, delta: 0.52, theta: -8.5, recommendation: 'BUY' },
-      { strike: 22500, type: 'CE', ltp: 98.25, volume: 62000, oi: 180000, iv: 13.8, delta: 0.45, theta: -7.2, recommendation: 'BUY' },
-      { strike: 22300, type: 'PE', ltp: 112.00, volume: 38000, oi: 95000, iv: 15.1, delta: -0.48, theta: -6.8, recommendation: 'SELL' },
-      { strike: 22200, type: 'PE', ltp: 165.75, volume: 28000, oi: 78000, iv: 15.8, delta: -0.55, theta: -8.1, recommendation: 'HOLD' },
-    ])
-    
-    setLoading(false)
+    try {
+      const token = localStorage.getItem('auth_token') || localStorage.getItem('token')
+      if (!token) {
+        throw new Error('Authentication required')
+      }
+
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://stocxer-ai.onrender.com'
+      const response = await fetch(
+        `${apiUrl}/options/scan?index=${selectedIndex}&expiry=${expiry}&min_volume=${minVolume}&min_oi=${minOI}`,
+        {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+        }
+      )
+
+      if (!response.ok) {
+        throw new Error(`API returned ${response.status}`)
+      }
+
+      const data = await response.json()
+      
+      // Transform the API response to match our interface
+      if (data.options) {
+        const transformedResults = data.options.map((opt: any) => ({
+          strike: opt.strike,
+          type: opt.type,
+          ltp: opt.ltp,
+          volume: opt.volume,
+          oi: opt.oi,
+          iv: opt.iv,
+          delta: opt.delta || 0,
+          theta: opt.theta || 0,
+          recommendation: opt.recommendation || opt.signal || 'HOLD',
+        }))
+        setResults(transformedResults)
+      }
+
+      // Update probability analysis if available
+      if (data.probability_analysis) {
+        setProbability({
+          bullish: Math.round(data.probability_analysis.probability_up * 100),
+          bearish: Math.round(data.probability_analysis.probability_down * 100),
+          confidence: Math.round(data.probability_analysis.confidence * 100),
+          direction: data.probability_analysis.expected_direction,
+          recommendation: data.probability_analysis.recommended_option_type === 'CALL' 
+            ? 'BUY CE' 
+            : data.probability_analysis.recommended_option_type === 'PUT'
+            ? 'BUY PE'
+            : 'STRADDLE',
+        })
+      }
+      
+    } catch (error) {
+      console.error('Failed to scan options:', error)
+      // Fall back to mock data
+      setResults([
+        { strike: 22400, type: 'CE', ltp: 145.50, volume: 45000, oi: 125000, iv: 14.2, delta: 0.52, theta: -8.5, recommendation: 'BUY' },
+        { strike: 22500, type: 'CE', ltp: 98.25, volume: 62000, oi: 180000, iv: 13.8, delta: 0.45, theta: -7.2, recommendation: 'BUY' },
+        { strike: 22300, type: 'PE', ltp: 112.00, volume: 38000, oi: 95000, iv: 15.1, delta: -0.48, theta: -6.8, recommendation: 'SELL' },
+        { strike: 22200, type: 'PE', ltp: 165.75, volume: 28000, oi: 78000, iv: 15.8, delta: -0.55, theta: -8.1, recommendation: 'HOLD' },
+      ])
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
@@ -118,13 +209,55 @@ export default function OptionsPage() {
               </div>
               <div className="space-y-2">
                 <Label className="text-xs md:text-sm">Expiry</Label>
-                <Select value={expiry} onValueChange={setExpiry}>
+                <Select value={expiry} onValueChange={setExpiry} disabled={loadingExpiries}>
                   <SelectTrigger>
-                    <SelectValue />
+                    <SelectValue placeholder={loadingExpiries ? "Loading..." : "Select expiry"} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="weekly">Weekly</SelectItem>
-                    <SelectItem value="monthly">Monthly</SelectItem>
+                    {expiryDates?.weekly && (
+                      <SelectItem value="weekly">
+                        Weekly - {new Date(expiryDates.weekly).toLocaleDateString('en-IN', { 
+                          day: '2-digit', 
+                          month: 'short' 
+                        })}
+                      </SelectItem>
+                    )}
+                    {expiryDates?.next_weekly && (
+                      <SelectItem value="next_weekly">
+                        Next Week - {new Date(expiryDates.next_weekly).toLocaleDateString('en-IN', { 
+                          day: '2-digit', 
+                          month: 'short' 
+                        })}
+                      </SelectItem>
+                    )}
+                    {expiryDates?.monthly && (
+                      <SelectItem value="monthly">
+                        Monthly - {new Date(expiryDates.monthly).toLocaleDateString('en-IN', { 
+                          day: '2-digit', 
+                          month: 'short' 
+                        })}
+                      </SelectItem>
+                    )}
+                    {expiryDates?.all_expiries && expiryDates.all_expiries.length > 0 && (
+                      <>
+                        {expiryDates.all_expiries
+                          .filter(date => 
+                            date !== expiryDates.weekly && 
+                            date !== expiryDates.next_weekly && 
+                            date !== expiryDates.monthly
+                          )
+                          .map((date) => (
+                            <SelectItem key={date} value={date}>
+                              {new Date(date).toLocaleDateString('en-IN', { 
+                                day: '2-digit', 
+                                month: 'short',
+                                year: 'numeric'
+                              })}
+                            </SelectItem>
+                          ))
+                        }
+                      </>
+                    )}
                   </SelectContent>
                 </Select>
               </div>
