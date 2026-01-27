@@ -6,6 +6,13 @@ import { DashboardLayout } from '@/components/layout/dashboard-layout'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { StatCard, StatsGrid } from '@/components/trading/stat-card'
 import { SignalCard, SignalGrid, Signal } from '@/components/trading/signal-card'
 import { ProbabilityBar, SentimentGauge } from '@/components/trading/probability-bar'
@@ -133,12 +140,25 @@ interface ScanResults {
   }
 }
 
+interface ExpiryData {
+  weekly: string
+  next_weekly: string
+  monthly: string
+  all_expiries?: string[]
+}
+
 export default function DashboardPage() {
   const router = useRouter()
   const [user, setUser] = React.useState<{ email: string } | null>(null)
   const [selectedIndex, setSelectedIndex] = React.useState('NIFTY')
   const [signals, setSignals] = React.useState<Signal[]>([])
   const [loading, setLoading] = React.useState(false)
+  const [expiry, setExpiry] = React.useState('weekly')
+  const [expiryDates, setExpiryDates] = React.useState<ExpiryData | null>(null)
+  const [loadingExpiries, setLoadingExpiries] = React.useState(false)
+  const [expiry, setExpiry] = React.useState('weekly')
+  const [expiryDates, setExpiryDates] = React.useState<ExpiryData | null>(null)
+  const [loadingExpiries, setLoadingExpiries] = React.useState(false)
   const [loadingMessage, setLoadingMessage] = React.useState('Loading Data...')
   const [loadingProgress, setLoadingProgress] = React.useState(0)
   const [loadingSteps, setLoadingSteps] = React.useState<Array<{ id: string; label: string; status: 'pending' | 'loading' | 'complete' | 'error' }>>([
@@ -385,6 +405,33 @@ export default function DashboardPage() {
     fetchNews()
   }, [])
 
+  // Fetch expiry dates when index changes
+  React.useEffect(() => {
+    const fetchExpiries = async () => {
+      setLoadingExpiries(true)
+      try {
+        const apiUrl = getApiUrl()
+        const response = await fetch(`${apiUrl}/index/${selectedIndex}/expiries`)
+        
+        if (response.ok) {
+          const data = await response.json()
+          setExpiryDates(data.expiries)
+          
+          // Set default to weekly expiry
+          if (data.expiries?.weekly) {
+            setExpiry('weekly')
+          }
+        }
+      } catch (error) {
+        console.error('Failed to fetch expiry dates:', error)
+      } finally {
+        setLoadingExpiries(false)
+      }
+    }
+
+    fetchExpiries()
+  }, [selectedIndex])
+
   // Refetch scans when selected index changes
   React.useEffect(() => {
     if (mounted && user) {
@@ -592,20 +639,18 @@ export default function DashboardPage() {
       updateStep('1', 'complete', 17)
       updateStep('2', 'loading', 25)
 
-      // Get the next weekly expiry (for demo, using current date)
-      const today = new Date()
-      const nextThursday = new Date(today)
-      nextThursday.setDate(today.getDate() + ((4 - today.getDay() + 7) % 7))
-      const expiry = nextThursday.toISOString().split('T')[0]
+      // Use the selected expiry from dropdown
+      const selectedExpiry = expiry
 
       // Step 2 complete, Step 3: Generating option symbols
       updateStep('2', 'complete', 33)
       updateStep('3', 'loading', 40)
 
-      const url = `${apiUrl}/options/scan?index=${selectedIndex}&expiry=${expiry}&min_volume=1000&min_oi=10000&strategy=all&include_probability=true`
+      const url = `${apiUrl}/options/scan?index=${selectedIndex}&expiry=${selectedExpiry}&min_volume=1000&min_oi=10000&strategy=all&include_probability=true`
 
       console.log(`📡 Fetching scan data from: ${url}`)
       console.log(`📈 Selected index: ${selectedIndex}`)
+      console.log(`📅 Selected expiry: ${selectedExpiry}`)
 
       // Step 3 complete, Step 4: Fetching option chain data
       updateStep('3', 'complete', 45)
@@ -866,6 +911,59 @@ export default function DashboardPage() {
             <span className="text-xl">🔑</span>
             <span className="text-sm font-medium">Connect Broker</span>
           </Button>
+          <div className="w-full">
+            <Select value={expiry} onValueChange={setExpiry} disabled={loadingExpiries}>
+              <SelectTrigger className="w-full h-auto py-3 px-4">
+                <SelectValue placeholder={loadingExpiries ? "Loading..." : "Select expiry"} />
+              </SelectTrigger>
+              <SelectContent>
+                {expiryDates?.weekly && (
+                  <SelectItem value="weekly">
+                    Weekly - {new Date(expiryDates.weekly).toLocaleDateString('en-IN', { 
+                      day: '2-digit', 
+                      month: 'short' 
+                    })}
+                  </SelectItem>
+                )}
+                {expiryDates?.next_weekly && (
+                  <SelectItem value="next_weekly">
+                    Next Week - {new Date(expiryDates.next_weekly).toLocaleDateString('en-IN', { 
+                      day: '2-digit', 
+                      month: 'short' 
+                    })}
+                  </SelectItem>
+                )}
+                {expiryDates?.monthly && (
+                  <SelectItem value="monthly">
+                    Monthly - {new Date(expiryDates.monthly).toLocaleDateString('en-IN', { 
+                      day: '2-digit', 
+                      month: 'short' 
+                    })}
+                  </SelectItem>
+                )}
+                {expiryDates?.all_expiries && expiryDates.all_expiries.length > 0 && (
+                  <>
+                    {expiryDates.all_expiries
+                      .filter(date => 
+                        date !== expiryDates.weekly && 
+                        date !== expiryDates.next_weekly && 
+                        date !== expiryDates.monthly
+                      )
+                      .map((date) => (
+                        <SelectItem key={date} value={date}>
+                          {new Date(date).toLocaleDateString('en-IN', { 
+                            day: '2-digit', 
+                            month: 'short',
+                            year: 'numeric'
+                          })}
+                        </SelectItem>
+                      ))
+                    }
+                  </>
+                )}
+              </SelectContent>
+            </Select>
+          </div>
           <Button
             className="w-full h-auto py-3 px-4 flex items-center justify-center gap-2 bg-primary hover:bg-primary/90"
             onClick={handleQuickScan}
