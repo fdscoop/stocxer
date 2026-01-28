@@ -645,6 +645,9 @@ class IndexProbabilityAnalyzer:
         current_price = df['close'].iloc[-1]
         prev_price = df['close'].iloc[-2] if len(df) > 1 else current_price
         
+        # Convert numpy boolean to Python bool for JSON serialization
+        volume_surge_value = df['volume'].iloc[-1] > df['volume_sma'].iloc[-1] * 1.5 if not pd.isna(df['volume_sma'].iloc[-1]) else False
+        
         return {
             'rsi': float(df['rsi'].iloc[-1]) if not pd.isna(df['rsi'].iloc[-1]) else 50,
             'ema_5': float(df['ema_5'].iloc[-1]),
@@ -653,7 +656,7 @@ class IndexProbabilityAnalyzer:
             'vwap': float(df['vwap'].iloc[-1]) if not pd.isna(df['vwap'].iloc[-1]) else current_price,
             'macd': float(df['macd'].iloc[-1]) if not pd.isna(df['macd'].iloc[-1]) else 0,
             'macd_signal': float(df['macd_signal'].iloc[-1]) if not pd.isna(df['macd_signal'].iloc[-1]) else 0,
-            'volume_surge': df['volume'].iloc[-1] > df['volume_sma'].iloc[-1] * 1.5 if not pd.isna(df['volume_sma'].iloc[-1]) else False,
+            'volume_surge': bool(volume_surge_value),  # Ensure Python bool, not numpy.bool
             'daily_change': ((current_price - prev_price) / prev_price * 100) if prev_price > 0 else 0,
             'trend': self._determine_trend(df),
             'vwap_position': 'above' if current_price > df['vwap'].iloc[-1] else 'below',

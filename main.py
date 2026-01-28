@@ -64,6 +64,33 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+
+def sanitize_for_json(obj):
+    """
+    Recursively convert numpy types to Python native types for JSON serialization.
+    This fixes the 'numpy.bool is not iterable' error when returning responses.
+    """
+    import numpy as np
+    
+    if isinstance(obj, dict):
+        return {k: sanitize_for_json(v) for k, v in obj.items()}
+    elif isinstance(obj, list):
+        return [sanitize_for_json(item) for item in obj]
+    elif isinstance(obj, (np.bool_, np.bool8)):
+        return bool(obj)
+    elif isinstance(obj, (np.integer, np.int64, np.int32)):
+        return int(obj)
+    elif isinstance(obj, (np.floating, np.float64, np.float32)):
+        return float(obj)
+    elif isinstance(obj, np.ndarray):
+        return obj.tolist()
+    elif hasattr(obj, '__dict__'):
+        # Dataclass or object - convert to dict
+        return sanitize_for_json(obj.__dict__ if hasattr(obj, '__dict__') else str(obj))
+    else:
+        return obj
+
+
 # Optional ML imports (not required for production API)
 try:
     from src.ml.price_prediction import price_predictor
@@ -5487,7 +5514,8 @@ async def scan_options(
             "data_source": data_source
         }
         
-        return result
+        # Sanitize numpy types for JSON serialization
+        return sanitize_for_json(result)
         
     except Exception as e:
         logger.error(f"Error in options scanner: {e}")
