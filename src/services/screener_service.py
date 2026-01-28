@@ -1,7 +1,7 @@
 """
 Screener Service - Handles saving screener results to database
 """
-from config.supabase_config import supabase
+from config.supabase_config import supabase, supabase_admin
 from src.models.auth_models import ScreenerResultModel, ScreenerScanModel
 from fastapi import HTTPException
 from datetime import datetime
@@ -20,6 +20,7 @@ class ScreenerService:
     
     def __init__(self):
         self.supabase = supabase
+        self.supabase_admin = supabase_admin  # Use admin client to bypass RLS
     
     async def save_scan_results(
         self,
@@ -49,7 +50,8 @@ class ScreenerService:
                 "scan_time": ist_timestamp()  # Use IST for scan timestamps
             }
             
-            self.supabase.table("screener_scans").insert(scan_record).execute()
+            # Use admin client to bypass RLS
+            self.supabase_admin.table("screener_scans").insert(scan_record).execute()
             
             # Save individual signals
             all_signals = []
@@ -64,9 +66,9 @@ class ScreenerService:
                 signal_record = self._create_signal_record(user_id, scan_id, signal)
                 all_signals.append(signal_record)
             
-            # Batch insert signals
+            # Batch insert signals using admin client to bypass RLS
             if all_signals:
-                self.supabase.table("screener_results").insert(all_signals).execute()
+                self.supabase_admin.table("screener_results").insert(all_signals).execute()
             
             logger.info(f"Saved scan {scan_id}: {len(all_signals)} signals for user {user_id}")
             
@@ -360,8 +362,8 @@ class ScreenerService:
                 "scanned_at": ist_timestamp()  # Use IST for options signal timestamps
             }
             
-            # Insert into screener_results table
-            self.supabase.table("screener_results").insert(signal_record).execute()
+            # Insert into screener_results table using admin client to bypass RLS
+            self.supabase_admin.table("screener_results").insert(signal_record).execute()
             
             logger.info(f"✅ Saved OPTIONS signal for {index}: {signal_data.get('action')} - ID: {signal_id}")
             
