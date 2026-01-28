@@ -697,9 +697,33 @@ export default function DashboardPage() {
         return
       }
 
+      // Handle Fyers data unavailable error (503)
+      if (response.status === 503) {
+        const errorData = await response.json().catch(() => ({}))
+        const detail = typeof errorData.detail === 'object' ? errorData.detail : { message: errorData.detail || 'Service unavailable' }
+        
+        if (detail.error === 'FYERS_DATA_UNAVAILABLE') {
+          setToast({ 
+            message: '⚠️ ' + (detail.message || 'No live market data available. Please connect your Fyers account.'), 
+            type: 'error' 
+          })
+          // Show the auth popup to reconnect Fyers
+          setTimeout(() => {
+            setToast(null)
+            openFyersAuthPopup()
+          }, 3000)
+          return
+        }
+        
+        throw new Error(detail.message || 'Service unavailable. Please try again.')
+      }
+
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({ detail: response.statusText }))
-        throw new Error(errorData.detail || `Scan failed: ${response.statusText}`)
+        const errorMessage = typeof errorData.detail === 'object' 
+          ? errorData.detail.message || JSON.stringify(errorData.detail)
+          : errorData.detail || `Scan failed: ${response.statusText}`
+        throw new Error(errorMessage)
       }
 
       const data = await response.json()
@@ -1009,8 +1033,8 @@ export default function DashboardPage() {
                   <Badge className={tradingSignal.direction === 'BULLISH' ? 'bg-bullish' : tradingSignal.direction === 'BEARISH' ? 'bg-bearish' : 'bg-neutral'}>
                     {tradingSignal.direction}
                   </Badge>
-                  <Badge variant="outline" className="text-xs">
-                    {scanResults.data_source === 'live' ? '🟢 Live' : '🟡 Demo'}
+                  <Badge variant="outline" className="text-xs border-green-500 text-green-500">
+                    🟢 Live Data
                   </Badge>
                   {/* Entry Grade Badge */}
                   <Badge
@@ -1298,6 +1322,105 @@ export default function DashboardPage() {
                         {(tradingSignal as any).confidence_adjustments.final_probability?.toFixed(1)}%
                       </span>
                     </div>
+                  </div>
+                </div>
+              )}
+
+              {/* NEW: Option Chart Analysis - Support/Resistance & Pullback */}
+              {(tradingSignal as any).entry_analysis?.option_supports && (
+                <div className="p-3 bg-indigo-500/10 rounded-lg border border-indigo-500/30">
+                  <div className="text-sm font-medium text-indigo-300 mb-3 flex items-center gap-2">
+                    📊 Option Chart Analysis
+                    <span className="text-xs bg-indigo-600/30 px-2 py-0.5 rounded">NEW</span>
+                  </div>
+                  
+                  {/* Support & Resistance on Option Chart */}
+                  <div className="grid grid-cols-2 gap-3 mb-3">
+                    <div className="p-2 bg-green-500/10 rounded border border-green-500/20">
+                      <div className="text-xs text-muted-foreground mb-1">Option Support Levels</div>
+                      <div className="space-y-1">
+                        {((tradingSignal as any).entry_analysis.option_supports || []).slice(0, 3).map((level: number, idx: number) => (
+                          <div key={idx} className="text-sm font-semibold text-green-400">
+                            ₹{level.toFixed(0)} {idx === 0 && <span className="text-xs">(Nearest)</span>}
+                          </div>
+                        ))}
+                      </div>
+                      <div className="text-xs text-green-300 mt-1">
+                        💡 Place SL below these
+                      </div>
+                    </div>
+                    <div className="p-2 bg-red-500/10 rounded border border-red-500/20">
+                      <div className="text-xs text-muted-foreground mb-1">Option Resistance Levels</div>
+                      <div className="space-y-1">
+                        {((tradingSignal as any).entry_analysis.option_resistances || []).slice(0, 3).map((level: number, idx: number) => (
+                          <div key={idx} className="text-sm font-semibold text-red-400">
+                            ₹{level.toFixed(0)} {idx === 0 && <span className="text-xs">(Target)</span>}
+                          </div>
+                        ))}
+                      </div>
+                      <div className="text-xs text-red-300 mt-1">
+                        🎯 Book profit near these
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Chart-based Targets */}
+                  {(tradingSignal as any).entry_analysis.option_target_1 && (
+                    <div className="grid grid-cols-3 gap-2 mb-3">
+                      <div className="p-2 bg-green-600/10 rounded border border-green-600/20 text-center">
+                        <div className="text-xs text-muted-foreground">Chart Target 1</div>
+                        <div className="text-lg font-bold text-green-400">
+                          ₹{(tradingSignal as any).entry_analysis.option_target_1?.toFixed(0)}
+                        </div>
+                      </div>
+                      <div className="p-2 bg-green-700/10 rounded border border-green-700/20 text-center">
+                        <div className="text-xs text-muted-foreground">Chart Target 2</div>
+                        <div className="text-lg font-bold text-green-400">
+                          ₹{(tradingSignal as any).entry_analysis.option_target_2?.toFixed(0)}
+                        </div>
+                      </div>
+                      <div className="p-2 bg-red-600/10 rounded border border-red-600/20 text-center">
+                        <div className="text-xs text-muted-foreground">Chart Stop Loss</div>
+                        <div className="text-lg font-bold text-red-400">
+                          ₹{(tradingSignal as any).entry_analysis.option_stop_loss?.toFixed(0)}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Pullback Analysis */}
+                  {(tradingSignal as any).entry_analysis.pullback_probability !== undefined && (
+                    <div className={`p-2 rounded border ${
+                      (tradingSignal as any).entry_analysis.wait_for_pullback 
+                        ? 'bg-orange-500/10 border-orange-500/30' 
+                        : 'bg-green-500/10 border-green-500/30'
+                    }`}>
+                      <div className="flex justify-between items-center">
+                        <div>
+                          <div className="text-xs text-muted-foreground">Pullback Analysis</div>
+                          <div className={`text-sm font-semibold ${
+                            (tradingSignal as any).entry_analysis.wait_for_pullback ? 'text-orange-400' : 'text-green-400'
+                          }`}>
+                            {(tradingSignal as any).entry_analysis.wait_for_pullback 
+                              ? `⏳ Wait for pullback (${((tradingSignal as any).entry_analysis.pullback_probability * 100).toFixed(0)}% likely)`
+                              : '✅ Good to enter now'
+                            }
+                          </div>
+                        </div>
+                        {(tradingSignal as any).entry_analysis.limit_order_price && (tradingSignal as any).entry_analysis.wait_for_pullback && (
+                          <div className="text-right">
+                            <div className="text-xs text-muted-foreground">Limit Order</div>
+                            <div className="text-lg font-bold text-orange-400">
+                              ₹{(tradingSignal as any).entry_analysis.limit_order_price?.toFixed(0)}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="mt-2 text-xs text-indigo-300/70">
+                    💡 These levels are from option price chart analysis, not spot index
                   </div>
                 </div>
               )}

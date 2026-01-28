@@ -82,7 +82,7 @@ NIFTY50_CONSTITUENTS: List[StockConstituent] = [
     StockConstituent("BAJAJ-AUTO", "NSE:BAJAJ-AUTO-EQ", "Bajaj Auto Ltd", 1.42, Sector.AUTO, 0.90, 0.68),
     StockConstituent("POWERGRID", "NSE:POWERGRID-EQ", "Power Grid Corporation", 1.38, Sector.POWER, 0.75, 0.62),
     StockConstituent("SHRIRAMFIN", "NSE:SHRIRAMFIN-EQ", "Shriram Finance Ltd", 1.35, Sector.NBFC, 1.20, 0.72),
-    StockConstituent("TATAMOTORS", "NSE:TATAMOTORS-EQ", "Tata Motors Ltd", 1.32, Sector.AUTO, 1.45, 0.78),
+    StockConstituent("TMPV", "NSE:TMPV-EQ", "Tata Motors Passenger Vehicles Ltd", 1.32, Sector.AUTO, 1.45, 0.78),
     StockConstituent("EICHERMOT", "NSE:EICHERMOT-EQ", "Eicher Motors Ltd", 1.28, Sector.AUTO, 1.00, 0.70),
     
     # Lower Weight (0.5-1%)
@@ -166,7 +166,7 @@ SENSEX_CONSTITUENTS: List[StockConstituent] = [
     StockConstituent("TATASTEEL", "NSE:TATASTEEL-EQ", "Tata Steel Ltd", 1.15, Sector.METALS, 1.35, 0.72),
     StockConstituent("WIPRO", "NSE:WIPRO-EQ", "Wipro Ltd", 1.05, Sector.IT, 0.78, 0.68),
     StockConstituent("INDUSINDBK", "NSE:INDUSINDBK-EQ", "IndusInd Bank Ltd", 0.95, Sector.BANKING, 1.30, 0.78),
-    StockConstituent("TATAMOTORS", "NSE:TATAMOTORS-EQ", "Tata Motors Ltd", 0.88, Sector.AUTO, 1.45, 0.78),
+    StockConstituent("TMPV", "NSE:TMPV-EQ", "Tata Motors Passenger Vehicles Ltd", 0.88, Sector.AUTO, 1.45, 0.78),
 ]
 
 

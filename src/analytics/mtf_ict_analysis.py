@@ -166,9 +166,10 @@ class MultiTimeframeICTAnalyzer:
                 date_to=date_to
             )
             
-            if df.empty:
-                # Generate sample data for testing
-                df = self._generate_sample_data(symbol, timeframe, days)
+            if df is None or df.empty:
+                # Return None instead of demo data - Fyers auth required
+                logger.warning(f"⚠️ No data for {symbol} {timeframe.value} - Fyers authentication required")
+                return None
             
             # Aggregate daily data to weekly/monthly if needed
             if timeframe in NEEDS_AGGREGATION and not df.empty:
@@ -185,7 +186,7 @@ class MultiTimeframeICTAnalyzer:
             return df
         except Exception as e:
             logger.error(f"Error fetching data for {symbol} {timeframe}: {e}")
-            return self._generate_sample_data(symbol, timeframe, LOOKBACK_DAYS[timeframe])
+            return None  # Return None instead of demo data
 
     
     def _generate_sample_data(self, symbol: str, timeframe: Timeframe, periods: int) -> pd.DataFrame:

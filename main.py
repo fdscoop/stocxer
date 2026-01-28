@@ -21,6 +21,7 @@ from src.api.fyers_client import fyers_client
 from src.analytics.options_pricing import options_pricer
 from src.analytics.ict_analysis import ict_analyzer
 from src.analytics.stock_screener import get_stock_screener
+from src.analytics.option_chart_analysis import get_option_chart_analyzer, OptionChartAnalysis
 from src.trading.signal_generator import signal_generator, risk_manager
 from src.services.auth_service import auth_service
 from src.services.screener_service import screener_service
@@ -216,77 +217,30 @@ async def fetch_market_news():
 # Startup event to load Fyers token from Supabase and start scheduler
 @app.on_event("startup")
 async def load_fyers_token_from_db():
-    """Load any valid Fyers token from Supabase on startup"""
+    """Load the most recent Fyers token from Supabase on startup.
+    No expiry check - let Fyers API validate the token."""
     try:
         from config.supabase_config import supabase_admin
-
-        # Use admin client (service role key) to bypass RLS
         supabase = supabase_admin
 
-        logger.info(f"🔍 Attempting to load Fyers tokens from database...")
+        logger.info(f"🔍 Loading Fyers token from database...")
         
-        # Get any non-expired token from the database
-        response = supabase.table("fyers_tokens").select("*").execute()
-        
-        logger.info(f"📊 Database response: {len(response.data) if response.data else 0} tokens found")
+        # Get most recently updated token
+        response = supabase.table("fyers_tokens").select("*").order("updated_at", desc=True).limit(1).execute()
         
         if response.data:
-            # Debug: Print all tokens
-            for i, token in enumerate(response.data):
-                logger.info(f"Token {i+1}: user={token.get('user_id', '')[:8]}..., expires_at={token.get('expires_at')}, has_token={bool(token.get('access_token'))}")
+            token_data = response.data[0]
+            access_token = token_data.get("access_token")
             
-            # Find the most recently updated token
-            tokens = sorted(response.data, key=lambda x: x.get("updated_at", ""), reverse=True)
-            
-            for token_data in tokens:
-                access_token = token_data.get("access_token")
-                logger.info(f"🎯 Checking token for user {token_data.get('user_id', '')[:8]}...")
-                
-                if not access_token:
-                    logger.warning(f"⚠️ Token found but access_token field is empty")
-                    continue
-                
-                # Check if token is not expired
-                expires_at = token_data.get("expires_at")
-                logger.info(f"🕐 Checking expiry: {expires_at}")
-                
-                if expires_at:
-                    try:
-                        # Handle different datetime formats
-                        if expires_at.endswith('+00'):
-                            expiry_time = datetime.fromisoformat(expires_at.replace('+00', '+00:00'))
-                        else:
-                            expiry_time = datetime.fromisoformat(expires_at.replace('Z', '+00:00'))
-                        
-                        current_time = datetime.now(timezone.utc)
-                        logger.info(f"🕐 Expiry: {expiry_time}, Current: {current_time}")
-                        
-                        if expiry_time > current_time:
-                            # Token is still valid, use it
-                            fyers_client.access_token = access_token
-                            fyers_client._initialize_client()
-                            logger.info(f"✅ Loaded VALID Fyers token from database (user: {token_data.get('user_id', '')[:8]}..., expires: {expiry_time})")
-                            return
-                        else:
-                            time_expired = current_time - expiry_time
-                            logger.warning(f"⚠️ Token expired {time_expired} ago at {expires_at}")
-                            continue
-                    except Exception as date_error:
-                        logger.warning(f"⚠️ Error parsing expiry date '{expires_at}': {date_error}")
-                        # If we can't parse expiry, use the token anyway
-                        fyers_client.access_token = access_token
-                        fyers_client._initialize_client()
-                        logger.info(f"✅ Loaded Fyers token from database with unparseable expiry (user: {token_data.get('user_id', '')[:8]}...)")
-                        return
-                else:
-                    # No expiry time, use the token anyway
-                    logger.info(f"ℹ️ No expiry field found, using token anyway")
-                    fyers_client.access_token = access_token
-                    fyers_client._initialize_client()
-                    logger.info(f"✅ Loaded Fyers token from database with no expiry (user: {token_data.get('user_id', '')[:8]}...)")
-                    return
+            if access_token:
+                fyers_client.access_token = access_token
+                fyers_client._initialize_client()
+                logger.info(f"✅ Loaded Fyers token from database (user: {token_data.get('user_id', '')[:8]}...)")
+                return
+            else:
+                logger.warning(f"⚠️ Token found but access_token field is empty")
         else:
-            logger.warning("⚠️ No token data found in database response")
+            logger.warning("⚠️ No token data found in database")
         
         # Try fallback token from environment if database lookup failed
         if settings.fallback_auth_token and settings.fallback_user_id:
@@ -785,14 +739,10 @@ async def refresh_fyers_token_from_db():
             token_data = response.data[0]
             access_token = token_data.get("access_token")
             
-            # Check expiry
-            expires_at = token_data.get("expires_at")
-            if expires_at:
-                expiry_time = datetime.fromisoformat(expires_at.replace('Z', '+00:00'))
-                if expiry_time < datetime.now(timezone.utc):
-                    return {"status": "error", "message": "Token expired", "expires_at": expires_at}
+            if not access_token:
+                return {"status": "error", "message": "Token has no access_token field"}
             
-            # Update Fyers client
+            # Update Fyers client - let API validate the token
             fyers_client.access_token = access_token
             fyers_client._initialize_client()
             
@@ -1425,7 +1375,7 @@ async def get_option_chain_analysis(
 ):
     """Get complete option chain analysis"""
     try:
-        # Try to load user's Fyers token if authorization provided
+        # Load user's Fyers token if authorization provided
         if authorization:
             try:
                 token = authorization.replace("Bearer ", "")
@@ -1433,16 +1383,9 @@ async def get_option_chain_analysis(
                 fyers_token = await auth_service.get_fyers_token(user.id)
                 
                 if fyers_token and fyers_token.access_token:
-                    # Check expiry
-                    now = datetime.now()
-                    if fyers_token.expires_at:
-                        if fyers_token.expires_at.tzinfo is not None:
-                            now = now.replace(tzinfo=timezone.utc)
-                        if fyers_token.expires_at > now:
-                            # Token is valid, use it
-                            fyers_client.access_token = fyers_token.access_token
-                            fyers_client._initialize_client()
-                            logger.info(f"✅ Using Fyers token from DB for user {user.email}")
+                    fyers_client.access_token = fyers_token.access_token
+                    fyers_client._initialize_client()
+                    logger.info(f"✅ Using Fyers token for user {user.email}")
             except Exception as auth_error:
                 logger.debug(f"Auth check skipped: {auth_error}")
         
@@ -1576,7 +1519,7 @@ async def get_index_signal(
     3. Signal → Direction + Strategy
     """
     try:
-        # Try to load user's Fyers token if authorization provided
+        # Load user's Fyers token if authorization provided
         if authorization:
             try:
                 token = authorization.replace("Bearer ", "")
@@ -1584,16 +1527,9 @@ async def get_index_signal(
                 fyers_token = await auth_service.get_fyers_token(user.id)
                 
                 if fyers_token and fyers_token.access_token:
-                    # Check expiry
-                    now = datetime.now()
-                    if fyers_token.expires_at:
-                        if fyers_token.expires_at.tzinfo is not None:
-                            now = now.replace(tzinfo=timezone.utc)
-                        if fyers_token.expires_at > now:
-                            # Token is valid, use it
-                            fyers_client.access_token = fyers_token.access_token
-                            fyers_client._initialize_client()
-                            logger.info(f"✅ Using Fyers token from DB for user {user.email}")
+                    fyers_client.access_token = fyers_token.access_token
+                    fyers_client._initialize_client()
+                    logger.info(f"✅ Using Fyers token for user {user.email}")
             except Exception as auth_error:
                 logger.debug(f"Auth check skipped: {auth_error}")
         
@@ -1611,7 +1547,7 @@ async def get_all_indices_overview(
 ):
     """Get quick overview of all supported indices"""
     try:
-        # Try to load user's Fyers token if authorization provided
+        # Load user's Fyers token if authorization provided
         if authorization:
             try:
                 token = authorization.replace("Bearer ", "")
@@ -1619,16 +1555,9 @@ async def get_all_indices_overview(
                 fyers_token = await auth_service.get_fyers_token(user.id)
                 
                 if fyers_token and fyers_token.access_token:
-                    # Check expiry
-                    now = datetime.now()
-                    if fyers_token.expires_at:
-                        if fyers_token.expires_at.tzinfo is not None:
-                            now = now.replace(tzinfo=timezone.utc)
-                        if fyers_token.expires_at > now:
-                            # Token is valid, use it
-                            fyers_client.access_token = fyers_token.access_token
-                            fyers_client._initialize_client()
-                            logger.info(f"✅ Using Fyers token from DB for user {user.email}")
+                    fyers_client.access_token = fyers_token.access_token
+                    fyers_client._initialize_client()
+                    logger.info(f"✅ Using Fyers token for user {user.email}")
             except Exception as auth_error:
                 logger.debug(f"Auth check skipped: {auth_error}")
         
@@ -1690,7 +1619,7 @@ async def get_mtf_analysis(
     Identifies: FVGs, Order Blocks, Liquidity Zones, Market Structure
     """
     try:
-        # Try to load user's Fyers token if authorization provided
+        # Load user's Fyers token if authorization provided
         if authorization:
             try:
                 token = authorization.replace("Bearer ", "")
@@ -1698,16 +1627,9 @@ async def get_mtf_analysis(
                 fyers_token = await auth_service.get_fyers_token(user.id)
                 
                 if fyers_token and fyers_token.access_token:
-                    # Check expiry
-                    now = datetime.now()
-                    if fyers_token.expires_at:
-                        if fyers_token.expires_at.tzinfo is not None:
-                            now = now.replace(tzinfo=timezone.utc)
-                        if fyers_token.expires_at > now:
-                            # Token is valid, use it
-                            fyers_client.access_token = fyers_token.access_token
-                            fyers_client._initialize_client()
-                            logger.info(f"✅ Using Fyers token from DB for user {user.email}")
+                    fyers_client.access_token = fyers_token.access_token
+                    fyers_client._initialize_client()
+                    logger.info(f"✅ Using Fyers token for user {user.email}")
             except Exception as auth_error:
                 logger.debug(f"Auth check skipped: {auth_error}")
         
@@ -1997,6 +1919,217 @@ async def get_optimal_entry_time(trade_type: str, days_to_expiry: int):
     return recommendation
 
 
+@app.get("/options/chart-analysis")
+async def get_option_chart_analysis(
+    index: str = Query("NIFTY", description="Index name"),
+    strike: int = Query(..., description="Strike price"),
+    option_type: str = Query("CALL", description="CALL or PUT"),
+    expiry_date: str = Query(None, description="Expiry date YYYY-MM-DD"),
+    spot_price: float = Query(None, description="Current spot price"),
+    target_price: float = Query(None, description="Expected spot target"),
+    iv: float = Query(0.15, description="Implied volatility (decimal)"),
+    days_to_expiry: int = Query(7, description="Days to expiry")
+):
+    """
+    Get comprehensive option chart analysis for better entry timing.
+    
+    This endpoint analyzes the option's OHLC price action to:
+    1. Identify support/resistance levels on the option chart
+    2. Detect if premium is in a discount zone
+    3. Analyze pullback probability
+    4. Recommend optimal entry price and stop-loss based on option chart
+    5. Check time feasibility for the trade
+    
+    Returns:
+        Detailed entry analysis with grade, recommendation, and chart-based levels
+    """
+    try:
+        # Build option symbol using helper function
+        if expiry_date:
+            exp_date_str = expiry_date
+        else:
+            # Default to next weekly expiry (Thursday)
+            today = datetime.now()
+            days_until_thursday = (3 - today.weekday()) % 7
+            if days_until_thursday == 0 and today.hour >= 15:
+                days_until_thursday = 7
+            exp_dt = today + timedelta(days=days_until_thursday)
+            exp_date_str = exp_dt.strftime("%Y-%m-%d")
+        
+        # Use the helper function for correct Fyers symbol format
+        option_symbol = build_fyers_option_symbol(
+            index=index,
+            expiry_date=exp_date_str,
+            strike=strike,
+            option_type=option_type,
+            is_monthly=False  # Default to weekly
+        )
+        
+        prefix_map = {
+            "NIFTY": "NIFTY",
+            "BANKNIFTY": "BANKNIFTY", 
+            "FINNIFTY": "FINNIFTY",
+            "MIDCPNIFTY": "MIDCPNIFTY",
+            "SENSEX": "SENSEX"
+        }
+        prefix = prefix_map.get(index.upper(), index.upper())
+        
+        # Get current spot if not provided
+        if not spot_price:
+            try:
+                quote = fyers_client.get_quotes([f"NSE:{prefix}50-INDEX" if prefix == "NIFTY" else f"NSE:{prefix}-INDEX"])
+                if quote and quote.get("d"):
+                    spot_price = quote["d"][0]["v"]["lp"]
+                else:
+                    spot_price = strike  # Fallback to strike
+            except:
+                spot_price = strike
+        
+        # Set target if not provided (1% move in direction)
+        if not target_price:
+            if option_type.upper() == "CALL":
+                target_price = spot_price * 1.01
+            else:
+                target_price = spot_price * 0.99
+        
+        # Get option chart analyzer
+        chart_analyzer = get_option_chart_analyzer(fyers_client)
+        
+        # Check if Fyers is authenticated
+        if not fyers_client.access_token:
+            raise HTTPException(
+                status_code=503,
+                detail={
+                    "error": "FYERS_DATA_UNAVAILABLE",
+                    "message": "Fyers authentication required for option chart analysis.",
+                    "action_required": "Please connect your Fyers account to get live option data."
+                }
+            )
+        
+        # Fetch current option LTP
+        try:
+            opt_quote = fyers_client.get_quotes([option_symbol])
+            if not opt_quote or not opt_quote.get("d"):
+                raise HTTPException(
+                    status_code=503,
+                    detail={
+                        "error": "FYERS_DATA_UNAVAILABLE",
+                        "message": f"Could not fetch quote for {option_symbol}. Please check your Fyers connection.",
+                        "action_required": "Verify your Fyers authentication is valid."
+                    }
+                )
+            current_premium = opt_quote["d"][0]["v"]["lp"]
+        except HTTPException:
+            raise
+        except Exception as quote_err:
+            raise HTTPException(
+                status_code=503,
+                detail={
+                    "error": "FYERS_DATA_UNAVAILABLE", 
+                    "message": f"Failed to fetch option quote: {str(quote_err)}",
+                    "action_required": "Please check your Fyers connection and try again."
+                }
+            )
+        
+        # Perform chart analysis
+        analysis = chart_analyzer.analyze_option(
+            option_symbol=option_symbol,
+            current_premium=current_premium,
+            option_type=option_type,
+            spot_price=spot_price,
+            spot_target=target_price,
+            strike=strike,
+            iv=iv,
+            days_to_expiry=days_to_expiry
+        )
+        
+        # Check if analysis returned None (no live data available)
+        if analysis is None:
+            raise HTTPException(
+                status_code=503,
+                detail={
+                    "error": "FYERS_DATA_UNAVAILABLE",
+                    "message": f"Could not fetch historical data for {option_symbol}. Live Fyers data required.",
+                    "action_required": "Please ensure your Fyers account is connected and has valid authentication."
+                }
+            )
+        
+        # Convert to response
+        return {
+            "status": "success",
+            "option_symbol": option_symbol,
+            "current_premium": analysis.current_premium,
+            "spot_price": spot_price,
+            "strike": strike,
+            "option_type": option_type,
+            
+            # Entry recommendation
+            "entry_grade": analysis.entry_grade,
+            "entry_recommendation": analysis.entry_recommendation,
+            "reasoning": analysis.reasoning,
+            
+            # Price levels from option chart
+            "support_levels": [
+                {"level": float(s.level), "strength": float(s.strength), "distance_pct": float(s.distance_pct)}
+                for s in analysis.support_levels
+            ],
+            "resistance_levels": [
+                {"level": float(r.level), "strength": float(r.strength), "distance_pct": float(r.distance_pct)}
+                for r in analysis.resistance_levels
+            ],
+            
+            # Discount zone analysis
+            "discount_zone": {
+                "zone_type": analysis.discount_zone.zone_type,
+                "is_in_discount": bool(analysis.discount_zone.is_in_discount),
+                "discount_pct": float(analysis.discount_zone.discount_pct),
+                "avg_premium": float(analysis.discount_zone.avg_premium),
+                "lower_bound": float(analysis.discount_zone.lower_bound),
+                "upper_bound": float(analysis.discount_zone.upper_bound)
+            },
+            
+            # Pullback analysis
+            "pullback": {
+                "should_wait": bool(analysis.pullback.should_wait),
+                "wait_reason": analysis.pullback.wait_reason,
+                "pullback_probability": float(analysis.pullback.pullback_probability),
+                "expected_pullback_level": float(analysis.pullback.expected_pullback_level),
+                "limit_order_price": float(analysis.pullback.limit_order_price),
+                "max_acceptable_price": float(analysis.pullback.max_acceptable_price)
+            },
+            
+            # Chart-based targets
+            "targets": {
+                "option_target_1": float(analysis.option_target_1),
+                "option_target_2": float(analysis.option_target_2),
+                "option_stop_loss": float(analysis.option_stop_loss)
+            },
+            
+            # Time analysis
+            "time_analysis": {
+                "time_feasible": bool(analysis.time_feasible),
+                "time_remaining_minutes": int(analysis.time_remaining_minutes),
+                "theta_impact_per_hour": float(analysis.theta_impact_per_hour)
+            },
+            
+            # Swing points for charting
+            "swing_lows": [
+                {"price": float(s.price), "timestamp": s.timestamp.isoformat()}
+                for s in analysis.swing_lows[-3:]
+            ],
+            "swing_highs": [
+                {"price": float(s.price), "timestamp": s.timestamp.isoformat()}
+                for s in analysis.swing_highs[-3:]
+            ]
+        }
+        
+    except Exception as e:
+        logger.error(f"Error in option chart analysis: {e}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 # ==================== NEWS & SENTIMENT ====================
 
 from src.analytics.news_sentiment import news_analyzer
@@ -2070,7 +2203,7 @@ async def get_actionable_trading_signal(
     4. Signal Generation with confidence scoring
     """
     try:
-        # Try to load user's Fyers token if authorization provided
+        # Load user's Fyers token if authorization provided
         if authorization:
             try:
                 token = authorization.replace("Bearer ", "")
@@ -2078,16 +2211,9 @@ async def get_actionable_trading_signal(
                 fyers_token = await auth_service.get_fyers_token(user.id)
                 
                 if fyers_token and fyers_token.access_token:
-                    # Check expiry
-                    now = datetime.now()
-                    if fyers_token.expires_at:
-                        if fyers_token.expires_at.tzinfo is not None:
-                            now = now.replace(tzinfo=timezone.utc)
-                        if fyers_token.expires_at > now:
-                            # Token is valid, use it
-                            fyers_client.access_token = fyers_token.access_token
-                            fyers_client._initialize_client()
-                            logger.info(f"✅ Using Fyers token from DB for user {user.email}")
+                    fyers_client.access_token = fyers_token.access_token
+                    fyers_client._initialize_client()
+                    logger.info(f"✅ Using Fyers token for user {user.email}")
             except Exception as auth_error:
                 logger.debug(f"Auth check skipped: {auth_error}")
         
@@ -3932,7 +4058,7 @@ async def get_stock_trading_signal(
         symbol: Stock symbol (e.g., "SBIN", "TCS", "NSE:SBIN-EQ")
     """
     try:
-        # Try to load user's Fyers token if authorization provided
+        # Load user's Fyers token if authorization provided
         if authorization:
             try:
                 token = authorization.replace("Bearer ", "")
@@ -3940,15 +4066,9 @@ async def get_stock_trading_signal(
                 fyers_token = await auth_service.get_fyers_token(user.id)
                 
                 if fyers_token and fyers_token.access_token:
-                    # Check expiry
-                    now = datetime.now()
-                    if fyers_token.expires_at:
-                        if fyers_token.expires_at.tzinfo is not None:
-                            now = now.replace(tzinfo=timezone.utc)
-                        if fyers_token.expires_at > now:
-                            fyers_client.access_token = fyers_token.access_token
-                            fyers_client._initialize_client()
-                            logger.info(f"✅ Using Fyers token from DB for user {user.email}")
+                    fyers_client.access_token = fyers_token.access_token
+                    fyers_client._initialize_client()
+                    logger.info(f"✅ Using Fyers token for user {user.email}")
             except Exception as auth_error:
                 logger.debug(f"Auth check skipped: {auth_error}")
         
@@ -4451,31 +4571,7 @@ async def scan_stocks(
                 }
             )
         
-        # Check if Fyers token is expired (tokens expire in ~24 hours)
-        if fyers_token.expires_at:
-            # Handle both timezone-aware and timezone-naive datetimes
-            now = datetime.now()
-            if fyers_token.expires_at.tzinfo is not None:
-                # expires_at is timezone-aware, make now timezone-aware too
-                now = now.replace(tzinfo=timezone.utc)
-                expires_at = fyers_token.expires_at
-            else:
-                # expires_at is timezone-naive, keep both naive
-                expires_at = fyers_token.expires_at
-            
-            if expires_at < now:
-                logger.info(f"Fyers token expired for user {user.email}")
-                raise HTTPException(
-                    status_code=401,
-                    detail={
-                        "error": "fyers_token_expired", 
-                        "message": "Your Fyers token has expired. Please re-authenticate to continue.",
-                        "auth_url": fyers_client.generate_auth_url(),
-                        "user_authenticated": True
-                    }
-                )
-        
-        # Set the Fyers token for this request
+        # Set the Fyers token for this request - let Fyers API validate it
         fyers_client.access_token = fyers_token.access_token
         fyers_client._initialize_client()
         
@@ -5095,27 +5191,18 @@ async def scan_options(
             "strategy": strategy
         }
         
-        # Try to load user's Fyers token if available
+        # Load user's Fyers token from Supabase
         try:
             fyers_token = await auth_service.get_fyers_token(user.id)
             
             if fyers_token and fyers_token.access_token:
-                # Check expiry
-                now = datetime.now()
-                if fyers_token.expires_at:
-                    if fyers_token.expires_at.tzinfo is not None:
-                        now = now.replace(tzinfo=timezone.utc)
-                    if fyers_token.expires_at > now:
-                        # Token is valid, use it
-                        fyers_client.access_token = fyers_token.access_token
-                        fyers_client._initialize_client()
-                        logger.info(f"✅ Using live Fyers token for user {user.email}")
-                    else:
-                        logger.warning(f"⚠️ Fyers token expired for user {user.email}")
-                        fyers_client.access_token = None
-                else:
-                    logger.warning(f"⚠️ No expiry info for Fyers token")
-                    fyers_client.access_token = None
+                # Use token directly - Fyers API will tell us if it's expired
+                fyers_client.access_token = fyers_token.access_token
+                fyers_client._initialize_client()
+                logger.info(f"✅ Using Fyers token for user {user.email}")
+            else:
+                logger.warning(f"⚠️ No Fyers token found for user {user.email}")
+                fyers_client.access_token = None
         except Exception as token_error:
             logger.warning(f"Could not load Fyers token: {token_error}")
             fyers_client.access_token = None
@@ -5180,26 +5267,49 @@ async def scan_options(
                 probability_analysis = {"error": str(prob_error)}
         # ====================================================================
         
-        # Get option chain data (will return mock data if no live token)
+        # Get option chain data - FAIL if no live data available
+        # We do NOT return demo data in production to prevent:
+        # 1. Charging users for failed scans
+        # 2. Showing misleading demo signals
         try:
             analyzer = get_index_analyzer(fyers_client)
             chain = analyzer.analyze_option_chain(index.upper(), expiry)
             
             if not chain:
-                # Return mock data for demo purposes
-                mock_result = generate_mock_options_scan_data(index, expiry, min_volume, min_oi, strategy)
-                if probability_analysis:
-                    mock_result["probability_analysis"] = probability_analysis
-                    mock_result["recommended_option_type"] = recommended_option_type
-                return mock_result
+                logger.error(f"❌ No option chain data available for {index}.")
+                raise HTTPException(
+                    status_code=503,
+                    detail={
+                        "error": "MARKET_DATA_UNAVAILABLE",
+                        "message": "Could not fetch live option chain data. Markets may be closed (9:15 AM - 3:30 PM IST) or there's a connection issue.",
+                        "action_required": "Try again during market hours or check your Fyers connection."
+                    }
+                )
                 
+        except HTTPException:
+            raise  # Re-raise HTTP exceptions as-is
         except Exception as chain_error:
-            logger.warning(f"Option chain analysis failed: {chain_error}, returning demo data")
-            mock_result = generate_mock_options_scan_data(index, expiry, min_volume, min_oi, strategy)
-            if probability_analysis:
-                mock_result["probability_analysis"] = probability_analysis
-                mock_result["recommended_option_type"] = recommended_option_type
-            return mock_result
+            error_msg = str(chain_error)
+            # Check if it's a market closed error
+            if "429" in error_msg or "Market" in error_msg:
+                logger.error(f"❌ Market data unavailable: {chain_error}")
+                raise HTTPException(
+                    status_code=503,
+                    detail={
+                        "error": "MARKET_CLOSED",
+                        "message": "Markets are closed. Indian markets operate from 9:15 AM to 3:30 PM IST.",
+                        "action_required": "Please try again during market hours."
+                    }
+                )
+            logger.error(f"❌ Option chain analysis failed: {chain_error}")
+            raise HTTPException(
+                status_code=503,
+                detail={
+                    "error": "FYERS_DATA_UNAVAILABLE",
+                    "message": f"Failed to fetch option chain data: {str(chain_error)}",
+                    "action_required": "Please check your Fyers connection and try again."
+                }
+            )
         
         # Process options for scanning
         scanned_options = process_options_scan(chain, min_volume, min_oi, strategy)
@@ -5253,6 +5363,97 @@ async def scan_options(
                 
         except Exception as sentiment_error:
             logger.warning(f"Could not integrate sentiment: {sentiment_error}")
+        
+        # =====================================================
+        # ENHANCED: Add OHLC-based chart analysis for top options
+        # This provides support/resistance levels on option chart
+        # and better entry timing recommendations
+        # =====================================================
+        try:
+            chart_analyzer = get_option_chart_analyzer(fyers_client)
+            top_n = min(5, len(scanned_options))
+            
+            for i in range(top_n):
+                opt = scanned_options[i]
+                try:
+                    # Use actual Fyers trading symbol from option chain
+                    # This is the correct symbol format as returned by Fyers API
+                    option_symbol = opt.get("fyers_symbol", "")
+                    
+                    # If no symbol from chain, skip chart analysis for this option
+                    if not option_symbol:
+                        logger.warning(f"⚠️ No Fyers symbol available for {opt['type']} {opt['strike']} - skipping chart analysis")
+                        continue
+                    
+                    # Calculate target price based on probability analysis
+                    if probability_analysis:
+                        expected_move = probability_analysis.get("expected_move_pct", 0.5) / 100
+                        if opt["type"] == "CALL":
+                            spot_target = chain.spot_price * (1 + expected_move)
+                        else:
+                            spot_target = chain.spot_price * (1 - expected_move)
+                    else:
+                        spot_target = chain.spot_price * (1.005 if opt["type"] == "CALL" else 0.995)
+                    
+                    # Perform chart analysis using actual Fyers symbol
+                    chart_analysis = chart_analyzer.analyze_option(
+                        option_symbol=option_symbol,
+                        current_premium=opt["ltp"],
+                        option_type=opt["type"],
+                        spot_price=chain.spot_price,
+                        spot_target=spot_target,
+                        strike=opt["strike"],
+                        iv=opt.get("iv", 0.15),
+                        days_to_expiry=chain.days_to_expiry
+                    )
+                    
+                    # Only enhance if chart analysis succeeded (requires live Fyers data)
+                    if chart_analysis is None:
+                        logger.warning(f"⚠️ Chart analysis unavailable for {opt['type']} {opt['strike']} - Fyers data required")
+                        continue
+                    
+                    # Enhance entry_analysis with chart-based data
+                    enhanced_entry = opt.get("entry_analysis", {})
+                    enhanced_entry.update({
+                        # Override with chart-based values
+                        "entry_grade": chart_analysis.entry_grade,
+                        "entry_recommendation": chart_analysis.entry_recommendation,
+                        "reasoning": chart_analysis.reasoning,
+                        "limit_order_price": chart_analysis.pullback.limit_order_price,
+                        "max_acceptable_price": chart_analysis.pullback.max_acceptable_price,
+                        "wait_for_pullback": chart_analysis.pullback.should_wait,
+                        "pullback_probability": chart_analysis.pullback.pullback_probability,
+                        "time_feasible": chart_analysis.time_feasible,
+                        "time_remaining_minutes": chart_analysis.time_remaining_minutes,
+                        "theta_impact_per_hour": chart_analysis.theta_impact_per_hour,
+                        
+                        # Chart-based targets
+                        "option_target_1": chart_analysis.option_target_1,
+                        "option_target_2": chart_analysis.option_target_2,
+                        "option_stop_loss": chart_analysis.option_stop_loss,
+                        
+                        # Support/Resistance from option chart
+                        "option_supports": [s.level for s in chart_analysis.support_levels[:3]],
+                        "option_resistances": [r.level for r in chart_analysis.resistance_levels[:3]],
+                    })
+                    
+                    scanned_options[i]["entry_analysis"] = enhanced_entry
+                    
+                    # Add discount zone info
+                    scanned_options[i]["discount_zone"] = {
+                        "zone_type": chart_analysis.discount_zone.zone_type,
+                        "is_in_discount": chart_analysis.discount_zone.is_in_discount,
+                        "discount_pct": chart_analysis.discount_zone.discount_pct,
+                        "avg_premium": chart_analysis.discount_zone.avg_premium
+                    }
+                    
+                    logger.debug(f"✅ Enhanced {opt['type']} {opt['strike']} with chart analysis: Grade {chart_analysis.entry_grade}")
+                    
+                except Exception as chart_err:
+                    logger.warning(f"Could not add chart analysis for {opt['type']} {opt['strike']}: {chart_err}")
+                    
+        except Exception as chart_error:
+            logger.warning(f"Chart analysis enhancement failed: {chart_error}")
         
         # Determine data source
         data_source = "live" if fyers_client.access_token else "demo"
@@ -5445,6 +5646,9 @@ def process_options_scan(chain, min_volume: int, min_oi: int, strategy: str,
                 oi=strike_data.call_oi
             )
             
+            # Get actual Fyers trading symbol from chain data
+            call_symbol = getattr(strike_data, 'call_symbol', '') or ''
+            
             options.append({
                 "strike": strike,
                 "type": "CALL",
@@ -5455,6 +5659,7 @@ def process_options_scan(chain, min_volume: int, min_oi: int, strategy: str,
                 "delta": delta,
                 "gamma": gamma,
                 "score": score,
+                "fyers_symbol": call_symbol,  # Actual Fyers trading symbol
                 "strategy_match": get_strategy_match(score, strategy),
                 "recommendation": get_option_recommendation(score, "CALL", spot_price / strike),
                 "discount_zone": discount_zone,
@@ -5502,6 +5707,9 @@ def process_options_scan(chain, min_volume: int, min_oi: int, strategy: str,
                 oi=strike_data.put_oi
             )
             
+            # Get actual Fyers trading symbol from chain data
+            put_symbol = getattr(strike_data, 'put_symbol', '') or ''
+            
             options.append({
                 "strike": strike,
                 "type": "PUT",
@@ -5512,6 +5720,7 @@ def process_options_scan(chain, min_volume: int, min_oi: int, strategy: str,
                 "delta": delta,
                 "gamma": gamma,
                 "score": score,
+                "fyers_symbol": put_symbol,  # Actual Fyers trading symbol
                 "strategy_match": get_strategy_match(score, strategy),
                 "recommendation": get_option_recommendation(score, "PUT", spot_price / strike),
                 "discount_zone": discount_zone,
@@ -5606,29 +5815,14 @@ def get_option_historical_context(
     }
     
     try:
-        # Build option symbol for Fyers
-        # Format: NSE:NIFTY{YYMM}{DD}{STRIKE}{CE/PE}
-        # Example: NSE:NIFTY2612323000CE
-        
-        # Parse expiry date
-        exp_dt = datetime.strptime(expiry_date, "%Y-%m-%d")
-        exp_yy = exp_dt.strftime("%y")
-        exp_mm = exp_dt.strftime("%m")
-        exp_dd = exp_dt.strftime("%d")
-        
-        # Map index to option prefix
-        option_prefix_map = {
-            "NIFTY": "NIFTY",
-            "BANKNIFTY": "BANKNIFTY",
-            "FINNIFTY": "FINNIFTY",
-            "MIDCPNIFTY": "MIDCPNIFTY"
-        }
-        
-        prefix = option_prefix_map.get(index.upper(), index.upper())
-        opt_type_suffix = "CE" if option_type.upper() == "CALL" else "PE"
-        
-        # Build symbol (e.g., NSE:NIFTY2612323000CE)
-        option_symbol = f"NSE:{prefix}{exp_yy}{exp_mm}{exp_dd}{int(strike)}{opt_type_suffix}"
+        # Build option symbol using the helper function for correct Fyers format
+        option_symbol = build_fyers_option_symbol(
+            index=index,
+            expiry_date=expiry_date,
+            strike=int(strike),
+            option_type=option_type,
+            is_monthly=False  # Weekly by default
+        )
         
         logger.debug(f"📊 Fetching historical context for: {option_symbol}")
         
@@ -5698,6 +5892,65 @@ def get_option_historical_context(
         logger.warning(f"Could not fetch option historical context: {e}")
     
     return result
+
+
+def build_fyers_option_symbol(index: str, expiry_date: str, strike: int, option_type: str, is_monthly: bool = False) -> str:
+    """
+    Build the correct Fyers option symbol format.
+    
+    Fyers uses different formats for weekly and monthly options:
+    - Weekly: NSE:NIFTY{YY}{M}{DD}{strike}{CE/PE} where M is month code (1-9, O, N, D)
+    - Monthly: NSE:NIFTY{YY}{MMM}{strike}{CE/PE} where MMM is month abbreviation
+    
+    Args:
+        index: Index name (NIFTY, BANKNIFTY, etc.)
+        expiry_date: Expiry date in YYYY-MM-DD format
+        strike: Strike price
+        option_type: "CALL" or "PUT"
+        is_monthly: True for monthly expiry, False for weekly
+    
+    Returns:
+        Correctly formatted Fyers option symbol
+    """
+    exp_dt = datetime.strptime(expiry_date, "%Y-%m-%d")
+    exp_yy = exp_dt.strftime("%y")  # 2-digit year
+    exp_dd = exp_dt.strftime("%d")  # 2-digit day
+    
+    # Map index to option prefix
+    prefix_map = {
+        "NIFTY": "NIFTY",
+        "BANKNIFTY": "BANKNIFTY",
+        "FINNIFTY": "FINNIFTY",
+        "MIDCPNIFTY": "MIDCPNIFTY",
+        "SENSEX": "SENSEX"
+    }
+    prefix = prefix_map.get(index.upper(), index.upper())
+    
+    # Option type suffix
+    opt_suffix = "CE" if option_type.upper() == "CALL" else "PE"
+    
+    # Month abbreviations for monthly expiry
+    month_abbr = {
+        1: "JAN", 2: "FEB", 3: "MAR", 4: "APR",
+        5: "MAY", 6: "JUN", 7: "JUL", 8: "AUG",
+        9: "SEP", 10: "OCT", 11: "NOV", 12: "DEC"
+    }
+    
+    # Month codes for weekly expiry (1-9 for Jan-Sep, O/N/D for Oct/Nov/Dec)
+    month_codes = {
+        1: "1", 2: "2", 3: "3", 4: "4",
+        5: "5", 6: "6", 7: "7", 8: "8",
+        9: "9", 10: "O", 11: "N", 12: "D"
+    }
+    
+    month = exp_dt.month
+    
+    if is_monthly:
+        # Monthly format: NSE:NIFTY26JAN25000CE
+        return f"NSE:{prefix}{exp_yy}{month_abbr[month]}{int(strike)}{opt_suffix}"
+    else:
+        # Weekly format: NSE:NIFTY2613025000CE (YY + Month code + DD)
+        return f"NSE:{prefix}{exp_yy}{month_codes[month]}{exp_dd}{int(strike)}{opt_suffix}"
 
 
 def calculate_simple_delta(spot: float, strike: float, option_type: str) -> float:

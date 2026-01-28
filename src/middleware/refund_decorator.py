@@ -103,13 +103,21 @@ def with_refund_on_failure(scan_type: ScanType, scan_count: int = 1):
                 
             except HTTPException as http_error:
                 # HTTP errors from within the endpoint - refund credits
+                # Refund on 500+ (server errors) AND 503 (Fyers data unavailable)
                 if user_id and http_error.status_code >= 500:
+                    # Handle error detail which can be string or dict
+                    error_msg = http_error.detail
+                    if isinstance(error_msg, dict):
+                        error_msg = error_msg.get('message', str(error_msg))[:100]
+                    else:
+                        error_msg = str(error_msg)[:100]
+                    
                     logger.warning(f"Scan failed with HTTP {http_error.status_code}, refunding credits")
                     await refund_credits_on_failure(
                         user_id=user_id,
                         scan_type=scan_type,
                         scan_count=scan_count,
-                        reason=f"Server error: {http_error.detail[:100]}"
+                        reason=f"Server error: {error_msg}"
                     )
                 raise
                 

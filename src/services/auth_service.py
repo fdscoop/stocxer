@@ -304,10 +304,9 @@ class AuthService:
             raise HTTPException(status_code=400, detail=f"Failed to store token: {str(e)}")
     
     async def get_fyers_token(self, user_id: str) -> Optional[FyersTokenResponse]:
-        """Get Fyers token for user"""
+        """Get Fyers token for user - returns token from DB without expiry check.
+        Let Fyers API validate the token and return appropriate error if expired."""
         try:
-            from datetime import timezone
-            
             # Use admin client to bypass RLS
             response = self.supabase_admin.table("fyers_tokens").select("*").eq("user_id", user_id).execute()
 
@@ -316,21 +315,7 @@ class AuthService:
                 return None
 
             data = response.data[0]
-            
-            # ✅ CHECK TOKEN EXPIRY
-            if data.get("expires_at"):
-                expires_at = datetime.fromisoformat(data["expires_at"])
-                # Ensure timezone-aware comparison
-                if expires_at.tzinfo is None:
-                    expires_at = expires_at.replace(tzinfo=timezone.utc)
-                
-                now = datetime.now(timezone.utc)
-                
-                if expires_at < now:
-                    logger.warning(f"⏰ Fyers token expired for user {user_id} (expired at {expires_at})")
-                    return None
-            
-            logger.info(f"✅ Found valid Fyers token for user {user_id}")
+            logger.info(f"✅ Found Fyers token for user {user_id}")
 
             return FyersTokenResponse(
                 id=data["id"],

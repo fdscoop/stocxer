@@ -97,12 +97,14 @@ class OptionStrike:
     call_volume: int
     call_oi_change: int
     call_analysis: str  # Long Build, Short Build, Long Unwind, Short Cover
-    put_ltp: float
-    put_iv: float
-    put_oi: int
-    put_volume: int
-    put_oi_change: int
-    put_analysis: str
+    call_symbol: str = ""  # Actual Fyers trading symbol for CALL
+    put_ltp: float = 0
+    put_iv: float = 0
+    put_oi: int = 0
+    put_volume: int = 0
+    put_oi_change: int = 0
+    put_analysis: str = ""
+    put_symbol: str = ""  # Actual Fyers trading symbol for PUT
 
 
 @dataclass
@@ -677,13 +679,18 @@ class IndexOptionsAnalyzer:
                 spot_data = self.fyers.get_quotes([config["symbol"]])
                 if spot_data and spot_data.get("d"):
                     spot_price = spot_data["d"][0]["v"]["lp"]
+                elif spot_data and spot_data.get("code") == 429:
+                    # Rate limited or IP restricted
+                    logger.error("❌ Fyers API returned 429 - Rate limited or IP restricted")
+                    raise Exception("Market data temporarily unavailable. Fyers API may be rate-limiting your connection. Please try again in a few minutes.")
             except Exception as e:
                 logger.error(f"❌ Failed to fetch spot price from Fyers: {e}")
+                raise
             
             # Raise error if no spot price instead of using mock data
             if not spot_price:
-                logger.error("❌ Fyers API authentication required. Cannot fetch live spot price.")
-                raise Exception("❌ Fyers authentication required. Please authenticate to get live option chain data.")
+                logger.error("❌ Could not get spot price from Fyers API.")
+                raise Exception("Could not fetch market data. Please check your Fyers connection or try during market hours.")
             
             # Get ACTUAL futures data (not estimated)
             futures_data = self.get_futures_data(index, spot_price)
@@ -773,6 +780,9 @@ class IndexOptionsAnalyzer:
                     volume = option_data.get("volume", 0)
                     iv = option_data.get("iv", vix)  # Use IV from data or fallback to VIX
                     
+                    # Get actual Fyers trading symbol from response
+                    fyers_trading_symbol = option_data.get("symbol", "")
+                    
                     # Find or create strike entry
                     strike_entry = next((s for s in strikes_data if s["strike"] == strike), None)
                     if not strike_entry:
@@ -784,12 +794,14 @@ class IndexOptionsAnalyzer:
                             "call_volume": 0,
                             "call_oi_change": 0,
                             "call_analysis": "",
+                            "call_symbol": "",  # Actual Fyers trading symbol
                             "put_ltp": 0,
                             "put_iv": vix,
                             "put_oi": 0,
                             "put_volume": 0,
                             "put_oi_change": 0,
-                            "put_analysis": ""
+                            "put_analysis": "",
+                            "put_symbol": ""  # Actual Fyers trading symbol
                         }
                         strikes_data.append(strike_entry)
                     
@@ -800,6 +812,7 @@ class IndexOptionsAnalyzer:
                         strike_entry["call_oi"] = oi
                         strike_entry["call_volume"] = volume
                         strike_entry["call_oi_change"] = option_data.get("oi_change", 0)
+                        strike_entry["call_symbol"] = fyers_trading_symbol  # Store actual Fyers symbol
                         strike_entry["call_analysis"] = self.analyze_oi_change(
                             strike_entry["call_oi_change"], 
                             option_data.get("price_change", 0)
@@ -812,6 +825,7 @@ class IndexOptionsAnalyzer:
                         strike_entry["put_oi"] = oi
                         strike_entry["put_volume"] = volume
                         strike_entry["put_oi_change"] = option_data.get("oi_change", 0)
+                        strike_entry["put_symbol"] = fyers_trading_symbol  # Store actual Fyers symbol
                         strike_entry["put_analysis"] = self.analyze_oi_change(
                             strike_entry["put_oi_change"],
                             option_data.get("price_change", 0)
@@ -824,42 +838,10 @@ class IndexOptionsAnalyzer:
                 logger.info(f"✅ Processed {len(strikes_data)} complete strikes with LIVE data")
                 
             else:
-                logger.warning("⚠️ Failed to fetch Fyers option chain, using fallback estimation")
-                # Fallback to estimation only if API fails
-                for i in range(-10, 11):
-                    strike = atm_strike + (i * strike_gap)
-                    distance = abs(strike - spot_price)
-                    moneyness = distance / spot_price
-                    
-                    base_iv = vix / 100
-                    iv_adjustment = 0.02 * (abs(i) / 5)
-                    call_iv = (base_iv + iv_adjustment) * 100
-                    put_iv = (base_iv + iv_adjustment + 0.005) * 100
-                    
-                    time_to_expiry = max(days_to_expiry / 365, 0.01)
-                    call_ltp = max(0, spot_price - strike) + spot_price * call_iv/100 * np.sqrt(time_to_expiry) * 0.4
-                    put_ltp = max(0, strike - spot_price) + spot_price * put_iv/100 * np.sqrt(time_to_expiry) * 0.4
-                    
-                    strikes_data.append({
-                        "strike": strike,
-                        "call_ltp": round(call_ltp, 2),
-                        "call_iv": round(call_iv, 2),
-                        "call_oi": 50000,
-                        "call_volume": 15000,
-                        "call_oi_change": 0,
-                        "call_analysis": "",
-                        "put_ltp": round(put_ltp, 2),
-                        "put_iv": round(put_iv, 2),
-                        "put_oi": 50000,
-                        "put_volume": 15000,
-                        "put_oi_change": 0,
-                        "put_analysis": ""
-                    })
-                    
-                    total_call_oi += 50000
-                    total_put_oi += 50000
-                    total_call_volume += 15000
-                    total_put_volume += 15000
+                # IMPORTANT: Do NOT generate fallback data in production
+                # Return None to indicate Fyers authentication is required
+                logger.error("❌ Failed to fetch Fyers option chain - no live data available")
+                return None
             
             # Calculate PCR
             pcr_oi = total_put_oi / max(total_call_oi, 1)
@@ -1134,4 +1116,7 @@ def get_index_analyzer(fyers_client):
     global index_analyzer
     if index_analyzer is None:
         index_analyzer = IndexOptionsAnalyzer(fyers_client)
+    else:
+        # Update the fyers reference in case token changed
+        index_analyzer.fyers = fyers_client
     return index_analyzer
