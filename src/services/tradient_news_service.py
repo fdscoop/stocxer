@@ -627,6 +627,7 @@ class TradientNewsService:
     async def get_recent_news(self,
                               hours: int = 4,
                               indices: List[str] = None,
+                              sectors: List[str] = None,
                               min_relevance: float = 0.1,
                               limit: int = 20) -> List[Dict]:
         """
@@ -636,6 +637,7 @@ class TradientNewsService:
         Args:
             hours: How many hours back to fetch
             indices: Filter by affected indices (NIFTY, BANKNIFTY, FINNIFTY)
+            sectors: Filter by affected sectors
             min_relevance: Minimum relevance score
             limit: Max articles to return
         
@@ -658,6 +660,15 @@ class TradientNewsService:
                 for article in articles:
                     article_indices = article.get("affected_indices") or []
                     if any(idx in article_indices for idx in indices):
+                        filtered.append(article)
+                articles = filtered
+            
+            # Filter by sectors if specified
+            if sectors:
+                filtered = []
+                for article in articles:
+                    article_sectors = article.get("affected_sectors") or []
+                    if any(sector in article_sectors for sector in sectors):
                         filtered.append(article)
                 articles = filtered
             
