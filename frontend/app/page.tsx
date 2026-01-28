@@ -69,19 +69,27 @@ interface TradingSignal {
   target_2: number
   stop_loss: number
   risk_reward: string
+  risk_reward_2?: string
   confidence: number
   direction: string
   trading_symbol: string
+  expiry_date?: string
+  days_to_expiry?: number
   // Enhanced fields
   discount_zone?: {
     best_entry?: number
     status?: string
     current_price?: number
-    iv_comparison?: string
-    analysis?: string
+    max_entry_price?: number
+    target_price?: number
+    iv_vs_avg_pct?: number
+    momentum_direction?: string
+    reasoning?: string
+    supports_entry?: boolean
   }
   liquidity_score?: number
   liquidity_grade?: string
+  execution_quality?: string
   sentiment_score?: number
   sentiment_direction?: string
   market_mood?: string
@@ -99,6 +107,165 @@ interface TradingSignal {
   }
   entry_analysis?: any
   raw_ltp?: number
+  // Greeks
+  greeks?: {
+    delta: number
+    gamma: number
+    theta: number
+    vega: number
+    interpretation?: {
+      delta_meaning?: string
+      theta_meaning?: string
+      gamma_meaning?: string
+    }
+  }
+  // ML Analysis
+  ml_analysis?: {
+    enabled: boolean
+    status: string
+    direction: string
+    confidence: number
+    predicted_price?: number
+    price_change_pct?: number
+    recommendation?: string
+    warning?: string
+    models?: {
+      arima?: string
+      momentum?: string
+    }
+  }
+  // Theta/Expiry Analysis
+  theta_analysis?: {
+    decay_phase: string
+    daily_decay_pct: number
+    hourly_decay_pct: number
+    current_theta: number
+    theta_per_hour: number
+    risk_level: string
+    advice: string
+    best_buy_time?: string
+    strategy_recommendation?: string
+  }
+  expiry_analysis?: {
+    days_to_expiry: number
+    is_expiry_week: boolean
+    is_expiry_day: boolean
+    theta_decay_rate: string
+    best_entry_advice: string
+    time_value_warning?: string
+  }
+  // MTF Analysis
+  mtf_analysis?: {
+    overall_bias: string
+    current_price: number
+    timeframes_analyzed: string[]
+    confluence_zones?: Array<{
+      center: number
+      weight: number
+      timeframes: string[]
+      distance_pct: number
+    }>
+    trend_reversal?: {
+      is_reversal: boolean
+      direction: string
+      confidence: number
+      reason: string
+      timeframes_signaling: string[]
+    }
+  }
+  // Probability Analysis
+  probability_analysis?: {
+    stocks_scanned: number
+    expected_direction: string
+    expected_move_pct: number
+    confidence: number
+    probability_up: number
+    probability_down: number
+    bullish_pct: number
+    bearish_pct: number
+    market_regime: string
+    constituent_recommendation: string
+    top_movers?: {
+      bullish: Array<{ symbol: string; probability: number }>
+      bearish: Array<{ symbol: string; probability: number }>
+      volume_surge: Array<{ symbol: string; has_surge: boolean }>
+    }
+  }
+  // Setup Details
+  setup_details?: {
+    timeframe: string
+    fvg_level: number
+    fvg_status: string
+    reasoning: string
+    reversal_direction: string
+    reversal_type: string
+    reversal_probability: number
+    confidence_level: string
+    four_hour_fvg?: {
+      detected: boolean
+      level: number
+      type: string
+      direction_message: string
+      is_active_setup: boolean
+    }
+  }
+  // Market Context
+  market_context?: {
+    spot_price: number
+    future_price: number
+    atm_strike: number
+    overall_bias: string
+    iv_regime: string
+    atm_iv: number
+    vix: number
+    pcr_oi: number
+    pcr_volume: number
+    max_pain: number
+    basis_pct: number
+    support_levels: number[]
+    resistance_levels: number[]
+  }
+  // Trade Recommendation
+  trade_recommendation?: {
+    verdict: string
+    risk_level: string
+    reasons: string[]
+    position_size_advice: string
+    summary: string
+  }
+  // Trading Mode
+  trading_mode?: {
+    mode: string
+    description: string
+    targets: string
+    max_hold: string
+    entry_window: string
+  }
+  // Entry Session
+  entry_session?: {
+    session: string
+    advice: string
+    can_trade: boolean
+    risk_level: string
+  }
+  // Chain Data
+  chain_data?: {
+    selected_option: {
+      ltp: number
+      iv: number
+      oi: number
+      volume: number
+      analysis: string
+    }
+    opposite_side?: {
+      type: string
+      ltp: number
+      iv: number
+      oi: number
+    }
+    strike_position: string
+    distance_pct: number
+  }
 }
 
 interface NewsArticle {
@@ -815,25 +982,185 @@ export default function DashboardPage() {
           target_2: backendSignal.targets.target_2,
           stop_loss: stopLoss,
           risk_reward: riskReward,
+          risk_reward_2: backendSignal.risk_reward?.ratio_2,
           confidence: numericConfidence,
-          direction: backendSignal.signal_type || 'NEUTRAL',
-          trading_symbol: backendSignal.option.symbol,
-          // Enhanced fields from backend
-          discount_zone: backendSignal.discount_zone || {},
-          liquidity_score: backendSignal.liquidity?.liquidity_score,
-          liquidity_grade: backendSignal.liquidity?.liquidity_grade,
+          direction: backendSignal.mtf_analysis?.overall_bias?.toUpperCase() || backendSignal.signal_type || 'NEUTRAL',
+          trading_symbol: backendSignal.option.trading_symbol || backendSignal.option.symbol,
+          expiry_date: backendSignal.option.expiry_date,
+          days_to_expiry: backendSignal.option.expiry_info?.days_to_expiry,
+          
+          // Discount Zone - comprehensive
+          discount_zone: {
+            best_entry: backendSignal.discount_zone?.best_entry_price,
+            status: backendSignal.discount_zone?.status,
+            current_price: backendSignal.discount_zone?.current_price,
+            max_entry_price: backendSignal.discount_zone?.max_entry_price,
+            target_price: backendSignal.discount_zone?.target_price,
+            iv_vs_avg_pct: backendSignal.discount_zone?.iv_vs_avg_pct,
+            momentum_direction: backendSignal.discount_zone?.momentum_direction,
+            reasoning: backendSignal.discount_zone?.reasoning,
+            supports_entry: backendSignal.discount_zone?.supports_entry
+          },
+          
+          // Market Depth/Liquidity
+          liquidity_score: backendSignal.market_depth?.liquidity_score,
+          liquidity_grade: backendSignal.market_depth?.execution_quality,
+          execution_quality: backendSignal.market_depth?.execution_quality,
+          
+          // Sentiment (if available)
           sentiment_score: backendSignal.sentiment_analysis?.sentiment_score,
           sentiment_direction: backendSignal.sentiment_analysis?.sentiment_direction,
           market_mood: backendSignal.sentiment_analysis?.market_mood,
           news_articles: backendSignal.sentiment_analysis?.news_articles_retrieved,
-          reversal_detected: backendSignal.reversal_detection?.detected,
-          reversal_type: backendSignal.reversal_detection?.type,
-          reversal_description: backendSignal.reversal_detection?.description,
-          mtf_bias: backendSignal.mtf_ict_analysis?.overall_bias,
-          confidence_adjustments: backendSignal.confidence_adjustments,
+          
+          // Reversal Detection
+          reversal_detected: backendSignal.mtf_analysis?.trend_reversal?.is_reversal,
+          reversal_type: backendSignal.mtf_analysis?.trend_reversal?.direction,
+          reversal_description: backendSignal.mtf_analysis?.trend_reversal?.reason,
+          
+          // MTF Bias
+          mtf_bias: backendSignal.mtf_analysis?.overall_bias,
+          
+          // Entry Analysis
           entry_analysis: backendSignal.entry_analysis,
-          raw_ltp: backendSignal.pricing?.ltp
-        } as TradingSignal
+          raw_ltp: backendSignal.pricing?.ltp,
+          
+          // Greeks - NEW
+          greeks: backendSignal.greeks ? {
+            delta: backendSignal.greeks.delta,
+            gamma: backendSignal.greeks.gamma,
+            theta: backendSignal.greeks.theta,
+            vega: backendSignal.greeks.vega,
+            interpretation: backendSignal.greeks.interpretation
+          } : undefined,
+          
+          // ML Analysis - NEW
+          ml_analysis: backendSignal.ml_analysis ? {
+            enabled: backendSignal.ml_analysis.enabled,
+            status: backendSignal.ml_analysis.status,
+            direction: backendSignal.ml_analysis.direction,
+            confidence: backendSignal.ml_analysis.confidence,
+            predicted_price: backendSignal.ml_analysis.predicted_price,
+            price_change_pct: backendSignal.ml_analysis.price_change_pct,
+            recommendation: backendSignal.ml_analysis.recommendation,
+            warning: backendSignal.ml_analysis.warning,
+            models: backendSignal.ml_analysis.models
+          } : undefined,
+          
+          // Theta Analysis - NEW
+          theta_analysis: backendSignal.theta_analysis ? {
+            decay_phase: backendSignal.theta_analysis.decay_phase,
+            daily_decay_pct: backendSignal.theta_analysis.daily_decay_pct,
+            hourly_decay_pct: backendSignal.theta_analysis.hourly_decay_pct,
+            current_theta: backendSignal.theta_analysis.current_theta,
+            theta_per_hour: backendSignal.theta_analysis.theta_per_hour,
+            risk_level: backendSignal.theta_analysis.risk_level,
+            advice: backendSignal.theta_analysis.advice,
+            best_buy_time: backendSignal.theta_analysis.best_buy_time,
+            strategy_recommendation: backendSignal.theta_analysis.strategy_recommendation
+          } : undefined,
+          
+          // Expiry Analysis - NEW
+          expiry_analysis: backendSignal.expiry_analysis ? {
+            days_to_expiry: backendSignal.expiry_analysis.days_to_expiry,
+            is_expiry_week: backendSignal.expiry_analysis.is_expiry_week,
+            is_expiry_day: backendSignal.expiry_analysis.is_expiry_day,
+            theta_decay_rate: backendSignal.expiry_analysis.theta_decay_rate,
+            best_entry_advice: backendSignal.expiry_analysis.best_entry_advice,
+            time_value_warning: backendSignal.expiry_analysis.time_value_warning
+          } : undefined,
+          
+          // MTF Analysis - NEW
+          mtf_analysis: backendSignal.mtf_analysis ? {
+            overall_bias: backendSignal.mtf_analysis.overall_bias,
+            current_price: backendSignal.mtf_analysis.current_price,
+            timeframes_analyzed: backendSignal.mtf_analysis.timeframes_analyzed,
+            confluence_zones: backendSignal.mtf_analysis.confluence_zones,
+            trend_reversal: backendSignal.mtf_analysis.trend_reversal
+          } : undefined,
+          
+          // Probability Analysis - NEW
+          probability_analysis: backendSignal.probability_analysis ? {
+            stocks_scanned: backendSignal.probability_analysis.stocks_scanned,
+            expected_direction: backendSignal.probability_analysis.expected_direction,
+            expected_move_pct: backendSignal.probability_analysis.expected_move_pct,
+            confidence: backendSignal.probability_analysis.confidence,
+            probability_up: backendSignal.probability_analysis.probability_up,
+            probability_down: backendSignal.probability_analysis.probability_down,
+            bullish_pct: backendSignal.probability_analysis.bullish_pct,
+            bearish_pct: backendSignal.probability_analysis.bearish_pct,
+            market_regime: backendSignal.probability_analysis.market_regime,
+            constituent_recommendation: backendSignal.probability_analysis.constituent_recommendation,
+            top_movers: backendSignal.probability_analysis.top_movers
+          } : undefined,
+          
+          // Setup Details - NEW
+          setup_details: backendSignal.setup_details ? {
+            timeframe: backendSignal.setup_details.timeframe,
+            fvg_level: backendSignal.setup_details.fvg_level,
+            fvg_status: backendSignal.setup_details.fvg_status,
+            reasoning: backendSignal.setup_details.reasoning,
+            reversal_direction: backendSignal.setup_details.reversal_direction,
+            reversal_type: backendSignal.setup_details.reversal_type,
+            reversal_probability: backendSignal.setup_details.reversal_probability,
+            confidence_level: backendSignal.setup_details.confidence_level,
+            four_hour_fvg: backendSignal.setup_details.four_hour_fvg
+          } : undefined,
+          
+          // Market Context - NEW
+          market_context: backendSignal.market_context ? {
+            spot_price: backendSignal.market_context.spot_price,
+            future_price: backendSignal.market_context.future_price,
+            atm_strike: backendSignal.market_context.atm_strike,
+            overall_bias: backendSignal.market_context.overall_bias,
+            iv_regime: backendSignal.market_context.iv_regime,
+            atm_iv: backendSignal.market_context.atm_iv,
+            vix: backendSignal.market_context.vix,
+            pcr_oi: backendSignal.market_context.pcr_oi,
+            pcr_volume: backendSignal.market_context.pcr_volume,
+            max_pain: backendSignal.market_context.max_pain,
+            basis_pct: backendSignal.market_context.basis_pct,
+            support_levels: backendSignal.market_context.support_levels,
+            resistance_levels: backendSignal.market_context.resistance_levels
+          } : undefined,
+          
+          // Trade Recommendation - NEW
+          trade_recommendation: backendSignal.trade_recommendation ? {
+            verdict: backendSignal.trade_recommendation.verdict,
+            risk_level: backendSignal.trade_recommendation.risk_level,
+            reasons: backendSignal.trade_recommendation.reasons,
+            position_size_advice: backendSignal.trade_recommendation.position_size_advice,
+            summary: backendSignal.trade_recommendation.summary
+          } : undefined,
+          
+          // Trading Mode - NEW
+          trading_mode: backendSignal.trading_mode ? {
+            mode: backendSignal.trading_mode.mode,
+            description: backendSignal.trading_mode.description,
+            targets: backendSignal.trading_mode.targets,
+            max_hold: backendSignal.trading_mode.max_hold,
+            entry_window: backendSignal.trading_mode.entry_window
+          } : undefined,
+          
+          // Entry Session - NEW
+          entry_session: backendSignal.entry?.session_advice ? {
+            session: backendSignal.entry.session_advice.session,
+            advice: backendSignal.entry.session_advice.advice,
+            can_trade: backendSignal.entry.session_advice.can_trade,
+            risk_level: backendSignal.entry.session_advice.risk_level
+          } : undefined,
+          
+          // Chain Data - NEW
+          chain_data: backendSignal.option?.chain_data ? {
+            selected_option: backendSignal.option.chain_data.selected_option,
+            opposite_side: backendSignal.option.chain_data.opposite_side,
+            strike_position: backendSignal.option.chain_data.strike_position,
+            distance_pct: backendSignal.option.chain_data.distance_pct
+          } : undefined,
+          
+          // Keep legacy for backward compatibility
+          confidence_adjustments: backendSignal.confidence_adjustments
+        }
 
         setTradingSignal(tradingSignal)
 
@@ -1236,16 +1563,391 @@ export default function DashboardPage() {
                 )}
               </div>
 
-              {/* Day Trading Tips */}
-              <div className="p-3 bg-orange-500/10 rounded-lg border border-orange-500/30">
-                <div className="text-xs text-muted-foreground mb-1">⏰ Day Trading Tips</div>
-                <div className="text-xs text-orange-300 space-y-1">
-                  <p>• Exit by 3:15 PM • Best entry: 9:30 AM - 2:00 PM</p>
-                  {(tradingSignal as any).discount_zone?.analysis && (
-                    <p>• {(tradingSignal as any).discount_zone.analysis}</p>
+              {/* ============ NEW: TRADE RECOMMENDATION VERDICT ============ */}
+              {tradingSignal.trade_recommendation && (
+                <div className={`p-3 rounded-lg border ${
+                  tradingSignal.trade_recommendation.verdict === 'TRADE' ? 'bg-green-500/10 border-green-500/30' :
+                  tradingSignal.trade_recommendation.verdict === 'WAIT' ? 'bg-yellow-500/10 border-yellow-500/30' :
+                  'bg-red-500/10 border-red-500/30'
+                }`}>
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="text-sm font-medium flex items-center gap-2">
+                      {tradingSignal.trade_recommendation.verdict === 'TRADE' ? '✅' : tradingSignal.trade_recommendation.verdict === 'WAIT' ? '⏳' : '⛔'}
+                      Trade Verdict: <span className={
+                        tradingSignal.trade_recommendation.verdict === 'TRADE' ? 'text-green-400' :
+                        tradingSignal.trade_recommendation.verdict === 'WAIT' ? 'text-yellow-400' : 'text-red-400'
+                      }>{tradingSignal.trade_recommendation.verdict}</span>
+                    </div>
+                    <Badge variant="outline" className={`text-xs ${
+                      tradingSignal.trade_recommendation.risk_level === 'LOW' ? 'border-green-500 text-green-500' :
+                      tradingSignal.trade_recommendation.risk_level === 'MEDIUM' ? 'border-yellow-500 text-yellow-500' :
+                      'border-red-500 text-red-500'
+                    }`}>
+                      Risk: {tradingSignal.trade_recommendation.risk_level}
+                    </Badge>
+                  </div>
+                  <div className="text-xs text-muted-foreground space-y-1">
+                    {tradingSignal.trade_recommendation.reasons?.map((reason, idx) => (
+                      <p key={idx}>{reason}</p>
+                    ))}
+                  </div>
+                  <div className="mt-2 text-xs font-medium text-slate-300">
+                    Position Size: {tradingSignal.trade_recommendation.position_size_advice}
+                  </div>
+                </div>
+              )}
+
+              {/* ============ NEW: GREEKS ANALYSIS ============ */}
+              {tradingSignal.greeks && (
+                <div className="p-3 bg-violet-500/10 rounded-lg border border-violet-500/30">
+                  <div className="text-sm font-medium text-violet-300 mb-3 flex items-center gap-2">
+                    📐 Option Greeks
+                    <span className="text-xs bg-violet-600/30 px-2 py-0.5 rounded">LIVE</span>
+                  </div>
+                  <div className="grid grid-cols-4 gap-2 mb-3">
+                    <div className="p-2 bg-card rounded border text-center">
+                      <div className="text-xs text-muted-foreground">Delta</div>
+                      <div className={`text-lg font-bold ${tradingSignal.greeks.delta < 0 ? 'text-red-400' : 'text-green-400'}`}>
+                        {tradingSignal.greeks.delta.toFixed(3)}
+                      </div>
+                    </div>
+                    <div className="p-2 bg-card rounded border text-center">
+                      <div className="text-xs text-muted-foreground">Gamma</div>
+                      <div className="text-lg font-bold text-blue-400">
+                        {tradingSignal.greeks.gamma.toFixed(4)}
+                      </div>
+                    </div>
+                    <div className="p-2 bg-card rounded border text-center">
+                      <div className="text-xs text-muted-foreground">Theta</div>
+                      <div className="text-lg font-bold text-red-400">
+                        {tradingSignal.greeks.theta.toFixed(2)}
+                      </div>
+                    </div>
+                    <div className="p-2 bg-card rounded border text-center">
+                      <div className="text-xs text-muted-foreground">Vega</div>
+                      <div className="text-lg font-bold text-purple-400">
+                        {tradingSignal.greeks.vega.toFixed(2)}
+                      </div>
+                    </div>
+                  </div>
+                  {tradingSignal.greeks.interpretation && (
+                    <div className="text-xs text-violet-200 space-y-1">
+                      <p>📊 {tradingSignal.greeks.interpretation.delta_meaning}</p>
+                      <p>⏰ {tradingSignal.greeks.interpretation.theta_meaning}</p>
+                    </div>
                   )}
                 </div>
-              </div>
+              )}
+
+              {/* ============ NEW: ML ANALYSIS ============ */}
+              {tradingSignal.ml_analysis && tradingSignal.ml_analysis.enabled && (
+                <div className={`p-3 rounded-lg border ${
+                  tradingSignal.ml_analysis.direction === 'bullish' ? 'bg-green-500/10 border-green-500/30' :
+                  tradingSignal.ml_analysis.direction === 'bearish' ? 'bg-red-500/10 border-red-500/30' :
+                  'bg-slate-500/10 border-slate-500/30'
+                }`}>
+                  <div className="text-sm font-medium mb-3 flex items-center gap-2">
+                    🤖 ML Prediction
+                    <Badge variant="outline" className={`text-xs ${
+                      tradingSignal.ml_analysis.status === 'ACTIVE' ? 'border-green-500 text-green-500' : 'border-yellow-500 text-yellow-500'
+                    }`}>
+                      {tradingSignal.ml_analysis.status}
+                    </Badge>
+                  </div>
+                  <div className="grid grid-cols-3 gap-2 mb-2">
+                    <div className="p-2 bg-card rounded border text-center">
+                      <div className="text-xs text-muted-foreground">Direction</div>
+                      <div className={`text-base font-bold ${
+                        tradingSignal.ml_analysis.direction === 'bullish' ? 'text-green-400' :
+                        tradingSignal.ml_analysis.direction === 'bearish' ? 'text-red-400' : 'text-slate-400'
+                      }`}>
+                        {tradingSignal.ml_analysis.direction?.toUpperCase()}
+                      </div>
+                    </div>
+                    <div className="p-2 bg-card rounded border text-center">
+                      <div className="text-xs text-muted-foreground">Confidence</div>
+                      <div className="text-base font-bold text-blue-400">
+                        {tradingSignal.ml_analysis.confidence}%
+                      </div>
+                    </div>
+                    <div className="p-2 bg-card rounded border text-center">
+                      <div className="text-xs text-muted-foreground">Predicted</div>
+                      <div className="text-base font-bold text-primary">
+                        ₹{tradingSignal.ml_analysis.predicted_price?.toFixed(0)}
+                      </div>
+                    </div>
+                  </div>
+                  {tradingSignal.ml_analysis.models && (
+                    <div className="flex gap-2 mb-2">
+                      <Badge variant="outline" className="text-xs">
+                        ARIMA: {tradingSignal.ml_analysis.models.arima}
+                      </Badge>
+                      <Badge variant="outline" className="text-xs">
+                        Momentum: {tradingSignal.ml_analysis.models.momentum}
+                      </Badge>
+                    </div>
+                  )}
+                  {tradingSignal.ml_analysis.warning && (
+                    <div className="text-xs text-yellow-400">
+                      {tradingSignal.ml_analysis.warning}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* ============ NEW: THETA/EXPIRY ANALYSIS ============ */}
+              {tradingSignal.theta_analysis && (
+                <div className={`p-3 rounded-lg border ${
+                  tradingSignal.theta_analysis.risk_level === 'LOW' ? 'bg-green-500/10 border-green-500/30' :
+                  tradingSignal.theta_analysis.risk_level?.includes('MEDIUM') ? 'bg-yellow-500/10 border-yellow-500/30' :
+                  'bg-red-500/10 border-red-500/30'
+                }`}>
+                  <div className="text-sm font-medium mb-3 flex items-center gap-2">
+                    ⏱️ Time Decay Analysis
+                    <Badge variant="outline" className="text-xs">
+                      {tradingSignal.theta_analysis.decay_phase}
+                    </Badge>
+                  </div>
+                  <div className="grid grid-cols-3 gap-2 mb-2">
+                    <div className="p-2 bg-card rounded border text-center">
+                      <div className="text-xs text-muted-foreground">Daily Decay</div>
+                      <div className="text-base font-bold text-red-400">
+                        -{tradingSignal.theta_analysis.daily_decay_pct}%
+                      </div>
+                    </div>
+                    <div className="p-2 bg-card rounded border text-center">
+                      <div className="text-xs text-muted-foreground">Hourly</div>
+                      <div className="text-base font-bold text-orange-400">
+                        -₹{Math.abs(tradingSignal.theta_analysis.theta_per_hour).toFixed(1)}/hr
+                      </div>
+                    </div>
+                    <div className="p-2 bg-card rounded border text-center">
+                      <div className="text-xs text-muted-foreground">Risk</div>
+                      <div className={`text-base font-bold ${
+                        tradingSignal.theta_analysis.risk_level === 'LOW' ? 'text-green-400' :
+                        tradingSignal.theta_analysis.risk_level?.includes('MEDIUM') ? 'text-yellow-400' : 'text-red-400'
+                      }`}>
+                        {tradingSignal.theta_analysis.risk_level}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="text-xs text-muted-foreground space-y-1">
+                    <p>💡 {tradingSignal.theta_analysis.advice}</p>
+                    <p>📅 {tradingSignal.theta_analysis.strategy_recommendation}</p>
+                  </div>
+                </div>
+              )}
+
+              {/* ============ NEW: MARKET CONTEXT ============ */}
+              {tradingSignal.market_context && (
+                <div className="p-3 bg-slate-500/10 rounded-lg border border-slate-500/30">
+                  <div className="text-sm font-medium text-slate-300 mb-3">📈 Market Context</div>
+                  <div className="grid grid-cols-4 gap-2 mb-3">
+                    <div className="p-2 bg-card rounded border text-center">
+                      <div className="text-xs text-muted-foreground">Spot</div>
+                      <div className="text-sm font-bold">₹{tradingSignal.market_context.spot_price?.toFixed(0)}</div>
+                    </div>
+                    <div className="p-2 bg-card rounded border text-center">
+                      <div className="text-xs text-muted-foreground">VIX</div>
+                      <div className={`text-sm font-bold ${tradingSignal.market_context.vix > 20 ? 'text-red-400' : 'text-green-400'}`}>
+                        {tradingSignal.market_context.vix?.toFixed(1)}
+                      </div>
+                    </div>
+                    <div className="p-2 bg-card rounded border text-center">
+                      <div className="text-xs text-muted-foreground">PCR (OI)</div>
+                      <div className={`text-sm font-bold ${tradingSignal.market_context.pcr_oi > 1 ? 'text-green-400' : 'text-red-400'}`}>
+                        {tradingSignal.market_context.pcr_oi?.toFixed(2)}
+                      </div>
+                    </div>
+                    <div className="p-2 bg-card rounded border text-center">
+                      <div className="text-xs text-muted-foreground">Max Pain</div>
+                      <div className="text-sm font-bold">₹{tradingSignal.market_context.max_pain}</div>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="text-xs">
+                      <span className="text-muted-foreground">Supports: </span>
+                      <span className="text-green-400">
+                        {tradingSignal.market_context.support_levels?.slice(0, 3).join(', ')}
+                      </span>
+                    </div>
+                    <div className="text-xs">
+                      <span className="text-muted-foreground">Resistances: </span>
+                      <span className="text-red-400">
+                        {tradingSignal.market_context.resistance_levels?.slice(0, 3).join(', ')}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* ============ NEW: PROBABILITY ANALYSIS WITH TOP MOVERS ============ */}
+              {tradingSignal.probability_analysis && (
+                <div className="p-3 bg-indigo-500/10 rounded-lg border border-indigo-500/30">
+                  <div className="text-sm font-medium text-indigo-300 mb-3 flex items-center justify-between">
+                    <span>📊 Constituent Analysis ({tradingSignal.probability_analysis.stocks_scanned} stocks)</span>
+                    <Badge variant="outline" className="text-xs">
+                      {tradingSignal.probability_analysis.market_regime}
+                    </Badge>
+                  </div>
+                  <div className="grid grid-cols-4 gap-2 mb-3">
+                    <div className="p-2 bg-green-500/10 rounded border border-green-500/20 text-center">
+                      <div className="text-xs text-muted-foreground">Bullish</div>
+                      <div className="text-lg font-bold text-green-400">{tradingSignal.probability_analysis.bullish_pct}%</div>
+                    </div>
+                    <div className="p-2 bg-red-500/10 rounded border border-red-500/20 text-center">
+                      <div className="text-xs text-muted-foreground">Bearish</div>
+                      <div className="text-lg font-bold text-red-400">{tradingSignal.probability_analysis.bearish_pct}%</div>
+                    </div>
+                    <div className="p-2 bg-card rounded border text-center">
+                      <div className="text-xs text-muted-foreground">Expected Move</div>
+                      <div className={`text-lg font-bold ${tradingSignal.probability_analysis.expected_move_pct > 0 ? 'text-green-400' : 'text-red-400'}`}>
+                        {tradingSignal.probability_analysis.expected_move_pct > 0 ? '+' : ''}{tradingSignal.probability_analysis.expected_move_pct?.toFixed(2)}%
+                      </div>
+                    </div>
+                    <div className="p-2 bg-primary/10 rounded border border-primary/20 text-center">
+                      <div className="text-xs text-muted-foreground">Recommended</div>
+                      <div className="text-lg font-bold text-primary">{tradingSignal.probability_analysis.constituent_recommendation}</div>
+                    </div>
+                  </div>
+                  {/* Top Movers */}
+                  {tradingSignal.probability_analysis.top_movers && (
+                    <div className="grid grid-cols-3 gap-2">
+                      <div className="p-2 bg-green-500/5 rounded border border-green-500/10">
+                        <div className="text-xs text-green-400 mb-1">🐂 Top Bullish</div>
+                        {tradingSignal.probability_analysis.top_movers.bullish?.slice(0, 3).map((stock, idx) => (
+                          <div key={idx} className="text-xs text-muted-foreground">
+                            {stock.symbol}: {(stock.probability * 100).toFixed(0)}%
+                          </div>
+                        ))}
+                      </div>
+                      <div className="p-2 bg-red-500/5 rounded border border-red-500/10">
+                        <div className="text-xs text-red-400 mb-1">🐻 Top Bearish</div>
+                        {tradingSignal.probability_analysis.top_movers.bearish?.slice(0, 3).map((stock, idx) => (
+                          <div key={idx} className="text-xs text-muted-foreground">
+                            {stock.symbol}: {(stock.probability * 100).toFixed(0)}%
+                          </div>
+                        ))}
+                      </div>
+                      <div className="p-2 bg-yellow-500/5 rounded border border-yellow-500/10">
+                        <div className="text-xs text-yellow-400 mb-1">📈 Volume Surge</div>
+                        {tradingSignal.probability_analysis.top_movers.volume_surge?.slice(0, 3).map((stock, idx) => (
+                          <div key={idx} className="text-xs text-muted-foreground">
+                            {stock.symbol}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* ============ NEW: MTF ANALYSIS ============ */}
+              {tradingSignal.mtf_analysis && (
+                <div className="p-3 bg-cyan-500/10 rounded-lg border border-cyan-500/30">
+                  <div className="text-sm font-medium text-cyan-300 mb-3 flex items-center gap-2">
+                    📊 Multi-Timeframe Analysis
+                    <Badge variant="outline" className={`text-xs ${
+                      tradingSignal.mtf_analysis.overall_bias === 'bullish' ? 'border-green-500 text-green-500' :
+                      tradingSignal.mtf_analysis.overall_bias === 'bearish' ? 'border-red-500 text-red-500' :
+                      'border-yellow-500 text-yellow-500'
+                    }`}>
+                      {tradingSignal.mtf_analysis.overall_bias?.toUpperCase()}
+                    </Badge>
+                  </div>
+                  <div className="flex flex-wrap gap-1 mb-2">
+                    {tradingSignal.mtf_analysis.timeframes_analyzed?.map((tf, idx) => (
+                      <Badge key={idx} variant="outline" className="text-xs">
+                        {tf === 'M' ? 'Monthly' : tf === 'W' ? 'Weekly' : tf === 'D' ? 'Daily' : `${tf}m`}
+                      </Badge>
+                    ))}
+                  </div>
+                  {/* Trend Reversal */}
+                  {tradingSignal.mtf_analysis.trend_reversal?.is_reversal && (
+                    <div className={`p-2 rounded border ${
+                      tradingSignal.mtf_analysis.trend_reversal.direction.includes('BULLISH') ? 'bg-green-500/10 border-green-500/20' : 'bg-red-500/10 border-red-500/20'
+                    }`}>
+                      <div className="text-xs font-medium mb-1">
+                        🔄 {tradingSignal.mtf_analysis.trend_reversal.direction}
+                        <span className="ml-2 text-muted-foreground">
+                          ({tradingSignal.mtf_analysis.trend_reversal.confidence}% confidence)
+                        </span>
+                      </div>
+                      <div className="text-xs text-muted-foreground">
+                        {tradingSignal.mtf_analysis.trend_reversal.reason}
+                      </div>
+                      <div className="text-xs text-muted-foreground mt-1">
+                        Signaling TFs: {tradingSignal.mtf_analysis.trend_reversal.timeframes_signaling?.join(', ')}
+                      </div>
+                    </div>
+                  )}
+                  {/* Confluence Zones */}
+                  {tradingSignal.mtf_analysis.confluence_zones && tradingSignal.mtf_analysis.confluence_zones.length > 0 && (
+                    <div className="mt-2">
+                      <div className="text-xs text-muted-foreground mb-1">Key Confluence Zones:</div>
+                      <div className="space-y-1">
+                        {tradingSignal.mtf_analysis.confluence_zones.slice(0, 2).map((zone, idx) => (
+                          <div key={idx} className="text-xs flex justify-between">
+                            <span>₹{zone.center.toFixed(0)} ({zone.timeframes.join('+')})</span>
+                            <span className={zone.distance_pct < 0 ? 'text-green-400' : 'text-red-400'}>
+                              {zone.distance_pct > 0 ? '+' : ''}{zone.distance_pct.toFixed(1)}%
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* ============ NEW: FVG SETUP DETAILS ============ */}
+              {tradingSignal.setup_details && (
+                <div className="p-3 bg-amber-500/10 rounded-lg border border-amber-500/30">
+                  <div className="text-sm font-medium text-amber-300 mb-2 flex items-center gap-2">
+                    📍 ICT FVG Setup
+                    <Badge variant="outline" className="text-xs">
+                      {tradingSignal.setup_details.confidence_level}
+                    </Badge>
+                  </div>
+                  <div className="grid grid-cols-3 gap-2 mb-2">
+                    <div className="p-2 bg-card rounded border text-center">
+                      <div className="text-xs text-muted-foreground">FVG Level</div>
+                      <div className="text-sm font-bold">₹{tradingSignal.setup_details.fvg_level?.toFixed(0)}</div>
+                    </div>
+                    <div className="p-2 bg-card rounded border text-center">
+                      <div className="text-xs text-muted-foreground">Timeframe</div>
+                      <div className="text-sm font-bold">{tradingSignal.setup_details.timeframe}m</div>
+                    </div>
+                    <div className="p-2 bg-card rounded border text-center">
+                      <div className="text-xs text-muted-foreground">Probability</div>
+                      <div className="text-sm font-bold text-primary">{tradingSignal.setup_details.reversal_probability}%</div>
+                    </div>
+                  </div>
+                  {tradingSignal.setup_details.four_hour_fvg?.detected && (
+                    <div className="text-xs text-amber-200">
+                      {tradingSignal.setup_details.four_hour_fvg.direction_message}
+                    </div>
+                  )}
+                  <div className="text-xs text-muted-foreground mt-1">
+                    {tradingSignal.setup_details.reasoning}
+                  </div>
+                </div>
+              )}
+
+              {/* Trading Mode & Session */}
+              {tradingSignal.trading_mode && (
+                <div className="p-3 bg-orange-500/10 rounded-lg border border-orange-500/30">
+                  <div className="text-xs text-muted-foreground mb-1">⏰ {tradingSignal.trading_mode.mode} Trading</div>
+                  <div className="text-xs text-orange-300 space-y-1">
+                    <p>• {tradingSignal.trading_mode.description}</p>
+                    <p>• Entry Window: {tradingSignal.trading_mode.entry_window}</p>
+                    <p>• Max Hold: {tradingSignal.trading_mode.max_hold}</p>
+                    {tradingSignal.entry_session && !tradingSignal.entry_session.can_trade && (
+                      <p className="text-yellow-400 font-medium">⚠️ {tradingSignal.entry_session.advice}</p>
+                    )}
+                  </div>
+                </div>
+              )}
 
               {/* Simple Explanation for Traders */}
               <div className="p-3 bg-primary/5 rounded-lg border border-primary/20">
