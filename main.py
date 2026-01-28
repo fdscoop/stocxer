@@ -76,17 +76,20 @@ def sanitize_for_json(obj):
         return {k: sanitize_for_json(v) for k, v in obj.items()}
     elif isinstance(obj, list):
         return [sanitize_for_json(item) for item in obj]
-    elif isinstance(obj, (np.bool_, np.bool8)):
+    elif isinstance(obj, np.bool_):
         return bool(obj)
-    elif isinstance(obj, (np.integer, np.int64, np.int32)):
+    elif isinstance(obj, np.integer):
         return int(obj)
-    elif isinstance(obj, (np.floating, np.float64, np.float32)):
+    elif isinstance(obj, np.floating):
         return float(obj)
     elif isinstance(obj, np.ndarray):
         return obj.tolist()
-    elif hasattr(obj, '__dict__'):
-        # Dataclass or object - convert to dict
-        return sanitize_for_json(obj.__dict__ if hasattr(obj, '__dict__') else str(obj))
+    elif hasattr(obj, '__dict__') and not isinstance(obj, type):
+        # Dataclass or object - convert to dict (but not class types)
+        try:
+            return sanitize_for_json(vars(obj))
+        except TypeError:
+            return str(obj)
     else:
         return obj
 
