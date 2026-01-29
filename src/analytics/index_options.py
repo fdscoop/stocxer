@@ -448,8 +448,12 @@ class IndexOptionsAnalyzer:
         """
         Get actual expiry dates dynamically from Fyers option chain.
         This ensures accuracy regardless of rule changes or holidays.
+        Excludes expiry dates that are today (IST timezone) to avoid expiry day options.
         """
-        today = datetime.now()
+        # Use IST timezone for accurate date comparison
+        from pytz import timezone as pytz_timezone
+        ist = pytz_timezone('Asia/Kolkata')
+        today = datetime.now(ist).date()
         
         try:
             # Fetch actual option chain from Fyers
@@ -481,11 +485,15 @@ class IndexOptionsAnalyzer:
                     if date_str:
                         try:
                             expiry_date = datetime.strptime(date_str, "%d-%m-%Y")
-                            expiry_dates.append(expiry_date)
+                            # Exclude expiry dates that are today (expiry day)
+                            if expiry_date.date() != today:
+                                expiry_dates.append(expiry_date)
+                            else:
+                                logger.info(f"🚫 Excluding today's expiry: {date_str} (expiry day options not recommended)")
                         except ValueError as e:
                             logger.warning(f"Could not parse expiry date: {date_str} - {e}")
                 
-                logger.info(f"Extracted {len(expiry_dates)} expiry dates from Fyers: {[d.strftime('%Y-%m-%d') for d in expiry_dates[:3]]}")
+                logger.info(f"Extracted {len(expiry_dates)} expiry dates from Fyers (excluding today): {[d.strftime('%Y-%m-%d') for d in expiry_dates[:3]]}")
             
             # Sort expiries chronologically
             if expiry_dates:
@@ -499,7 +507,7 @@ class IndexOptionsAnalyzer:
                 
                 # Monthly expiry: find the last occurrence of expiry day in the month
                 # This is the true monthly expiry (e.g., last Tuesday of the month)
-                today = datetime.now()
+                today_datetime = datetime.now()
                 monthly_expiry = None
                 
                 for exp in sorted_expiries:
@@ -530,11 +538,11 @@ class IndexOptionsAnalyzer:
                 
                 return {
                     "weekly": weekly_expiry.strftime("%Y-%m-%d"),
-                    "weekly_days": (weekly_expiry - today).days,
+                    "weekly_days": (weekly_expiry.date() - today).days,
                     "next_weekly": next_weekly.strftime("%Y-%m-%d"),
-                    "next_weekly_days": (next_weekly - today).days,
+                    "next_weekly_days": (next_weekly.date() - today).days,
                     "monthly": monthly_expiry.strftime("%Y-%m-%d"),
-                    "monthly_days": (monthly_expiry - today).days,
+                    "monthly_days": (monthly_expiry.date() - today).days,
                     "all_expiries": [exp.strftime("%Y-%m-%d") for exp in sorted_expiries]
                 }
             else:
@@ -542,20 +550,31 @@ class IndexOptionsAnalyzer:
                 
         except Exception as e:
             logger.warning(f"⚠️ Could not fetch expiries from Fyers: {e}. Using fallback calculation.")
-            # Fallback: calculate next Tuesday only as last resort
-            days_ahead = (1 - today.weekday()) % 7 or 7  # Next Tuesday
-            weekly_expiry = today + timedelta(days=days_ahead)
+            # Use IST timezone for fallback as well
+            from pytz import timezone as pytz_timezone
+            ist = pytz_timezone('Asia/Kolkata')
+            today_datetime = datetime.now(ist)
+            today_date = today_datetime.date()
+            
+            # Fallback: calculate next Tuesday (excluding today if it's Tuesday)
+            days_ahead = (1 - today_datetime.weekday()) % 7
+            if days_ahead == 0:  # Today is Tuesday (expiry day), skip to next week
+                days_ahead = 7
+            elif days_ahead == 0:  # Safety check
+                days_ahead = 7
+                
+            weekly_expiry = today_datetime + timedelta(days=days_ahead)
             next_weekly = weekly_expiry + timedelta(days=7)
             
             # Last Tuesday of current month
-            month = today.month
-            year = today.year
+            month = today_datetime.month
+            year = today_datetime.year
             last_day = (datetime(year, month + 1, 1) - timedelta(days=1)).day if month < 12 else 31
-            monthly_expiry = today
+            monthly_expiry = today_datetime
             for day in range(last_day, 0, -1):
                 try:
                     d = datetime(year, month, day)
-                    if d.weekday() == 1:  # Tuesday
+                    if d.weekday() == 1 and d.date() != today_date:  # Tuesday and not today
                         monthly_expiry = d
                         break
                 except:
@@ -563,11 +582,11 @@ class IndexOptionsAnalyzer:
             
             return {
                 "weekly": weekly_expiry.strftime("%Y-%m-%d"),
-                "weekly_days": (weekly_expiry - today).days,
+                "weekly_days": (weekly_expiry.date() - today_date).days,
                 "next_weekly": next_weekly.strftime("%Y-%m-%d"),
-                "next_weekly_days": (next_weekly - today).days,
+                "next_weekly_days": (next_weekly.date() - today_date).days,
                 "monthly": monthly_expiry.strftime("%Y-%m-%d"),
-                "monthly_days": (monthly_expiry - today).days
+                "monthly_days": (monthly_expiry.date() - today_date).days
             }
 
     

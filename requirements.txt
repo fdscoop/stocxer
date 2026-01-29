@@ -10,6 +10,7 @@ APScheduler>=3.10.4
 # Data Processing
 pandas>=2.0.0
 numpy>=1.24.0
+pytz>=2023.3  # Timezone support for IST date filtering
 
 # Options Pricing & Quantitative Finance  
 mibian>=0.1.3
