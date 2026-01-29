@@ -570,6 +570,11 @@ class IndexProbabilityAnalyzer:
             # Calculate technical indicators
             indicators = self._calculate_indicators(df)
             
+            # Add intraday momentum analysis during market hours
+            intraday_data = self._analyze_intraday_momentum(stock, current_price)
+            if intraday_data:
+                indicators['intraday_momentum'] = intraday_data
+            
             # Generate probability-weighted signal
             signal_data = self._generate_probability_signal(
                 stock, df, indicators, regime
@@ -609,6 +614,145 @@ class IndexProbabilityAnalyzer:
             
         except Exception as e:
             logger.error(f"Error analyzing {stock.symbol}: {e}")
+            return None
+    
+    def _analyze_intraday_momentum(self, stock: StockConstituent, daily_close: float) -> Optional[Dict]:
+        """
+        Analyze intraday momentum using 5-minute candles
+        Returns momentum score and direction for current trading session
+        """
+        try:
+            from pytz import timezone as pytz_timezone
+            ist = pytz_timezone('Asia/Kolkata')
+            now = datetime.now(ist)
+            
+            # Only run during market hours (9:15 AM - 3:30 PM IST)
+            market_open = now.replace(hour=9, minute=15, second=0, microsecond=0)
+            market_close = now.replace(hour=15, minute=30, second=0, microsecond=0)
+            
+            # If outside market hours, return None (use daily analysis only)
+            if now < market_open or now > market_close:
+                return None
+            
+            # Fetch today's intraday data (5-minute candles)
+            today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+            
+            intraday_df = self.fyers_client.get_historical_data(
+                symbol=stock.fyers_symbol,
+                resolution="5",  # 5-minute candles
+                date_from=today_start,
+                date_to=now
+            )
+            
+            if intraday_df is None or len(intraday_df) < 5:
+                # Not enough intraday data
+                return None
+            
+            # Calculate intraday metrics
+            current_price = float(intraday_df['close'].iloc[-1])
+            open_price = float(intraday_df['open'].iloc[0])
+            
+            # Day's change
+            day_change_pct = ((current_price - open_price) / open_price) * 100 if open_price > 0 else 0
+            
+            # Intraday EMAs (faster response to momentum)
+            intraday_df['ema_3'] = intraday_df['close'].ewm(span=3).mean()
+            intraday_df['ema_5'] = intraday_df['close'].ewm(span=5).mean()
+            intraday_df['ema_10'] = intraday_df['close'].ewm(span=10).mean()
+            
+            ema_3 = float(intraday_df['ema_3'].iloc[-1])
+            ema_5 = float(intraday_df['ema_5'].iloc[-1])
+            ema_10 = float(intraday_df['ema_10'].iloc[-1])
+            
+            # Calculate momentum score (-100 to +100)
+            momentum_score = 0
+            factors = []
+            
+            # 1. EMA Alignment (40 points max)
+            if current_price > ema_3 > ema_5 > ema_10:
+                momentum_score += 40
+                factors.append("Strong bullish EMA alignment")
+            elif current_price > ema_3 > ema_5:
+                momentum_score += 25
+                factors.append("Bullish EMA trend")
+            elif current_price < ema_3 < ema_5 < ema_10:
+                momentum_score -= 40
+                factors.append("Strong bearish EMA alignment")
+            elif current_price < ema_3 < ema_5:
+                momentum_score -= 25
+                factors.append("Bearish EMA trend")
+            
+            # 2. Day's performance (30 points max)
+            if day_change_pct > 1.5:
+                momentum_score += 30
+                factors.append(f"Strong intraday gain (+{day_change_pct:.1f}%)")
+            elif day_change_pct > 0.5:
+                momentum_score += 20
+                factors.append(f"Positive intraday (+{day_change_pct:.1f}%)")
+            elif day_change_pct < -1.5:
+                momentum_score -= 30
+                factors.append(f"Sharp intraday decline ({day_change_pct:.1f}%)")
+            elif day_change_pct < -0.5:
+                momentum_score -= 20
+                factors.append(f"Negative intraday ({day_change_pct:.1f}%)")
+            
+            # 3. Recent momentum (last 30 minutes) (30 points max)
+            if len(intraday_df) >= 6:  # At least 6 5-minute candles (30 minutes)
+                last_30min_df = intraday_df.iloc[-6:]
+                recent_start = float(last_30min_df['close'].iloc[0])
+                recent_end = current_price
+                recent_change_pct = ((recent_end - recent_start) / recent_start) * 100 if recent_start > 0 else 0
+                
+                if recent_change_pct > 0.5:
+                    momentum_score += 30
+                    factors.append(f"Strong 30-min momentum (+{recent_change_pct:.1f}%)")
+                elif recent_change_pct > 0.2:
+                    momentum_score += 15
+                    factors.append(f"Positive 30-min trend (+{recent_change_pct:.1f}%)")
+                elif recent_change_pct < -0.5:
+                    momentum_score -= 30
+                    factors.append(f"Weak 30-min momentum ({recent_change_pct:.1f}%)")
+                elif recent_change_pct < -0.2:
+                    momentum_score -= 15
+                    factors.append(f"Negative 30-min trend ({recent_change_pct:.1f}%)")
+            
+            # 4. Volume analysis
+            avg_volume_5min = intraday_df['volume'].mean()
+            recent_volume = intraday_df['volume'].iloc[-3:].mean()  # Last 3 candles
+            
+            if recent_volume > avg_volume_5min * 1.5:
+                if day_change_pct > 0:
+                    momentum_score += 15
+                    factors.append("High volume on up move")
+                else:
+                    momentum_score -= 15
+                    factors.append("High volume on down move")
+            
+            # Determine intraday trend
+            if momentum_score > 30:
+                intraday_trend = "strong_bullish"
+            elif momentum_score > 10:
+                intraday_trend = "bullish"
+            elif momentum_score < -30:
+                intraday_trend = "strong_bearish"
+            elif momentum_score < -10:
+                intraday_trend = "bearish"
+            else:
+                intraday_trend = "neutral"
+            
+            return {
+                'momentum_score': momentum_score,
+                'day_change_pct': day_change_pct,
+                'intraday_trend': intraday_trend,
+                'current_vs_ema3': current_price > ema_3,
+                'current_vs_ema5': current_price > ema_5,
+                'factors': factors,
+                'candles_analyzed': len(intraday_df),
+                'time_analyzed': now.strftime('%H:%M IST')
+            }
+            
+        except Exception as e:
+            logger.debug(f"Intraday analysis failed for {stock.symbol}: {e}")
             return None
     
     def _calculate_indicators(self, df: pd.DataFrame) -> Dict:
@@ -765,6 +909,31 @@ class IndexProbabilityAnalyzer:
         else:
             bearish_score += 15
             bearish_factors.append("MACD bearish crossover")
+        
+        # 7. Intraday Momentum (weight: 40 - HIGH PRIORITY during market hours)
+        intraday_data = indicators.get('intraday_momentum')
+        if intraday_data:
+            momentum_score = intraday_data['momentum_score']
+            
+            # Convert momentum score (-100 to +100) to bullish/bearish points
+            if momentum_score > 30:
+                bullish_score += 40
+                bullish_factors.append(f"🔥 Strong intraday momentum ({intraday_data['day_change_pct']:+.1f}%)")
+                for factor in intraday_data['factors']:
+                    bullish_factors.append(f"  • {factor}")
+            elif momentum_score > 10:
+                bullish_score += 25
+                bullish_factors.append(f"📈 Positive intraday trend ({intraday_data['day_change_pct']:+.1f}%)")
+            elif momentum_score < -30:
+                bearish_score += 40
+                bearish_factors.append(f"📉 Weak intraday momentum ({intraday_data['day_change_pct']:+.1f}%)")
+                for factor in intraday_data['factors']:
+                    bearish_factors.append(f"  • {factor}")
+            elif momentum_score < -10:
+                bearish_score += 25
+                bearish_factors.append(f"⚠️ Negative intraday trend ({intraday_data['day_change_pct']:+.1f}%)")
+            
+            logger.debug(f"Intraday momentum applied: {momentum_score}, trend: {intraday_data['intraday_trend']}")
         
         # Calculate raw probability (0-1)
         total_score = bullish_score + bearish_score
