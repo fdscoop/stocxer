@@ -30,6 +30,14 @@ from src.models.auth_models import UserRegister, UserLogin, FyersTokenStore
 from src.middleware.token_middleware import require_tokens, ScanType
 from src.middleware.refund_decorator import with_refund_on_failure
 
+# NEW: Phase 1 - ICT Top-Down Modules
+from src.analytics.candlestick_patterns import analyze_candlestick_patterns
+from src.analytics.confidence_calculator import calculate_trade_confidence
+from src.analytics.ict_analysis import (
+    analyze_multi_timeframe_ict_topdown,
+    calculate_premium_discount_zones
+)
+
 # Billing system (hybrid subscription + PAYG)
 from src.api.billing_routes import router as billing_router
 
@@ -69,21 +77,27 @@ def sanitize_for_json(obj):
     """
     Recursively convert numpy types to Python native types for JSON serialization.
     This fixes the 'numpy.bool is not iterable' error when returning responses.
+    Compatible with NumPy 2.0+
     """
     import numpy as np
+    import pandas as pd
     
-    if isinstance(obj, dict):
-        return {k: sanitize_for_json(v) for k, v in obj.items()}
-    elif isinstance(obj, list):
-        return [sanitize_for_json(item) for item in obj]
-    elif isinstance(obj, np.bool_):
+    # Check numpy types first (before dict/list checks)
+    # NumPy 2.0+ compatibility - removed deprecated type aliases
+    if isinstance(obj, np.bool_):
         return bool(obj)
-    elif isinstance(obj, np.integer):
+    elif isinstance(obj, (np.integer, np.int8, np.int16, np.int32, np.int64)):
         return int(obj)
-    elif isinstance(obj, np.floating):
+    elif isinstance(obj, (np.floating, np.float16, np.float32, np.float64)):
         return float(obj)
     elif isinstance(obj, np.ndarray):
-        return obj.tolist()
+        return [sanitize_for_json(item) for item in obj.tolist()]
+    elif isinstance(obj, pd.Series):
+        return [sanitize_for_json(item) for item in obj.tolist()]
+    elif isinstance(obj, dict):
+        return {k: sanitize_for_json(v) for k, v in obj.items()}
+    elif isinstance(obj, (list, tuple)):
+        return [sanitize_for_json(item) for item in obj]
     elif hasattr(obj, '__dict__') and not isinstance(obj, type):
         # Dataclass or object - convert to dict (but not class types)
         try:
@@ -371,26 +385,26 @@ class OrderRequest(BaseModel):
 # Dashboard route (protected - requires authentication)
 @app.get("/")
 async def root():
-    """Redirect to frontend on Vercel"""
-    return RedirectResponse(url="https://www.stocxer.in", status_code=302)
+    """Serve the frontend index.html locally"""
+    return FileResponse(os.path.join(static_dir, "index.html"))
 
 
 @app.get("/login.html")
 async def login_page():
-    """Redirect to frontend login page"""
-    return RedirectResponse(url="https://www.stocxer.in/login", status_code=302)
+    """Serve the local login page"""
+    return FileResponse(os.path.join(static_dir, "login.html"))
 
 
 @app.get("/screener.html")
 async def screener_page():
-    """Redirect to frontend screener page"""
-    return RedirectResponse(url="https://www.stocxer.in/screener", status_code=302)
+    """Serve the local screener page"""
+    return FileResponse(os.path.join(static_dir, "screener.html"))
 
 
 @app.get("/index-analyzer.html")
 async def index_analyzer_page():
-    """Redirect to frontend analyzer page"""
-    return RedirectResponse(url="https://www.stocxer.in/analyzer", status_code=302)
+    """Serve the local analyzer page"""
+    return FileResponse(os.path.join(static_dir, "index-analyzer.html"))
 
 
 @app.get("/fyers-callback.html")
@@ -668,6 +682,46 @@ async def store_fyers_token(
     token = authorization.replace("Bearer ", "")
     user = await auth_service.get_current_user(token)
     return await auth_service.store_fyers_token(user.id, token_data)
+
+
+@app.get("/api/fyers/status")
+async def get_fyers_status(authorization: str = Header(None, description="Bearer token")):
+    """Check if authenticated user has a valid Fyers token"""
+    if not authorization:
+        return {"status": "no_auth", "message": "Not authenticated"}
+    
+    try:
+        token = authorization.replace("Bearer ", "")
+        user = await auth_service.get_current_user(token)
+        fyers_token = await auth_service.get_fyers_token(user.id)
+        
+        if not fyers_token:
+            return {
+                "status": "inactive",
+                "message": "No Fyers token found. Please connect your Fyers account.",
+                "has_token": False
+            }
+        
+        # Check if token is expired
+        from datetime import timezone
+        if fyers_token.expires_at:
+            now = datetime.now(timezone.utc)
+            if fyers_token.expires_at < now:
+                return {
+                    "status": "expired",
+                    "message": "Fyers token has expired. Please reconnect your Fyers account.",
+                    "has_token": False
+                }
+        
+        return {
+            "status": "active",
+            "message": "Fyers token is active",
+            "has_token": True,
+            "expires_at": fyers_token.expires_at.isoformat() if fyers_token.expires_at else None
+        }
+    except Exception as e:
+        logger.error(f"Fyers status check error: {e}")
+        return {"status": "error", "message": str(e), "has_token": False}
 
 
 @app.get("/api/fyers/token")
@@ -2494,18 +2548,74 @@ async def get_actionable_trading_signal(
                     
             except Exception as prob_error:
                 logger.warning(f"⚠️ Probability analysis failed: {prob_error}")
-        # ====================================================================
         
-        # Always generate signal even with minimal data
-        # Pass probability analysis to enhance signal generation
-        signal = _generate_actionable_signal(mtf_result, session_info, chain_data, historical_prices, probability_analysis)
+        # ==================== SIGNAL GENERATION ====================
+        # 🎯 USING NEW ICT TOP-DOWN FLOW (Enabled Jan 29, 2026)
+        # 
+        # NEW FLOW HIERARCHY:
+        # 1. HTF ICT Structure: 40% (Monthly/Weekly/Daily bias)
+        # 2. LTF Entry Model: 25% (FVG/OB retests on lower TFs)
+        # 3. ML Prediction: 15% (CONFIRMATION only, not direction setter)
+        # 4. Candlesticks: 10%
+        # 5. Futures Sentiment: 5%
+        # 6. Constituents: 5%
+        #
+        # KEY BENEFIT: Structure-driven (not prediction-driven)
+        # - HTF determines trade direction
+        # - ML conflicts are penalized and shown to user
+        # - Higher transparency & confidence accuracy
+        # ===========================================================
         
-        # Add index data for UI cards (critical for displaying index information)
-        if index_data:
-            signal["index_data"] = index_data
-        else:
-            # Create minimal index data from chain_data
-            signal["index_data"] = {
+        # ==================== TRY NEW FLOW WITH ERROR HANDLING ====================
+        try:
+            logger.info("🚀 Attempting NEW ICT TOP-DOWN FLOW...")
+            
+            signal = _generate_actionable_signal_topdown(
+                mtf_result=mtf_result,
+                session_info=session_info,
+                chain_data=chain_data,
+                historical_prices=historical_prices,
+                probability_analysis=probability_analysis,
+                use_new_flow=True  # 🚀 NEW ICT-FIRST FLOW ENABLED!
+            )
+            
+            # Verify NEW flow actually ran by checking for its unique fields
+            if "htf_analysis" in signal and "ltf_entry_model" in signal:
+                logger.info("✅ NEW ICT TOP-DOWN FLOW COMPLETED SUCCESSFULLY!")
+                logger.info(f"   HTF Direction: {signal['htf_analysis'].get('direction', 'N/A')}")
+                logger.info(f"   LTF Entry: {'Found' if signal['ltf_entry_model'].get('found') else 'Not found'}")
+            else:
+                logger.warning("⚠️ NEW flow returned but missing new fields - may have fallen back internally")
+            
+        except Exception as new_flow_error:
+            logger.error("=" * 70)
+            logger.error("❌ NEW ICT TOP-DOWN FLOW FAILED!")
+            logger.error(f"   Error: {str(new_flow_error)}")
+            logger.error(f"   Type: {type(new_flow_error).__name__}")
+            logger.error("=" * 70)
+            
+            # Log full traceback for debugging
+            import traceback
+            logger.error("Full traceback:")
+            logger.error(traceback.format_exc())
+            
+            # Fallback to OLD flow
+            logger.warning("🔄 Falling back to OLD signal generation flow...")
+            signal = _generate_actionable_signal(
+                mtf_result=mtf_result,
+                session_info=session_info,
+                chain_data=chain_data,
+                historical_prices=historical_prices,
+                probability_analysis=probability_analysis
+            )
+            logger.info("✅ OLD flow completed as fallback")
+        
+        # OLD FLOW (Deprecated - now only used as fallback on error)
+        # signal = _generate_actionable_signal(mtf_result, session_info, chain_data, historical_prices, probability_analysis)
+        
+        # Add index data for UI cards (if not already added by NEW flow)
+        if "index_data" not in signal:
+            signal["index_data"] = index_data if index_data else {
                 "spot_price": chain_data.get("spot_price") or chain_data.get("future_price"),
                 "future_price": chain_data.get("future_price"),
                 "vix": chain_data.get("vix", 15),
@@ -2519,8 +2629,9 @@ async def get_actionable_trading_signal(
         # Detect trend reversal signals from MTF analysis
         trend_reversal = _detect_trend_reversal(mtf_result)
         
-        # Add MTF analysis summary for UI
-        signal["mtf_analysis"] = {
+        # Add MTF analysis summary for UI (if not already in signal from NEW flow)
+        if "mtf_analysis" not in signal:
+            signal["mtf_analysis"] = {
             "overall_bias": mtf_result.overall_bias,
             "current_price": mtf_result.current_price,
             "timeframes_analyzed": list(mtf_result.analyses.keys()),
@@ -2652,6 +2763,513 @@ def _estimate_option_price(spot_price: float, strike: float, action: str, chain_
             return max(spot_price * 0.005, 10)
 
 
+
+def _generate_actionable_signal_topdown(mtf_result, session_info, chain_data, historical_prices=None, probability_analysis=None, use_new_flow=True):
+    """
+    Generate trading signal using ICT top-down methodology
+    
+    Flow: HTF Bias → LTF Entry → Confirmation Stack (ML + Candlesticks + Futures) → Confidence
+    
+    Args:
+        mtf_result: Multi-timeframe ICT analysis result
+        session_info: Market session information
+        chain_data: Option chain data
+        historical_prices: Historical price data for ML
+        probability_analysis: Constituent stock analysis
+        use_new_flow: If True, use new ICT-first flow; if False, fall back to old flow
+    
+    Returns:
+        Complete signal dictionary with ICT analysis, confirmations, and confidence breakdown
+    """
+    
+    if not use_new_flow:
+        # Feature flag: Fall back to old flow
+        return _generate_actionable_signal(mtf_result, session_info, chain_data, historical_prices, probability_analysis)
+    
+    spot_price = mtf_result.current_price
+    session = session_info.current_session
+    
+    logger.info("=" * 70)
+    logger.info("🎯 ICT TOP-DOWN SIGNAL GENERATION (NEW FLOW)")
+    logger.info("=" * 70)
+    
+    # ==================== PHASE 1: DATA VALIDATION ====================
+    logger.info("\n📊 Phase 1: Data Validation")
+    
+    # Get expiry and basic option data
+    dte = chain_data.get("days_to_expiry", 7)
+    time_to_expiry = max(dte / 365.0, 0.001)
+    atm_iv = chain_data.get("atm_iv", 15) / 100 if chain_data.get("atm_iv") else 0.15
+    atm_strike = chain_data.get("atm_strike", round(spot_price / 50) * 50)
+    expiry_date = chain_data.get("expiry_date", "Unknown")
+    
+    logger.info(f"   Spot Price: ₹{spot_price}")
+    logger.info(f"   ATM Strike: {atm_strike}")
+    logger.info(f"   DTE: {dte} days")
+    logger.info(f"   IV: {atm_iv * 100:.1f}%")
+    
+    # ==================== PHASE 2: ICT TOP-DOWN ANALYSIS ====================
+    logger.info("\n📈 Phase 2: ICT Top-Down Analysis (HTF → LTF)")
+    
+    # Prepare multi-timeframe candles from mtf_result
+    candles_by_timeframe = {}
+    for tf, analysis in mtf_result.analyses.items():
+        if hasattr(analysis, 'candles') and analysis.candles is not None:
+            candles_by_timeframe[tf] = analysis.candles
+    
+    # Run complete top-down ICT analysis
+    topdown_result = analyze_multi_timeframe_ict_topdown(
+        candles_by_timeframe=candles_by_timeframe,
+        current_price=spot_price
+    )
+    
+    htf_bias = topdown_result['htf_bias']
+    ltf_entry = topdown_result['ltf_entry']
+    
+    logger.info(f"\n   ✅ HTF BIAS:")
+    logger.info(f"      Direction: {htf_bias.overall_direction.upper()}")
+    logger.info(f"      Strength: {htf_bias.bias_strength:.1f}/100")
+    logger.info(f"      Structure: {htf_bias.structure_quality}")
+    logger.info(f"      Premium/Discount: {htf_bias.premium_discount.upper()}")
+    logger.info(f"      Key Zones: {len(htf_bias.key_zones)}")
+    
+    if ltf_entry:
+        logger.info(f"\n   ✅ LTF ENTRY MODEL FOUND:")
+        logger.info(f"      Type: {ltf_entry.entry_type}")
+        logger.info(f"      Timeframe: {ltf_entry.timeframe}")
+        logger.info(f"      Entry Zone: ₹{ltf_entry.entry_zone[0]:.2f} - ₹{ltf_entry.entry_zone[1]:.2f}")
+        logger.info(f"      Trigger: ₹{ltf_entry.trigger_price:.2f}")
+        logger.info(f"      Momentum: {'✅' if ltf_entry.momentum_confirmed else '❌'}")
+        logger.info(f"      Alignment: {ltf_entry.alignment_score:.0f}%")
+        logger.info(f"      Confidence: {ltf_entry.confidence:.2%}")
+    else:
+        logger.info(f"\n   ⚠️ NO LTF ENTRY MODEL FOUND")
+        logger.info(f"      Will use HTF bias for trade direction")
+    
+    # ==================== PHASE 3: CONFIRMATION STACK ====================
+    logger.info("\n🔍 Phase 3: Confirmation Stack (ML + Candlesticks + Futures)")
+    
+    # 3.1: ML Prediction (15% weight - CONFIRMATION ONLY)
+    ml_signal = None
+    ml_direction = 'neutral'
+    ml_confidence = 0
+    
+    if historical_prices is not None and len(historical_prices) >= 50:
+        try:
+            ml_result = get_ml_signal(historical_prices, steps=1)
+            
+            if ml_result.get('success'):
+                ensemble = ml_result['predictions'].get('ensemble', {})
+                ml_direction = ensemble.get('direction', 'neutral')
+                ml_confidence = ensemble.get('direction_confidence', 0)
+                
+                ml_signal = {
+                    'direction': ml_direction,
+                    'confidence': ml_confidence,
+                    'predicted_price': ensemble.get('predicted_price', spot_price),
+                    'price_change_pct': ensemble.get('price_change_pct', 0),
+                    'arima': ml_result['predictions'].get('arima', {}),
+                    'lstm': ml_result['predictions'].get('lstm', {}),
+                    'momentum': ml_result['predictions'].get('momentum', {})
+                }
+                
+                # Check alignment with HTF bias
+                agrees_with_htf = ml_direction == htf_bias.overall_direction
+                logger.info(f"\n   🤖 ML PREDICTION:")
+                logger.info(f"      Direction: {ml_direction.upper()}")
+                logger.info(f"      Confidence: {ml_confidence:.1%}")
+                logger.info(f"      Alignment: {'✅ AGREES' if agrees_with_htf else '⚠️ CONFLICTS'} with HTF")
+                
+        except Exception as e:
+            logger.warning(f"   ⚠️ ML prediction failed: {e}")
+    else:
+        logger.info(f"   ⚠️ Insufficient data for ML (need 50+ candles)")
+    
+    # 3.2: Candlestick Pattern Analysis (10% weight)
+    candlestick_analysis = None
+    try:
+        candlestick_analysis = analyze_candlestick_patterns(
+            candles_by_timeframe, 
+            expected_direction=htf_bias.overall_direction
+        )
+        
+        confluence = candlestick_analysis['confluence_analysis']
+        logger.info(f"\n   🕯️ CANDLESTICK PATTERNS:")
+        logger.info(f"      Confluence Score: {confluence['confluence_score']:.1f}/100")
+        logger.info(f"      Confidence: {confluence['confidence_level']}")
+        logger.info(f"      Aligned: {confluence['aligned_patterns']}")
+        logger.info(f"      Conflicting: {confluence['conflicting_patterns']}")
+        
+    except Exception as e:
+        logger.warning(f"   ⚠️ Candlestick analysis failed: {e}")
+    
+    # 3.3: Futures Sentiment Analysis (5% weight)
+    futures_data = chain_data.get("futures_data")
+    futures_sentiment = 'neutral'
+    futures_basis_pct = 0
+    
+    if futures_data:
+        futures_basis_pct = futures_data.get("basis_pct", 0)
+        
+        if futures_basis_pct > 0.3:
+            futures_sentiment = 'bullish'
+        elif futures_basis_pct < -0.1:
+            futures_sentiment = 'bearish'
+        
+        agrees_with_htf = futures_sentiment == htf_bias.overall_direction or futures_sentiment == 'neutral'
+        logger.info(f"\n   📊 FUTURES SENTIMENT:")
+        logger.info(f"      Basis: {futures_basis_pct:.3f}%")
+        logger.info(f"      Sentiment: {futures_sentiment.upper()}")
+        logger.info(f"      Alignment: {'✅ AGREES' if agrees_with_htf else '⚠️ CONFLICTS'} with HTF")
+    
+    # 3.4: Constituent Stock Analysis (5% weight)
+    constituent_direction = 'neutral'
+    constituent_confidence = 0
+    
+    if probability_analysis and not probability_analysis.get('error'):
+        constituent_direction = probability_analysis.get('expected_direction', 'NEUTRAL').lower()
+        constituent_confidence = probability_analysis.get('confidence', 0)
+        
+        agrees_with_htf = constituent_direction == htf_bias.overall_direction
+        logger.info(f"\n   🏢 CONSTITUENT STOCKS:")
+        logger.info(f"      Direction: {constituent_direction.upper()}")
+        logger.info(f"      Confidence: {constituent_confidence:.1f}%")
+        logger.info(f"      Alignment: {'✅ AGREES' if agrees_with_htf else '⚠️ CONFLICTS'} with HTF")
+    
+    # ==================== PHASE 4: TRADE DECISION LOGIC ====================
+    logger.info("\n🎯 Phase 4: Trade Decision Logic")
+    
+    # Determine trade direction (ICT first!)
+    trade_direction = htf_bias.overall_direction
+    
+    # Check for liquidity reversal opportunity
+    is_reversal_play = False
+    if htf_bias.premium_discount == 'premium' and htf_bias.overall_direction == 'bearish':
+        # Price at premium in bearish market - potential liquidity grab before drop
+        if ltf_entry and ltf_entry.entry_type in ['FVG_TEST_2ND', 'OB_TEST']:
+            is_reversal_play = True
+            logger.info(f"   🔄 LIQUIDITY REVERSAL OPPORTUNITY")
+            logger.info(f"      Price at PREMIUM in bearish market")
+            logger.info(f"      LTF entry model confirms reversal setup")
+    
+    elif htf_bias.premium_discount == 'discount' and htf_bias.overall_direction == 'bullish':
+        # Price at discount in bullish market - potential liquidity grab before rally
+        if ltf_entry and ltf_entry.entry_type in ['FVG_TEST_2ND', 'OB_TEST']:
+            is_reversal_play = True
+            logger.info(f"   🔄 LIQUIDITY REVERSAL OPPORTUNITY")
+            logger.info(f"      Price at DISCOUNT in bullish market")
+            logger.info(f"      LTF entry model confirms reversal setup")
+    
+    # Determine option type and strike
+    if trade_direction == 'bullish':
+        option_type = 'call'
+        action = "BUY CALL"
+        
+        # Select strike based on setup quality
+        if ltf_entry and ltf_entry.confidence > 0.6:
+            target_delta = 0.50  # ATM for strong setups
+        elif htf_bias.bias_strength > 60:
+            target_delta = 0.45  # Slightly OTM for strong HTF
+        else:
+            target_delta = 0.40  # OTM for weaker setups
+            
+    elif trade_direction == 'bearish':
+        option_type = 'put'
+        action = "BUY PUT"
+        
+        if ltf_entry and ltf_entry.confidence > 0.6:
+            target_delta = 0.50
+        elif htf_bias.bias_strength > 60:
+            target_delta = 0.45
+        else:
+            target_delta = 0.40
+            
+    else:  # neutral
+        option_type = 'call'  # Default to call in neutral
+        action = "WAIT"
+        target_delta = 0.40
+    
+    logger.info(f"   Direction: {trade_direction.upper()}")
+    logger.info(f"   Option Type: {option_type.upper()}")
+    logger.info(f"   Target Delta: {target_delta}")
+    
+    # Delta-based strike selection
+    def select_strike_by_delta(target_delta: float, opt_type: str) -> int:
+        """Select strike with delta closest to target"""
+        strikes_to_check = range(atm_strike - 500, atm_strike + 550, 50)
+        best_strike = atm_strike
+        best_delta_diff = float('inf')
+        
+        for s in strikes_to_check:
+            try:
+                greeks = options_pricer.calculate_greeks(
+                    spot_price=spot_price,
+                    strike_price=s,
+                    time_to_expiry=time_to_expiry,
+                    volatility=atm_iv,
+                    option_type=opt_type
+                )
+                delta_diff = abs(abs(greeks['delta']) - target_delta)
+                if delta_diff < best_delta_diff:
+                    best_delta_diff = delta_diff
+                    best_strike = s
+            except:
+                continue
+        return best_strike
+    
+    strike = select_strike_by_delta(target_delta, option_type)
+    logger.info(f"   Selected Strike: {strike}")
+    
+    # Determine entry trigger
+    if ltf_entry:
+        entry_trigger = ltf_entry.trigger_price
+        timing = f"{ltf_entry.entry_type} on {ltf_entry.timeframe}"
+    else:
+        if trade_direction == 'bullish':
+            entry_trigger = spot_price + 20
+            timing = "Bullish bias - enter on momentum"
+        elif trade_direction == 'bearish':
+            entry_trigger = spot_price - 20
+            timing = "Bearish bias - enter on breakdown"
+        else:
+            entry_trigger = spot_price
+            timing = "Wait for clear setup"
+    
+    #  ==================== PHASE 5: NEW CONFIDENCE SCORING ====================
+    logger.info("\n📊 Phase 5: Confidence Calculation (New Hierarchy)")
+    
+    # Prepare data for confidence calculator
+    htf_bias_dict = {
+        'overall_direction': htf_bias.overall_direction,
+        'bias_strength': htf_bias.bias_strength,
+        'structure_quality': htf_bias.structure_quality,
+        'premium_discount': htf_bias.premium_discount
+    }
+    
+    ltf_entry_dict = {
+        'entry_type': ltf_entry.entry_type if ltf_entry else 'NO_SETUP',
+        'timeframe': ltf_entry.timeframe if ltf_entry else 'N/A',
+        'momentum_confirmed': ltf_entry.momentum_confirmed if ltf_entry else False,
+        'alignment_score': ltf_entry.alignment_score if ltf_entry else 0
+    }
+    
+    ml_signal_dict = {
+        'direction': ml_direction,
+        'confidence': ml_confidence,
+        'agrees_with_htf': ml_direction == htf_bias.overall_direction if ml_direction != 'neutral' else True
+    }
+    
+    futures_dict = {
+        'basis_pct': futures_basis_pct,
+        'sentiment': futures_sentiment
+    }
+    
+    # Calculate new confidence score
+    confidence_breakdown = calculate_trade_confidence(
+        htf_bias=htf_bias_dict,
+        ltf_entry=ltf_entry_dict,
+        ml_signal=ml_signal_dict,
+        candlestick_analysis=candlestick_analysis,
+        futures_data=futures_dict,
+        probability_analysis=probability_analysis
+    )
+    
+    total_confidence = confidence_breakdown['total']
+    confidence_level = confidence_breakdown['confidence_level']
+    
+    logger.info(f"\n   📊 CONFIDENCE BREAKDOWN:")
+    logger.info(f"      ICT HTF Structure:    {confidence_breakdown['htf_structure']:.1f}/40")
+    logger.info(f"      ICT LTF Confirmation: {confidence_breakdown['ltf_confirmation']:.1f}/25")
+    logger.info(f"      ML Alignment:         {confidence_breakdown['ml_alignment']:.1f}/15")
+    logger.info(f"      Candlestick Patterns: {confidence_breakdown['candlestick']:.1f}/10")
+    logger.info(f"      Futures Basis:        {confidence_breakdown['futures_basis']:.1f}/5")
+    logger.info(f"      Constituents:         {confidence_breakdown['constituents']:.1f}/5")
+    logger.info(f"      {'─' * 50}")
+    logger.info(f"      TOTAL CONFIDENCE:     {total_confidence:.1f}/100 ({confidence_level})")
+    
+    # Calculate pricing and Greeks (same as old flow)
+    greeks = options_pricer.calculate_greeks(
+        spot_price=spot_price,
+        strike_price=strike,
+        time_to_expiry=time_to_expiry,
+        volatility=atm_iv,
+        option_type=option_type
+    )
+    
+    # Find option price from chain
+    option_price = None
+    price_source = "ESTIMATED"
+    strikes = chain_data.get("strikes", [])
+    
+    if strikes:
+        strike_data = next((s for s in strikes if s.get("strike") == strike), None)
+        if strike_data:
+            option_data = strike_data.get(option_type, {})
+            option_price = (option_data.get("ltp") or 
+                          option_data.get("ask") or 
+                          option_data.get("mid_price"))
+            if option_price and option_price > 0:
+                price_source = "LIVE_CHAIN"
+    
+    # Fallback to Black-Scholes if needed
+    if not option_price or option_price <= 0:
+        option_price = greeks.get('price', spot_price * 0.02)
+    
+    current_ltp = option_price
+    
+    # Calculate targets and stop-loss
+    if ltf_entry:
+        # Use LTF entry zone for tight stop
+        if trade_direction == 'bullish':
+            stop_loss = option_price * 0.7  # 30% stop
+            target_1 = option_price * 1.5   # 50% target
+            target_2 = option_price * 2.0   # 100% target
+        else:
+            stop_loss = option_price * 0.7
+            target_1 = option_price * 1.5
+            target_2 = option_price * 2.0
+    else:
+        # Wider stops without LTF confirmation
+        stop_loss = option_price * 0.6   # 40% stop
+        target_1 = option_price * 1.4    # 40% target
+        target_2 = option_price * 1.8    # 80% target
+    
+    risk_per_lot = (current_ltp - stop_loss) * 50  # NIFTY lot size
+    reward_1 = (target_1 - current_ltp) * 50
+    reward_2 = (target_2 - current_ltp) * 50
+    
+    logger.info("=" * 70)
+    logger.info("✅ SIGNAL GENERATION COMPLETE")
+    logger.info("=" * 70)
+    
+    # Build the response (enhanced structure)
+    signal_type = f"ICT_{trade_direction.upper()}_{'REVERSAL' if is_reversal_play else ltf_entry.entry_type if ltf_entry else 'BIAS'}"
+    expiry_date_str = expiry_date if isinstance(expiry_date, str) else expiry_date.strftime("%Y-%m-%d")
+    option_suffix = "CE" if option_type == "call" else "PE"
+    full_symbol = f"NIFTY{expiry_date_str.replace('-', '')}{strike}{option_suffix}"
+    
+    return {
+        "signal": signal_type,
+        "action": action,
+        "option": {
+            "strike": strike,
+            "type": option_suffix,
+            "symbol": f"{int(strike)} {option_suffix}",
+            "trading_symbol": full_symbol,
+            "expiry_date": expiry_date_str,
+            "expiry_info": {
+                "days_to_expiry": dte,
+                "is_weekly": dte <= 7,
+                "time_to_expiry_years": round(time_to_expiry, 4)
+            }
+        },
+        "pricing": {
+            "ltp": round(current_ltp, 2),
+            "entry_price": round(current_ltp, 2),
+            "price_source": price_source,
+            "iv_used": round(atm_iv * 100, 2)
+        },
+        "entry": {
+            "price": round(current_ltp, 2),
+            "trigger_level": round(entry_trigger, 2),
+            "timing": timing,
+            "session_advice": f"{session} session"
+        },
+        "targets": {
+            "target_1": round(target_1, 2),
+            "target_2": round(target_2, 2),
+            "stop_loss": round(stop_loss, 2)
+        },
+        "risk_reward": {
+            "risk_per_lot": round(risk_per_lot, 2),
+            "reward_1_per_lot": round(reward_1, 2),
+            "reward_2_per_lot": round(reward_2, 2),
+            "ratio_1": f"1:{(reward_1/risk_per_lot):.1f}" if risk_per_lot > 0 else "N/A",
+            "ratio_2": f"1:{(reward_2/risk_per_lot):.1f}" if risk_per_lot > 0 else "N/A"
+        },
+        "greeks": {
+            "delta": round(greeks.get('delta', 0), 4),
+            "gamma": round(greeks.get('gamma', 0), 4),
+            "theta": round(greeks.get('theta', 0), 4),
+            "vega": round(greeks.get('vega', 0), 4)
+        },
+        # NEW: ICT Analysis Section
+        "htf_analysis": {
+            "direction": htf_bias.overall_direction,
+            "strength": htf_bias.bias_strength,
+            "structure_quality": htf_bias.structure_quality,
+            "premium_discount": htf_bias.premium_discount,
+            "key_zones_count": len(htf_bias.key_zones),
+            "timeframe_breakdown": {
+                tf: {
+                    "trend": analysis.trend,
+                    "strength": getattr(analysis, 'trend_strength', 0)
+                }
+                for tf, analysis in htf_bias.timeframe_breakdowns.items()
+            } if hasattr(htf_bias, 'timeframe_breakdowns') else {}
+        },
+        # NEW: LTF Entry Model
+        "ltf_entry_model": {
+            "found": ltf_entry is not None,
+            "entry_type": ltf_entry.entry_type if ltf_entry else None,
+            "timeframe": ltf_entry.timeframe if ltf_entry else None,
+            "entry_zone": [round(ltf_entry.entry_zone[0], 2), round(ltf_entry.entry_zone[1], 2)] if ltf_entry else None,
+            "trigger_price": round(ltf_entry.trigger_price, 2) if ltf_entry else None,
+            "momentum_confirmed": ltf_entry.momentum_confirmed if ltf_entry else False,
+            "alignment_score": ltf_entry.alignment_score if ltf_entry else 0,
+            "confidence": round(ltf_entry.confidence * 100, 1) if ltf_entry else 0
+        },
+        # NEW: Confirmation Stack
+        "confirmation_stack": {
+            "ml_prediction": {
+                "direction": ml_direction,
+                "confidence": round(ml_confidence * 100, 1) if ml_confidence else 0,
+                "agrees_with_htf": ml_direction == htf_bias.overall_direction,
+                "price_target": ml_signal['predicted_price'] if ml_signal else None
+            } if ml_signal else {"available": False},
+            "candlestick_patterns": {
+                "confluence_score": candlestick_analysis['confluence_analysis']['confluence_score'] if candlestick_analysis else 0,
+                "confidence_level": candlestick_analysis['confluence_analysis']['confidence_level'] if candlestick_analysis else "N/A",
+                "aligned_patterns": candlestick_analysis['confluence_analysis']['aligned_patterns'] if candlestick_analysis else 0
+            } if candlestick_analysis else {"available": False},
+            "futures_sentiment": {
+                "basis_pct": round(futures_basis_pct, 3),
+                "sentiment": futures_sentiment,
+                "agrees_with_htf": futures_sentiment == htf_bias.overall_direction or futures_sentiment == 'neutral'
+            } if futures_data else {"available": False},
+            "constituents": {
+                "direction": constituent_direction,
+                "confidence": round(constituent_confidence, 1),
+                "agrees_with_htf": constituent_direction == htf_bias.overall_direction
+            } if probability_analysis else {"available": False}
+        },
+        # NEW: Confidence Breakdown
+        "confidence_breakdown": {
+            "total": round(total_confidence, 1),
+            "level": confidence_level,
+            "components": {
+                "ict_htf_structure": round(confidence_breakdown['htf_structure'], 1),
+                "ict_ltf_confirmation": round(confidence_breakdown['ltf_confirmation'], 1),
+                "ml_alignment": round(confidence_breakdown['ml_alignment'], 1),
+                "candlestick_patterns": round(confidence_breakdown['candlestick'], 1),
+                "futures_basis": round(confidence_breakdown['futures_basis'], 1),
+                "constituents": round(confidence_breakdown['constituents'], 1)
+            },
+            "weights": {
+                "ict_total": 65,
+                "ml": 15,
+                "candlestick": 10,
+                "market_data": 10
+            }
+        },
+        "confidence": {
+            "score": round(total_confidence, 1),
+            "level": confidence_level
+        },
+        "is_reversal_play": is_reversal_play,
+        "spot_price": spot_price,
+        "timestamp": datetime.now().isoformat()
+    }
 def _generate_actionable_signal(mtf_result, session_info, chain_data, historical_prices=None, probability_analysis=None):
     """Generate clear trading signal from MTF analysis with full Greeks integration, ML predictions, and constituent stock analysis"""
     
@@ -6811,6 +7429,26 @@ async def analyze_index_probability(
         )
     
     try:
+        # Get user's Fyers token if authenticated
+        user_fyers_client = fyers_client  # Default to shared client
+        if authorization:
+            try:
+                token = authorization.replace("Bearer ", "")
+                user = await auth_service.get_current_user(token)
+                fyers_token = await auth_service.get_fyers_token(user.id)
+                
+                if fyers_token and fyers_token.access_token:
+                    # Create a user-specific Fyers client with their token
+                    from src.api.fyers_client import FyersClient
+                    user_fyers_client = FyersClient()
+                    user_fyers_client.access_token = fyers_token.access_token
+                    user_fyers_client._initialize_client()
+                    logger.info(f"✅ Using Fyers token for user {user.email}")
+                else:
+                    logger.warning(f"⚠️ User {user.email} has no Fyers token, using shared client")
+            except Exception as auth_error:
+                logger.warning(f"⚠️ Auth error, using shared Fyers client: {auth_error}")
+        
         # Get constituent count for this index
         constituents = index_manager.get_constituents(index_name)
         stock_count = len(constituents) if constituents else 0
@@ -6818,7 +7456,7 @@ async def analyze_index_probability(
         logger.info(f"🎯 Index probability analysis for {index_name} - Scanning {stock_count} constituent stocks")
         
         # Perform live analysis - this scans ALL constituent stocks
-        analyzer = get_probability_analyzer(fyers_client)
+        analyzer = get_probability_analyzer(user_fyers_client)
         prediction = analyzer.analyze_index(index_name)
         
         # Apply ML optimization if requested
@@ -6832,7 +7470,7 @@ async def analyze_index_probability(
                 end_date = datetime.now()
                 start_date = end_date - timedelta(days=120)
                 
-                df = fyers_client.get_historical_data(
+                df = user_fyers_client.get_historical_data(
                     symbol=index_symbol,
                     resolution="D",
                     date_from=start_date,
@@ -7054,7 +7692,7 @@ async def analyze_index_probability(
                 for s in sorted(prediction.stock_signals, key=lambda x: x.weight, reverse=True)
             ]
         
-        return response
+        return sanitize_for_json(response)
         
     except Exception as e:
         logger.error(f"Index probability analysis error: {e}")

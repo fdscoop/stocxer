@@ -1,0 +1,94 @@
+[
+  {
+    "date": "2026-01-20T00:00:00",
+    "spot_price": 25232.5,
+    "old_signal": {
+      "generated": false,
+      "error": "cannot access local variable 'depth_data' where it is not associated with a value"
+    },
+    "new_signal": {
+      "signal": "ICT_NEUTRAL_BIAS",
+      "action": "WAIT",
+      "strike": 25350,
+      "confidence": 31.0,
+      "htf_direction": "neutral",
+      "htf_strength": 50,
+      "ltf_found": false,
+      "ml_agrees": true,
+      "generated": true,
+      "evaluation": {
+        "direction_correct": true,
+        "predicted_direction": "bearish",
+        "actual_direction": "bearish",
+        "actual_move": -183.84999999999854,
+        "confidence": 31.0,
+        "entry_price": 504.65,
+        "estimated_pnl_pct": 20.0,
+        "signal_quality": "Poor"
+      }
+    },
+    "actual_outcome": {
+      "start_price": 25232.5,
+      "end_price": 25048.65,
+      "move_points": -183.84999999999854,
+      "move_pct": -0.7286237986723414,
+      "direction": "bearish"
+    }
+  },
+  {
+    "date": "2026-01-22T00:00:00",
+    "spot_price": 25289.9,
+    "old_signal": {
+      "generated": false,
+      "error": "cannot access local variable 'depth_data' where it is not associated with a value"
+    },
+    "new_signal": {
+      "signal": "ICT_NEUTRAL_BIAS",
+      "action": "WAIT",
+      "strike": 25450,
+      "confidence": 31.0,
+      "htf_direction": "neutral",
+      "htf_strength": 50,
+      "ltf_found": false,
+      "ml_agrees": true,
+      "generated": true,
+      "evaluation": {
+        "direction_correct": true,
+        "predicted_direction": "bearish",
+        "actual_direction": "bearish",
+        "actual_move": -241.25,
+        "confidence": 31.0,
+        "entry_price": 505.8,
+        "estimated_pnl_pct": 20.0,
+        "signal_quality": "Poor"
+      }
+    },
+    "actual_outcome": {
+      "start_price": 25289.9,
+      "end_price": 25048.65,
+      "move_points": -241.25,
+      "move_pct": -0.9539381334050351,
+      "direction": "bearish"
+    }
+  },
+  {
+    "date": "2026-01-24T00:00:00",
+    "spot_price": 25048.65,
+    "old_signal": {
+      "generated": false,
+      "error": "cannot access local variable 'depth_data' where it is not associated with a value"
+    },
+    "new_signal": {
+      "signal": "ICT_NEUTRAL_BIAS",
+      "action": "WAIT",
+      "strike": 25200,
+      "confidence": 25.5,
+      "htf_direction": "neutral",
+      "htf_strength": 50,
+      "ltf_found": false,
+      "ml_agrees": false,
+      "generated": true
+    },
+    "actual_outcome": null
+  }
+]

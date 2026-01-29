@@ -46,15 +46,18 @@ NEEDS_AGGREGATION = {
 }
 
 # Days of data needed for each timeframe
-# Note: Fyers API limits 1D resolution to max 365 days
+# Fyers API limits:
+# - 1D resolution: max 366 days (1 year)
+# - Intraday (1-240 min): max 100 days per request
+# - Data available from July 3, 2017
 LOOKBACK_DAYS = {
-    Timeframe.MONTHLY: 365,   # 1 year (Fyers max for 1D)
-    Timeframe.WEEKLY: 365,    # 1 year
-    Timeframe.DAILY: 180,     # 6 months
-    Timeframe.FOUR_HOUR: 60,  # 2 months
-    Timeframe.ONE_HOUR: 30,   # 1 month
-    Timeframe.FIFTEEN_MIN: 10, # 10 days
-    Timeframe.FIVE_MIN: 5     # 5 days
+    Timeframe.MONTHLY: 366,   # 366 days = ~12 months (Fyers max for 1D)
+    Timeframe.WEEKLY: 366,    # 366 days = ~52 weeks
+    Timeframe.DAILY: 366,     # 366 days = 1 full year (maximum allowed)
+    Timeframe.FOUR_HOUR: 100, # 100 days (Fyers max for intraday)
+    Timeframe.ONE_HOUR: 100,  # 100 days (maximum for better structure)
+    Timeframe.FIFTEEN_MIN: 100, # 100 days (maximum allowed)
+    Timeframe.FIVE_MIN: 100,  # 100 days (maximum for LTF precision)
 }
 
 

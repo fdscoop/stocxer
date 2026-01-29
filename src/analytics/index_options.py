@@ -316,7 +316,9 @@ class IndexOptionsAnalyzer:
                 "NIFTY": "NIFTY",
                 "BANKNIFTY": "NIFTYBANK",
                 "FINNIFTY": "FINNIFTY",
-                "MIDCPNIFTY": "MIDCPNIFTY"
+                "MIDCPNIFTY": "MIDCPNIFTY",
+                "SENSEX": "SENSEX",
+                "BANKEX": "BANKEX"
             }
             
             fut_prefix = futures_map.get(index.upper())
@@ -339,13 +341,16 @@ class IndexOptionsAnalyzer:
                 9: "SEP", 10: "OCT", 11: "NOV", 12: "DEC"
             }
             
+            # Determine exchange prefix based on index
+            exchange_prefix = "BSE" if index.upper() in ["SENSEX", "BANKEX"] else "NSE"
+            
             # Current month symbol
-            current_month_symbol = f"NSE:{fut_prefix}{current_year}{month_abbr[current_month]}FUT"
+            current_month_symbol = f"{exchange_prefix}:{fut_prefix}{current_year}{month_abbr[current_month]}FUT"
             
             # Next month symbol
             next_month = current_month + 1 if current_month < 12 else 1
             next_year = current_year if current_month < 12 else current_year + 1
-            next_month_symbol = f"NSE:{fut_prefix}{next_year}{month_abbr[next_month]}FUT"
+            next_month_symbol = f"{exchange_prefix}:{fut_prefix}{next_year}{month_abbr[next_month]}FUT"
             
             logger.info(f"📊 Fetching futures data: {current_month_symbol}, {next_month_symbol}")
             

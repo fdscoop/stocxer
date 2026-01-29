@@ -394,3 +394,411 @@ class ICTAnalyzer:
 
 # Global analyzer instance
 ict_analyzer = ICTAnalyzer()
+
+
+# ====================================================================
+# NEW: Top-Down ICT Analysis Functions
+# ====================================================================
+
+@dataclass
+class HTFBias:
+    """Higher Timeframe Bias Analysis Result"""
+    overall_direction: str  # 'bullish', 'bearish', 'neutral'
+    bias_strength: float  # 0-100
+    structure_quality: str  # 'HIGH', 'MEDIUM', 'LOW'
+    premium_discount: str  # 'premium', 'equilibrium', 'discount'
+    key_zones: List[Dict]  # List of important FVG/OB zones
+    swing_high: float
+    swing_low: float
+    current_price: float
+
+
+@dataclass
+class LTFEntryModel:
+    """Lower Timeframe Entry Model Result"""
+    entry_type: str  # 'FVG_TEST_2ND', 'FVG_TEST', 'OB_TEST', 'CHOCH', 'BOS'
+    timeframe: str  # Which LTF has the setup
+    trigger_price: float  # Exact entry level
+    entry_zone: Tuple[float, float]  # (low, high) entry range
+    momentum_confirmed: bool
+    alignment_score: float  # 0-100 (how well it aligns with HTF)
+    confidence: float  # 0-1
+
+
+def calculate_premium_discount_zones(
+    swing_high: float,
+    swing_low: float,
+    current_price: float
+) -> Dict:
+    """
+    Calculate if price is in premium, equilibrium, or discount zone
+    
+    Premium: 75-100% of swing range (expensive - avoid buying)
+    Equilibrium: 25-75% of swing range (neutral)
+    Discount: 0-25% of swing range (cheap - good for buying)
+    
+    Args:
+        swing_high: Recent swing high
+        swing_low: Recent swing low
+        current_price: Current market price
+        
+    Returns:
+        Dict with zone classification and percentage
+    """
+    swing_range = swing_high - swing_low
+    if swing_range == 0:
+        return {
+            'zone': 'equilibrium',
+            'percentage': 50.0,
+            'swing_high': swing_high,
+            'swing_low': swing_low
+        }
+    
+    # Calculate position in range (0% = swing_low, 100% = swing_high)
+    position_pct = ((current_price - swing_low) / swing_range) * 100
+    position_pct = max(0, min(100, position_pct))  # Clamp to 0-100
+    
+    # Classify zone
+    if position_pct >= 75:
+        zone = 'premium'  # Expensive zone
+    elif position_pct <= 25:
+        zone = 'discount'  # Cheap zone
+    else:
+        zone = 'equilibrium'  # Fair value
+    
+    return {
+        'zone': zone,
+        'percentage': round(position_pct, 1),
+        'swing_high': swing_high,
+        'swing_low': swing_low,
+        'equilibrium': swing_low + (swing_range * 0.5)
+    }
+
+
+def determine_htf_bias(
+    analyses_by_timeframe: Dict[str, Dict],
+    current_price: float
+) -> HTFBias:
+    """
+    Establish directional bias from higher timeframes
+    Priority order: Monthly > Weekly > Daily > 4H
+    
+    Args:
+        analyses_by_timeframe: Dict mapping timeframe to ICT analysis results
+            Keys: 'M', 'W', 'D', '240' (4H)
+            Values: Dict with 'trend', 'fvgs', 'order_blocks', etc.
+        current_price: Current market price
+        
+    Returns:
+        HTFBias with overall direction and key zones
+    """
+    logger.info("=" * 60)
+    logger.info("🎯 DETERMINING HTF BIAS")
+    logger.info("=" * 60)
+    
+    # Timeframe priority (higher = more important)
+    tf_priority = {'M': 4, 'W': 3, 'D': 2, '240': 1, '4H': 1}
+    
+    # Collect trends from each timeframe
+    trends = {}
+    key_zones = []
+    
+    # Find swing range for premium/discount calculation
+    swing_high = current_price
+    swing_low = current_price
+    
+    for tf in ['M', 'W', 'D', '240', '4H']:
+        if tf not in analyses_by_timeframe:
+            continue
+            
+        analysis = analyses_by_timeframe[tf]
+        trend = analysis.get('trend', 'neutral')
+        trends[tf] = trend
+        
+        # Collect swing points
+        if 'swing_high' in analysis:
+            swing_high = max(swing_high, analysis['swing_high'])
+        if 'swing_low' in analysis:
+            swing_low = min(swing_low, analysis['swing_low'])
+        
+        # Collect key FVG/OB zones
+        for fvg in analysis.get('fvgs', [])[:3]:  # Top 3 FVGs
+            key_zones.append({
+                'type': 'FVG',
+                'direction': fvg.gap_type,
+                'timeframe': tf,
+                'low': fvg.gap_low,
+                'high': fvg.gap_high,
+                'priority': tf_priority.get(tf, 0)
+            })
+        
+        for ob in analysis.get('order_blocks', [])[:2]:  # Top 2 OBs
+            key_zones.append({
+                'type': 'OB',
+                'direction': ob.block_type,
+                'timeframe': tf,
+                'low': ob.low,
+                'high': ob.high,
+                'priority': tf_priority.get(tf, 0)
+            })
+    
+    # Weight trends by timeframe priority
+    bullish_score = 0
+    bearish_score = 0
+    total_weight = 0
+    
+    for tf, trend in trends.items():
+        weight = tf_priority.get(tf, 0)
+        total_weight += weight
+        
+        if trend == 'uptrend':
+            bullish_score += weight
+        elif trend == 'downtrend':
+            bearish_score += weight
+    
+    # Determine overall direction
+    if total_weight == 0:
+        overall_direction = 'neutral'
+        bias_strength = 30
+        structure_quality = 'LOW'
+    else:
+        bullish_pct = (bullish_score / total_weight) * 100
+        bearish_pct = (bearish_score / total_weight) * 100
+        
+        if bullish_pct >= 60:
+            overall_direction = 'bullish'
+            bias_strength = bullish_pct
+            structure_quality = 'HIGH' if bullish_pct >= 80 else 'MEDIUM'
+        elif bearish_pct >= 60:
+            overall_direction = 'bearish'
+            bias_strength = bearish_pct
+            structure_quality = 'HIGH' if bearish_pct >= 80 else 'MEDIUM'
+        else:
+            overall_direction = 'neutral'
+            bias_strength = 50
+            structure_quality = 'LOW'
+    
+    # Calculate premium/discount
+    pd_zones = calculate_premium_discount_zones(swing_high, swing_low, current_price)
+    
+    # Sort key zones by priority
+    key_zones.sort(key=lambda x: x['priority'], reverse=True)
+    
+    logger.info(f"📊 HTF Direction: {overall_direction.upper()}")
+    logger.info(f"   Bias Strength: {bias_strength:.1f}/100")
+    logger.info(f"   Structure Quality: {structure_quality}")
+    logger.info(f"   Premium/Discount: {pd_zones['zone'].upper()} ({pd_zones['percentage']:.1f}%)")
+    logger.info(f"   Key Zones: {len(key_zones)}")
+    logger.info("=" * 60)
+    
+    return HTFBias(
+        overall_direction=overall_direction,
+        bias_strength=bias_strength,
+        structure_quality=structure_quality,
+        premium_discount=pd_zones['zone'],
+        key_zones=key_zones[:10],  # Top 10 zones
+        swing_high=swing_high,
+        swing_low=swing_low,
+        current_price=current_price
+    )
+
+
+def identify_ltf_entry_model(
+    htf_bias: HTFBias,
+    ltf_analyses: Dict[str, Dict],
+    current_price: float
+) -> Optional[LTFEntryModel]:
+    """
+    Find entry triggers on lower timeframes that align with HTF bias
+    Only looks for setups that AGREE with HTF direction
+    
+    Args:
+        htf_bias: HTF bias analysis
+        ltf_analyses: Dict mapping LTF ('60', '15', '5', '3') to analysis
+        current_price: Current market price
+        
+    Returns:
+        LTFEntryModel if valid setup found, None otherwise
+    """
+    logger.info("=" * 60)
+    logger.info("🔎 SEARCHING FOR LTF ENTRY MODEL")
+    logger.info(f"   HTF Bias: {htf_bias.overall_direction.upper()}")
+    logger.info("=" * 60)
+    
+    # Timeframe priority for entry (prefer higher LTF)
+    ltf_order = ['60', '15', '5', '3']  # 1H > 15m > 5m > 3m
+    
+    best_entry = None
+    best_score = 0
+    
+    for tf in ltf_order:
+        if tf not in ltf_analyses:
+            continue
+        
+        analysis = ltf_analyses[tf]
+        fvgs = analysis.get('fvgs', [])
+        order_blocks = analysis.get('order_blocks', [])
+        structure_breaks = analysis.get('structure_breaks', [])
+        
+        # Look for FVG tests (highest priority)
+        for i, fvg in enumerate(fvgs[-5:]):  # Check last 5 FVGs
+            # Must align with HTF direction
+            if fvg.gap_type != htf_bias.overall_direction:
+                continue
+            
+            # Check if price is near FVG
+            distance_pct = abs((fvg.gap_low + fvg.gap_high) / 2 - current_price) / current_price * 100
+            if distance_pct > 2.0:  # More than 2% away
+                continue
+            
+            # Determine if second test (higher probability)
+            entry_type = 'FVG_TEST_2ND' if i > 0 else 'FVG_TEST'
+            
+            # Calculate alignment score
+            alignment = 100 if fvg.gap_type == htf_bias.overall_direction else 0
+            
+            # Calculate overall score
+            score = alignment * (1.5 if entry_type == 'FVG_TEST_2ND' else 1.0)
+            score *= (1.2 if tf == '60' else 1.0)  # Bonus for 1H timeframe
+            
+            if score > best_score:
+                best_score = score
+                best_entry = LTFEntryModel(
+                    entry_type=entry_type,
+                    timeframe=tf,
+                    trigger_price=(fvg.gap_low + fvg.gap_high) / 2,
+                    entry_zone=(fvg.gap_low, fvg.gap_high),
+                    momentum_confirmed=True,  # Assume confirmed if FVG exists
+                    alignment_score=alignment,
+                    confidence=0.75 if entry_type == 'FVG_TEST_2ND' else 0.60
+                )
+        
+        # Look for Order Block tests
+        for ob in order_blocks[-3:]:
+            if ob.block_type != htf_bias.overall_direction:
+                continue
+            
+            distance_pct = abs((ob.low + ob.high) / 2 - current_price) / current_price * 100
+            if distance_pct > 1.5:
+                continue
+            
+            alignment = 100 if ob.block_type == htf_bias.overall_direction else 0
+            score = alignment * ob.strength
+            
+            if score > best_score:
+                best_score = score
+                best_entry = LTFEntryModel(
+                    entry_type='OB_TEST',
+                    timeframe=tf,
+                    trigger_price=(ob.low + ob.high) / 2,
+                    entry_zone=(ob.low, ob.high),
+                    momentum_confirmed=ob.strength > 0.7,
+                    alignment_score=alignment,
+                    confidence=0.65
+                )
+    
+    if best_entry:
+        logger.info(f"✅ Found {best_entry.entry_type} on {best_entry.timeframe}")
+        logger.info(f"   Entry Zone: {best_entry.entry_zone[0]:.2f} - {best_entry.entry_zone[1]:.2f}")
+        logger.info(f"   Alignment: {best_entry.alignment_score:.0f}%")
+    else:
+        logger.info("⚠️ No valid LTF entry model found")
+    
+    logger.info("=" * 60)
+    return best_entry
+
+
+def analyze_multi_timeframe_ict_topdown(
+    candles_by_timeframe: Dict[str, pd.DataFrame],
+    current_price: float
+) -> Dict:
+    """
+    Complete top-down ICT analysis
+    
+    Phase 1: HTF Bias (Monthly > Weekly > Daily > 4H)
+    Phase 2: LTF Entry (1H > 15m > 5m > 3m)
+    
+    Args:
+        candles_by_timeframe: Dict mapping timeframe to OHLC DataFrame
+            HTF: Keys like 'M', 'W', 'D', '240'
+            LTF: Keys like '60', '15', '5', '3'
+        current_price: Current market price
+        
+    Returns:
+        Dict with complete top-down analysis
+    """
+    logger.info("\n" + "=" * 60)
+    logger.info("🚀 ICT TOP-DOWN ANALYSIS")
+    logger.info("=" * 60)
+    
+    analyzer = ICTAnalyzer()
+    
+    # Phase 1: Analyze HTF for bias
+    htf_analyses = {}
+    for tf in ['M', 'W', 'D', '240', '4H']:
+        if tf not in candles_by_timeframe:
+            continue
+        
+        df = candles_by_timeframe[tf]
+        if df is None or len(df) < 20:
+            continue
+        
+        try:
+            # Run ICT analysis
+            df_analyzed = analyzer.identify_market_structure(df)
+            fvgs = analyzer.identify_fair_value_gaps(df)
+            order_blocks = analyzer.identify_order_blocks(df)
+            
+            # Get swing points
+            swing_highs = df_analyzed['swing_high'].dropna()
+            swing_lows = df_analyzed['swing_low'].dropna()
+            
+            htf_analyses[tf] = {
+                'trend': df_analyzed['trend'].iloc[-1] if 'trend' in df_analyzed.columns else 'neutral',
+                'fvgs': fvgs,
+                'order_blocks': order_blocks,
+                'swing_high': swing_highs.iloc[-1] if len(swing_highs) > 0 else current_price,
+                'swing_low': swing_lows.iloc[-1] if len(swing_lows) > 0 else current_price
+            }
+        except Exception as e:
+            logger.warning(f"HTF analysis failed for {tf}: {e}")
+    
+    # Determine HTF bias
+    htf_bias = determine_htf_bias(htf_analyses, current_price)
+    
+    # Phase 2: Analyze LTF for entry
+    ltf_analyses = {}
+    for tf in ['60', '15', '5', '3']:
+        if tf not in candles_by_timeframe:
+            continue
+        
+        df = candles_by_timeframe[tf]
+        if df is None or len(df) < 10:
+            continue
+        
+        try:
+            df_analyzed = analyzer.identify_market_structure(df)
+            fvgs = analyzer.identify_fair_value_gaps(df)
+            order_blocks = analyzer.identify_order_blocks(df)
+            
+            ltf_analyses[tf] = {
+                'fvgs': fvgs,
+                'order_blocks': order_blocks,
+                'structure_breaks': df_analyzed.get('structure_break', [])
+            }
+        except Exception as e:
+            logger.warning(f"LTF analysis failed for {tf}: {e}")
+    
+    # Find LTF entry model
+    ltf_entry = identify_ltf_entry_model(htf_bias, ltf_analyses, current_price)
+    
+    logger.info("=" * 60)
+    logger.info("✅ TOP-DOWN ANALYSIS COMPLETE")
+    logger.info("=" * 60 + "\n")
+    
+    return {
+        'htf_bias': htf_bias,
+        'ltf_entry': ltf_entry,
+        'htf_analyses': htf_analyses,
+        'ltf_analyses': ltf_analyses
+    }
