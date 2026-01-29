@@ -340,6 +340,7 @@ export default function DashboardPage() {
   const [toast, setToast] = React.useState<{ message: string; type: 'success' | 'error' } | null>(null)
   const [news, setNews] = React.useState<NewsArticle[]>([])
   const [loadingNews, setLoadingNews] = React.useState(false)
+  const [analysisMode, setAnalysisMode] = React.useState('auto')
 
   // Calculate trading signal from scan results with improved entry analysis
   const calculateTradingSignal = (data: ScanResults): TradingSignal | null => {
@@ -810,7 +811,7 @@ export default function DashboardPage() {
       updateStep('2', 'complete', 33)
       updateStep('3', 'loading', 40)
 
-      const url = `${apiUrl}/options/scan?index=${selectedIndex}&expiry=${selectedExpiry}&min_volume=1000&min_oi=10000&strategy=all&include_probability=true`
+      const url = `${apiUrl}/options/scan?index=${selectedIndex}&expiry=${selectedExpiry}&min_volume=1000&min_oi=10000&strategy=all&include_probability=true&analysis_mode=${analysisMode}`
 
       console.log(`📡 Fetching scan data from: ${url}`)
       console.log(`📈 Selected index: ${selectedIndex}`)
@@ -1309,6 +1310,19 @@ export default function DashboardPage() {
                     }
                   </>
                 )}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="w-full">
+            <label className="text-xs text-muted-foreground mb-1 block">Analysis Mode</label>
+            <Select value={analysisMode} onValueChange={setAnalysisMode}>
+              <SelectTrigger className="w-full h-auto py-3 px-4">
+                <SelectValue placeholder="Select mode" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="auto">Auto (Intraday during market hours)</SelectItem>
+                <SelectItem value="intraday">Intraday (5-min candles)</SelectItem>
+                <SelectItem value="longterm">Long Term (Daily candles)</SelectItem>
               </SelectContent>
             </Select>
           </div>
