@@ -175,8 +175,9 @@ class IndexProbabilityAnalyzer:
     5. Regime detection
     """
     
-    def __init__(self, fyers_client):
+    def __init__(self, fyers_client, analysis_mode="auto"):
         self.fyers_client = fyers_client
+        self.analysis_mode = analysis_mode  # 'auto', 'intraday', 'longterm'
         
         # Configuration
         self.min_correlation = 0.3       # Minimum correlation to include stock
@@ -622,16 +623,25 @@ class IndexProbabilityAnalyzer:
         Returns momentum score and direction for current trading session
         """
         try:
+            # Check analysis mode
+            if self.analysis_mode == "longterm":
+                # User explicitly wants long-term only
+                return None
+            
             from pytz import timezone as pytz_timezone
             ist = pytz_timezone('Asia/Kolkata')
             now = datetime.now(ist)
             
-            # Only run during market hours (9:15 AM - 3:30 PM IST)
+            # Market hours check
             market_open = now.replace(hour=9, minute=15, second=0, microsecond=0)
             market_close = now.replace(hour=15, minute=30, second=0, microsecond=0)
             
-            # If outside market hours, return None (use daily analysis only)
-            if now < market_open or now > market_close:
+            # For 'auto' mode: only during market hours
+            # For 'intraday' mode: force intraday analysis (if market is open)
+            if self.analysis_mode == "auto" and (now < market_open or now > market_close):
+                return None
+            elif self.analysis_mode == "intraday" and (now < market_open or now > market_close):
+                logger.warning("Intraday mode requested but market is closed. Using daily analysis.")
                 return None
             
             # Fetch today's intraday data (5-minute candles)
@@ -1255,9 +1265,10 @@ class IndexProbabilityAnalyzer:
 # Global analyzer instance
 _probability_analyzer = None
 
-def get_probability_analyzer(fyers_client) -> IndexProbabilityAnalyzer:
+def get_probability_analyzer(fyers_client, analysis_mode="auto") -> IndexProbabilityAnalyzer:
     """Get or create probability analyzer instance"""
     global _probability_analyzer
-    if _probability_analyzer is None:
-        _probability_analyzer = IndexProbabilityAnalyzer(fyers_client)
+    # Recreate analyzer if analysis_mode changes
+    if _probability_analyzer is None or _probability_analyzer.analysis_mode != analysis_mode:
+        _probability_analyzer = IndexProbabilityAnalyzer(fyers_client, analysis_mode=analysis_mode)
     return _probability_analyzer

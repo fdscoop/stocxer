@@ -50,6 +50,7 @@ export default function OptionsPage() {
   const [loadingExpiries, setLoadingExpiries] = React.useState(false)
   const [minVolume, setMinVolume] = React.useState('1000')
   const [minOI, setMinOI] = React.useState('10000')
+  const [analysisMode, setAnalysisMode] = React.useState('auto') // 'auto', 'intraday', 'longterm'
 
   // Probability analysis
   const [probability, setProbability] = React.useState({
@@ -115,7 +116,7 @@ export default function OptionsPage() {
 
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://stocxer-ai.onrender.com'
       const response = await fetch(
-        `${apiUrl}/options/scan?index=${selectedIndex}&expiry=${expiry}&min_volume=${minVolume}&min_oi=${minOI}`,
+        `${apiUrl}/options/scan?index=${selectedIndex}&expiry=${expiry}&min_volume=${minVolume}&min_oi=${minOI}&analysis_mode=${analysisMode}`,
         {
           headers: {
             'Authorization': `Bearer ${token}`,
@@ -258,6 +259,25 @@ export default function OptionsPage() {
                         }
                       </>
                     )}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label className="text-xs md:text-sm">Analysis Mode</Label>
+                <Select value={analysisMode} onValueChange={setAnalysisMode}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select analysis mode" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="auto">
+                      🤖 Auto (Intraday during market hours)
+                    </SelectItem>
+                    <SelectItem value="intraday">
+                      📊 Intraday (5-min candles)
+                    </SelectItem>
+                    <SelectItem value="longterm">
+                      📈 Long Term (Daily candles only)
+                    </SelectItem>
                   </SelectContent>
                 </Select>
               </div>

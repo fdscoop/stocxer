@@ -5181,6 +5181,7 @@ async def scan_options(
     min_oi: int = Query(10000, description="Minimum Open Interest filter"),
     strategy: str = Query("all", description="all, momentum, reversal, volatility"),
     include_probability: bool = Query(True, description="Include constituent stock probability analysis"),
+    analysis_mode: str = Query("auto", description="Analysis mode: 'intraday', 'longterm', or 'auto' (default)"),
     authorization: str = Header(None, description="Bearer token (required)"),
     token_validation: dict = None,
 ):
@@ -5246,8 +5247,8 @@ async def scan_options(
         
         if include_probability and INDEX_ANALYSIS_AVAILABLE:
             try:
-                logger.info(f"📊 Starting constituent stock analysis for {index}...")
-                prob_analyzer = get_probability_analyzer(fyers_client)
+                logger.info(f"📊 Starting constituent stock analysis for {index} (mode: {analysis_mode})...")
+                prob_analyzer = get_probability_analyzer(fyers_client, analysis_mode=analysis_mode)
                 prediction = prob_analyzer.analyze_index(index.upper())
                 
                 if prediction:
