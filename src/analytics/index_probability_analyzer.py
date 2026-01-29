@@ -637,12 +637,12 @@ class IndexProbabilityAnalyzer:
             market_close = now.replace(hour=15, minute=30, second=0, microsecond=0)
             
             # For 'auto' mode: only during market hours
-            # For 'intraday' mode: force intraday analysis (if market is open)
             if self.analysis_mode == "auto" and (now < market_open or now > market_close):
                 return None
-            elif self.analysis_mode == "intraday" and (now < market_open or now > market_close):
-                logger.warning("Intraday mode requested but market is closed. Using daily analysis.")
-                return None
+            
+            # For 'intraday' mode: Allow even after close (shows today's data)
+            # User explicitly wants intraday analysis
+            # Fetch today's intraday data (even if market closed, shows final intraday state)
             
             # Fetch today's intraday data (5-minute candles)
             today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
