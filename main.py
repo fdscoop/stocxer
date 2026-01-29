@@ -5240,6 +5240,109 @@ async def scan_options(
         
         logger.info(f"Options scanner requested by {user.email}: {index}/{expiry}, min_vol={min_volume}, min_oi={min_oi}, strategy={strategy}")
         
+        # ==================== MTF/ICT ANALYSIS ON INDEX =====================
+        # Analyze INDEX chart with multi-timeframe ICT analysis
+        # This gives us the overall market structure and direction
+        mtf_analysis_result = None
+        mtf_bias = None
+        
+        try:
+            # Get index symbol for MTF analysis
+            index_symbol_map = {
+                "NIFTY": "NSE:NIFTY50-INDEX",
+                "NIFTY50": "NSE:NIFTY50-INDEX",
+                "BANKNIFTY": "NSE:NIFTYBANK-INDEX",
+                "SENSEX": "BSE:SENSEX-INDEX",
+                "FINNIFTY": "NSE:FINNIFTY-INDEX",
+                "MIDCPNIFTY": "NSE:MIDCPNIFTY-INDEX",
+                "BANKEX": "BSE:BANKEX-INDEX"
+            }
+            mtf_symbol = index_symbol_map.get(index.upper(), f"NSE:{index.upper()}-INDEX")
+            
+            mtf_analyzer = get_mtf_analyzer(fyers_client)
+            from src.analytics.mtf_ict_analysis import Timeframe
+            
+            # Choose timeframes based on analysis mode
+            if analysis_mode == "intraday":
+                # Intraday: Focus on shorter timeframes for quick momentum
+                # Daily → 4H → 1H → 15min → 5min
+                timeframes = [
+                    Timeframe.DAILY,         # Overall daily trend
+                    Timeframe.FOUR_HOUR,     # 4H structure
+                    Timeframe.ONE_HOUR,      # 1H bias
+                    Timeframe.FIFTEEN_MIN,   # 15min for timing
+                    Timeframe.FIVE_MIN       # 5min for entry precision
+                ]
+                logger.info(f"🔍 Intraday MTF/ICT Analysis: {[tf.value for tf in timeframes]}")
+            elif analysis_mode == "longterm":
+                # Long-term: Full top-down analysis
+                timeframes = [
+                    Timeframe.MONTHLY,
+                    Timeframe.WEEKLY,
+                    Timeframe.DAILY,
+                    Timeframe.FOUR_HOUR,
+                    Timeframe.ONE_HOUR
+                ]
+                logger.info(f"🔍 Long-term MTF/ICT Analysis: {[tf.value for tf in timeframes]}")
+            else:
+                # Auto: Use intraday during market hours, long-term otherwise
+                from pytz import timezone as pytz_timezone
+                ist = pytz_timezone('Asia/Kolkata')
+                now = datetime.now(ist)
+                market_open = now.replace(hour=9, minute=15, second=0, microsecond=0)
+                market_close = now.replace(hour=15, minute=30, second=0, microsecond=0)
+                
+                if market_open <= now <= market_close:
+                    # During market hours - use intraday timeframes
+                    timeframes = [
+                        Timeframe.DAILY,
+                        Timeframe.FOUR_HOUR,
+                        Timeframe.ONE_HOUR,
+                        Timeframe.FIFTEEN_MIN,
+                        Timeframe.FIVE_MIN
+                    ]
+                    logger.info(f"🔍 Auto (Market Hours) MTF/ICT Analysis: {[tf.value for tf in timeframes]}")
+                else:
+                    # Outside market hours - use long-term
+                    timeframes = [
+                        Timeframe.WEEKLY,
+                        Timeframe.DAILY,
+                        Timeframe.FOUR_HOUR,
+                        Timeframe.ONE_HOUR
+                    ]
+                    logger.info(f"🔍 Auto (After Hours) MTF/ICT Analysis: {[tf.value for tf in timeframes]}")
+            
+            mtf_result = mtf_analyzer.analyze(mtf_symbol, timeframes)
+            mtf_bias = mtf_result.overall_bias
+            
+            logger.info(f"✅ MTF Analysis: {mtf_bias.upper()} bias")
+            for tf_key, tf_analysis in mtf_result.analyses.items():
+                logger.info(f"   {tf_key}: {tf_analysis.bias} - {tf_analysis.market_structure.trend}")
+            
+            # Store MTF analysis for response
+            mtf_analysis_result = {
+                "overall_bias": mtf_bias,
+                "timeframes_analyzed": [tf.value for tf in timeframes],
+                "timeframe_details": {
+                    tf_key: {
+                        "bias": tf_analysis.bias,
+                        "trend": tf_analysis.market_structure.trend,
+                        "structure": tf_analysis.market_structure.last_break
+                    }
+                    for tf_key, tf_analysis in mtf_result.analyses.items()
+                },
+                "confluence_zones": [
+                    {"level": z.level, "strength": z.strength, "timeframes": z.timeframes}
+                    for z in mtf_result.confluence_zones[:3]
+                ] if mtf_result.confluence_zones else [],
+                "trade_setups": len(mtf_result.trade_setups) if mtf_result.trade_setups else 0
+            }
+            
+        except Exception as mtf_error:
+            logger.warning(f"⚠️ MTF/ICT analysis failed: {mtf_error}")
+            mtf_analysis_result = {"error": str(mtf_error)}
+        # ====================================================================
+        
         # ==================== INDEX PROBABILITY ANALYSIS ====================
         # Scan ALL constituent stocks to predict index direction
         probability_analysis = None
@@ -5252,10 +5355,38 @@ async def scan_options(
                 prediction = prob_analyzer.analyze_index(index.upper())
                 
                 if prediction:
-                    # Determine recommended option type based on probability
-                    if prediction.expected_direction == "BULLISH" and prediction.prob_up > 0.55:
+                    # Determine recommended option type based on probability AND MTF bias
+                    constituent_direction = prediction.expected_direction
+                    constituent_prob_up = prediction.prob_up
+                    constituent_prob_down = prediction.prob_down
+                    
+                    # Combine MTF bias with constituent analysis
+                    # MTF bias overrides if strong, otherwise use probability
+                    final_direction = constituent_direction
+                    mtf_override = False
+                    
+                    if mtf_bias:
+                        if mtf_bias == "bullish" and constituent_direction != "BULLISH":
+                            # MTF says bullish but constituents disagree
+                            # If MTF is clear and constituents are weak, trust MTF
+                            if constituent_prob_down < 0.6:  # Not strongly bearish
+                                logger.info(f"🔄 MTF OVERRIDE: MTF={mtf_bias}, Constituents={constituent_direction} → Using BULLISH")
+                                final_direction = "BULLISH"
+                                mtf_override = True
+                        elif mtf_bias == "bearish" and constituent_direction != "BEARISH":
+                            # MTF says bearish but constituents disagree
+                            if constituent_prob_up < 0.6:  # Not strongly bullish
+                                logger.info(f"🔄 MTF OVERRIDE: MTF={mtf_bias}, Constituents={constituent_direction} → Using BEARISH")
+                                final_direction = "BEARISH"
+                                mtf_override = True
+                        elif mtf_bias == constituent_direction.lower():
+                            # Agreement between MTF and constituents - high confidence
+                            logger.info(f"✅ MTF CONFIRMS: Both MTF and constituents agree on {final_direction}")
+                    
+                    # Set recommended option type based on final direction
+                    if final_direction == "BULLISH":
                         recommended_option_type = "CALL"
-                    elif prediction.expected_direction == "BEARISH" and prediction.prob_down > 0.55:
+                    elif final_direction == "BEARISH":
                         recommended_option_type = "PUT"
                     else:
                         recommended_option_type = "STRADDLE"  # Neutral - play both sides
@@ -5263,7 +5394,10 @@ async def scan_options(
                     probability_analysis = {
                         "stocks_scanned": prediction.total_stocks_analyzed,
                         "total_stocks": len(index_manager.get_constituents(index.upper())) if index_manager else prediction.total_stocks_analyzed,
-                        "expected_direction": prediction.expected_direction,
+                        "expected_direction": final_direction,  # Use combined direction
+                        "constituent_direction": constituent_direction,  # Original from stocks
+                        "mtf_bias": mtf_bias,
+                        "mtf_override": mtf_override,
                         "expected_move_pct": round(prediction.expected_move_pct, 2),
                         "confidence": round(prediction.prediction_confidence / 100, 3),  # Convert 0-100 to 0-1
                         "probability_up": round(prediction.prob_up, 3),
@@ -5510,6 +5644,7 @@ async def scan_options(
                 "days_to_expiry": chain.days_to_expiry
             },
             "probability_analysis": probability_analysis,
+            "mtf_ict_analysis": mtf_analysis_result,  # NEW: MTF/ICT analysis on index chart
             "recommended_option_type": recommended_option_type,
             "sentiment_analysis": sentiment_data,  # Include sentiment in response
             "total_options": len(scanned_options),
