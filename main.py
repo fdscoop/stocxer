@@ -2268,10 +2268,25 @@ async def get_event_calendar():
 @app.get("/signals/{symbol}/actionable")
 async def get_actionable_trading_signal(
     symbol: str,
+    quick_mode: bool = Query(False, description="Quick mode: skip 50-stock analysis for faster signals"),
     authorization: str = Header(None, description="Bearer token for authenticated access")
 ):
     """
     Get clear, actionable trading signals with specific strikes, prices, and timing
+    
+    MODES:
+    ------
+    🚀 Quick Mode (quick_mode=true):
+       - Fast signals in 5-10 seconds
+       - MTF/ICT analysis only
+       - 10-20 API calls
+       - For: Automated trading
+    
+    🎯 Full Analysis (quick_mode=false, default):
+       - 40-60 seconds
+       - Includes 50-stock analysis
+       - Higher confidence
+       - For: Manual trading decisions
     
     Returns:
     - Exact option to buy/sell (strike + type)
@@ -2284,7 +2299,8 @@ async def get_actionable_trading_signal(
     1. Multi-Timeframe ICT Analysis (Weekly → Daily → 4H → 1H → 15min)
     2. Option Chain Analysis (PCR, Max Pain, OI Distribution)
     3. ML Analysis (ARIMA + LSTM + Momentum)
-    4. Signal Generation with confidence scoring
+    4. Constituent Stock Analysis (only if quick_mode=False)
+    5. Signal Generation with confidence scoring
     """
     try:
         # Load user's Fyers token if authorization provided
@@ -2492,13 +2508,16 @@ async def get_actionable_trading_signal(
             logger.warning(f"Could not fetch historical data for ML: {e}")
         
         # ==================== INDEX PROBABILITY ANALYSIS ====================
-        # Scan ALL constituent stocks to enhance signal with market-wide data
+        # 🚀 QUICK MODE: Skip expensive 50-stock analysis
+        # 🎯 FULL MODE: Scan ALL constituent stocks to enhance signal
         probability_analysis = None
         constituent_recommendation = None
         
-        if INDEX_ANALYSIS_AVAILABLE:
+        # Only run expensive analysis if NOT in quick mode
+        if not quick_mode and INDEX_ANALYSIS_AVAILABLE:
             try:
-                logger.info(f"📊 Running constituent stock analysis for {index_name}...")
+                logger.info(f"📊 FULL MODE: Running constituent stock analysis for {index_name}...")
+                logger.info(f"⚠️ This will analyze ~50 stocks and may take 40-60 seconds")
                 prob_analyzer = get_probability_analyzer(fyers_client)
                 prediction = prob_analyzer.analyze_index(index_name.upper())
                 
@@ -2548,7 +2567,11 @@ async def get_actionable_trading_signal(
                     logger.info(f"   Recommendation from stocks: {constituent_recommendation}")
                     
             except Exception as prob_error:
-                logger.warning(f"⚠️ Probability analysis failed: {prob_error}")
+                logger.warning(f"⚠️ Constituent stock analysis failed: {prob_error}")
+        elif quick_mode:
+            logger.info(f"🚀 QUICK MODE: Skipping 50-stock analysis (use quick_mode=false for full analysis)")
+        else:
+            logger.info(f"⚠️ Constituent analysis disabled (INDEX_ANALYSIS_AVAILABLE={INDEX_ANALYSIS_AVAILABLE})")
         
         # ==================== SIGNAL GENERATION ====================
         # 🎯 USING NEW ICT TOP-DOWN FLOW (Enabled Jan 29, 2026)

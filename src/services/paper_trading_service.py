@@ -121,14 +121,31 @@ class PaperTradingService:
     # ==================== SIGNAL GENERATION ====================
     
     async def generate_signal(self, index: str, user_id: str) -> Optional[Dict]:
-        """Generate trading signal for index"""
+        """
+        Generate trading signal for index
+        
+        Uses QUICK MODE by default for automated trading to:
+        - Avoid API rate limits (10-20 calls vs 100-150)
+        - Get faster signals (5-10s vs 40-60s)
+        - Enable more frequent scanning
+        
+        Quick mode includes:
+        - MTF/ICT analysis on index chart
+        - Market sentiment analysis
+        - Option recommendation based on technical structure
+        
+        Skips (to save API calls):
+        - 50-stock constituent probability analysis
+        """
         try:
             # Import signal generation function from main
             import httpx
             
-            # Call the existing actionable signal endpoint
-            signal_url = f"http://localhost:8000/signals/{index}/actionable"
-            logger.info(f"📡 Fetching signal from: {signal_url}")
+            # Call the existing actionable signal endpoint with quick_mode=true
+            # This makes automated trading fast and avoids rate limits
+            signal_url = f"http://localhost:8000/signals/{index}/actionable?quick_mode=true"
+            logger.info(f"📡 Fetching QUICK signal from: {signal_url}")
+            logger.info(f"   ⚡ Quick mode: Fast analysis without 50-stock scan")
             
             async with httpx.AsyncClient(timeout=30.0) as client:
                 response = await client.get(signal_url)
