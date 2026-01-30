@@ -30,7 +30,7 @@ async def check_automation_status():
     
     # 2. Check for running schedulers
     print("\n⏰ Scheduler Status:")
-    print("   News fetching: DISABLED (commented out in main.py)")
+    print("   News fetching: ENABLED (every 1 hour - lightweight)")
     print("   Options auto-scan: DISABLED (not found in startup)")
     print("   Paper trading scanner: STOPPED (as of above)")
     
@@ -59,14 +59,14 @@ async def check_automation_status():
     print("   • All analysis features")
     print("")
     print("🔴 Automated features: DISABLED")
-    print("   • Background news updates")
-    print("   • Automated options scanning") 
-    print("   • Paper trading scanner")
+    print("   • Background news updates: ENABLED (1hr - lightweight)")
+    print("   • Automated options scanning: DISABLED") 
+    print("   • Paper trading scanner: DISABLED")
     print("")
     print("💰 Resource savings:")
     print("   • No more 90-180 second scans every 16 minutes")
     print("   • No more paper trading scans every 5 minutes")
-    print("   • No more news fetching every hour")
+    print("   • Light news fetching every hour (minimal impact)")
     print("   • API quota preserved for manual usage")
 
 if __name__ == "__main__":
