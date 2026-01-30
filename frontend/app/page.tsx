@@ -24,6 +24,9 @@ import Link from 'next/link'
 import { getApiUrl, clearAuthData } from '@/lib/api'
 import { checkDailySessionReset, signOut } from '@/lib/supabase'
 import { BeginnerSignalCard } from '@/components/trading/beginner-signal-card'
+import { TokenBalanceWidget } from '@/components/billing/token-balance-widget'
+import { ScanConfirmationDialog } from '@/components/trading/scan-confirmation-dialog'
+import { OptionScannerResultsWidget } from '@/components/trading/option-scanner-results-widget'
 
 // Types for scan results
 interface ProbabilityAnalysis {
@@ -345,6 +348,12 @@ export default function DashboardPage() {
   const [showScanModeDialog, setShowScanModeDialog] = React.useState(false)
   const [selectedScanMode, setSelectedScanMode] = React.useState<'quick' | 'full'>('quick')
 
+  // New state for token balance and scan confirmation
+  const [tokenBalance, setTokenBalance] = React.useState<number | null>(null)
+  const [loadingBalance, setLoadingBalance] = React.useState(false)
+  const [showConfirmDialog, setShowConfirmDialog] = React.useState(false)
+  const [scanCostData, setScanCostData] = React.useState<any>(null)
+
   // Calculate trading signal from scan results with improved entry analysis
   const calculateTradingSignal = (data: ScanResults): TradingSignal | null => {
     if (!data.probability_analysis || !data.options || data.options.length === 0) return null
@@ -527,6 +536,8 @@ export default function DashboardPage() {
       checkFyersAuth(token)
       // Fetch latest scan results and display on dashboard
       fetchLatestScanResults(token)
+      // Fetch token balance
+      fetchTokenBalance(token)
     } else {
       // Redirect to landing page if not authenticated
       router.push('/landing')
@@ -714,6 +725,63 @@ export default function DashboardPage() {
     }
   }
 
+  // Fetch user token balance
+  const fetchTokenBalance = async (token: string) => {
+    setLoadingBalance(true)
+    try {
+      const apiUrl = typeof window !== 'undefined'
+        ? (localStorage.getItem('apiUrl') || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000')
+        : 'http://localhost:8000'
+
+      const response = await fetch(`${apiUrl}/api/billing/status`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        setTokenBalance(data.billing_status?.credits_balance || 0)
+      }
+    } catch (error) {
+      console.error('Error fetching token balance:', error)
+    } finally {
+      setLoadingBalance(false)
+    }
+  }
+
+  // Calculate option scan cost
+  const calculateScanCost = async (token: string, quickScan: boolean, index: string) => {
+    try {
+      const apiUrl = typeof window !== 'undefined'
+        ? (localStorage.getItem('apiUrl') || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000')
+        : 'http://localhost:8000'
+
+      const response = await fetch(`${apiUrl}/api/options/calculate-cost`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          quick_scan: quickScan,
+          index: index
+        })
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        return data
+      }
+      return null
+    } catch (error) {
+      console.error('Error calculating scan cost:', error)
+      return null
+    }
+  }
+
   // Open Fyers authentication popup
   const openFyersAuthPopup = async () => {
     try {
@@ -780,7 +848,23 @@ export default function DashboardPage() {
   const executeScan = async (mode: 'quick' | 'full') => {
     setSelectedScanMode(mode)
     setShowScanModeDialog(false)
-    
+
+    const token = localStorage.getItem('auth_token') || localStorage.getItem('token') || localStorage.getItem('jwt_token')
+    if (!token) return
+
+    // Calculate scan cost and show confirmation dialog
+    const costData = await calculateScanCost(token, mode === 'quick', selectedIndex)
+    if (costData) {
+      setScanCostData(costData)
+      setShowConfirmDialog(true)
+    } else {
+      setToast({ message: 'Failed to calculate scan cost', type: 'error' })
+      setTimeout(() => setToast(null), 3000)
+    }
+  }
+
+  // Actually execute the scan after user confirms
+  const confirmedExecuteScan = async () => {
     const token = localStorage.getItem('auth_token') || localStorage.getItem('token') || localStorage.getItem('jwt_token')
     if (!token) return
 
@@ -1225,7 +1309,7 @@ export default function DashboardPage() {
       showBackButton={false}
     >
       <div className="container mx-auto px-3 md:px-4 py-4 md:py-6 space-y-4 md:space-y-6">
-        
+
         {/* Scan Mode Selection Dialog */}
         {showScanModeDialog && (
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
@@ -1304,7 +1388,7 @@ export default function DashboardPage() {
             </Card>
           </div>
         )}
-        
+
         {/* User Dashboard Header */}
         <Card className="bg-gradient-to-r from-primary/10 to-purple-500/10 border-primary/30">
           <CardContent className="p-4 md:p-6">
@@ -1435,7 +1519,27 @@ export default function DashboardPage() {
             )}
             <span className="text-sm font-semibold">Scan {selectedIndex}</span>
           </Button>
+
+          {/* Token Balance Widget */}
+          <TokenBalanceWidget
+            balance={tokenBalance}
+            loading={loadingBalance}
+            onRefresh={() => {
+              const token = localStorage.getItem('auth_token') || localStorage.getItem('token') || localStorage.getItem('jwt_token')
+              if (token) fetchTokenBalance(token)
+            }}
+            className="md:col-span-2"
+          />
         </div>
+
+        {/* Option Scanner Results Widget */}
+        {tradingSignal && (
+          <OptionScannerResultsWidget
+            index={selectedIndex}
+            onIndexChange={setSelectedIndex}
+            className="mb-6"
+          />
+        )}
 
         {/* ============ NO SCANS MESSAGE ============ */}
         {!loading && !scanResults && !tradingSignal && (
@@ -1494,738 +1598,738 @@ export default function DashboardPage() {
             </CardHeader>
             <CardContent className="space-y-4">
               {/* WAIT/AVOID Warning if applicable */}
-                  {(tradingSignal.action.includes('WAIT') || tradingSignal.action.includes('AVOID')) && (
-                    <div className={`p-3 rounded-lg border ${tradingSignal.action.includes('AVOID')
-                      ? 'bg-red-500/10 border-red-500/30'
-                      : 'bg-orange-500/10 border-orange-500/30'
+              {(tradingSignal.action.includes('WAIT') || tradingSignal.action.includes('AVOID')) && (
+                <div className={`p-3 rounded-lg border ${tradingSignal.action.includes('AVOID')
+                  ? 'bg-red-500/10 border-red-500/30'
+                  : 'bg-orange-500/10 border-orange-500/30'
+                  }`}>
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="text-xl">{tradingSignal.action.includes('AVOID') ? '⛔' : '⏳'}</span>
+                    <span className={`font-semibold ${tradingSignal.action.includes('AVOID') ? 'text-red-500' : 'text-orange-500'}`}>
+                      {tradingSignal.action.includes('AVOID') ? 'Avoid Entry - Poor Conditions' : 'Wait for Better Entry'}
+                    </span>
+                  </div>
+                  <div className="text-xs text-muted-foreground space-y-1">
+                    {((tradingSignal as any).entry_reasons || []).slice(0, 3).map((reason: string, idx: number) => (
+                      <p key={idx}>{reason}</p>
+                    ))}
+                    {(tradingSignal as any).wait_for_pullback && (
+                      <p className="text-orange-400 font-medium">
+                        💡 Wait for pullback to ₹{(tradingSignal as any).limit_order_price?.toFixed(0) || tradingSignal.entry_price.toFixed(0)}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Action & Strike */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="p-3 bg-card rounded-lg border">
+                  <div className="text-xs text-muted-foreground mb-1">What to Buy</div>
+                  <div className={`text-xl md:text-2xl font-bold ${tradingSignal.action.includes('AVOID') ? 'text-red-500' :
+                    tradingSignal.action.includes('WAIT') ? 'text-orange-500' :
+                      tradingSignal.action.includes('BUY CALL') || (tradingSignal.type === 'CALL' && tradingSignal.action.includes('BUY')) ? 'text-green-500' :
+                        tradingSignal.type === 'CALL' ? 'text-bullish' : 'text-bearish'
+                    }`}>
+                    {tradingSignal.action}
+                  </div>
+                  <div className="text-sm text-muted-foreground">
+                    {tradingSignal.strike} Strike
+                  </div>
+                </div>
+                <div className="p-3 bg-card rounded-lg border">
+                  <div className="text-xs text-muted-foreground mb-1">
+                    {(tradingSignal as any).wait_for_pullback ? 'Limit Order Price' : 'Entry Price'}
+                  </div>
+                  <div className="text-xl md:text-2xl font-bold text-primary">
+                    ₹{tradingSignal.entry_price.toFixed(2)}
+                  </div>
+                  {/* Show current LTP if different from entry */}
+                  {(tradingSignal as any).raw_ltp && Math.abs((tradingSignal as any).raw_ltp - tradingSignal.entry_price) > 0.5 && (
+                    <div className="text-xs text-muted-foreground">
+                      Current LTP: ₹{(tradingSignal as any).raw_ltp?.toFixed(2)}
+                    </div>
+                  )}
+                  <div className="text-sm text-muted-foreground">
+                    Confidence: {tradingSignal.confidence}%
+                  </div>
+                </div>
+              </div>
+
+              {/* Time & Theta Warning for Intraday */}
+              {((tradingSignal as any).time_remaining_minutes < 120 || (tradingSignal as any).theta_per_hour > 2) && (
+                <div className="grid grid-cols-2 gap-2">
+                  {(tradingSignal as any).time_remaining_minutes < 120 && (
+                    <div className="p-2 bg-yellow-500/10 rounded-lg border border-yellow-500/30 text-center">
+                      <div className="text-yellow-500 text-xs font-medium">⏰ Time Left</div>
+                      <div className="text-sm font-bold text-yellow-500">
+                        {Math.floor((tradingSignal as any).time_remaining_minutes / 60)}h {(tradingSignal as any).time_remaining_minutes % 60}m
+                      </div>
+                    </div>
+                  )}
+                  {(tradingSignal as any).theta_per_hour > 2 && (
+                    <div className="p-2 bg-red-500/10 rounded-lg border border-red-500/30 text-center">
+                      <div className="text-red-500 text-xs font-medium">📉 Theta Decay</div>
+                      <div className="text-sm font-bold text-red-500">
+                        -₹{(tradingSignal as any).theta_per_hour?.toFixed(1)}/hr
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Targets & Stop Loss - Easy to understand */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                <div className="p-2 sm:p-3 bg-green-500/10 rounded-lg border border-green-500/30 text-center">
+                  <div className="text-green-500 text-[10px] sm:text-xs font-medium mb-1">🎯 TARGET 1</div>
+                  <div className="text-base sm:text-lg font-bold text-green-500">₹{tradingSignal.target_1.toFixed(0)}</div>
+                  <div className="text-[10px] sm:text-xs text-green-400">
+                    +{Math.round(((tradingSignal.target_1 - tradingSignal.entry_price) / tradingSignal.entry_price) * 100)}%
+                  </div>
+                </div>
+                <div className="p-2 sm:p-3 bg-green-600/10 rounded-lg border border-green-600/30 text-center">
+                  <div className="text-green-500 text-[10px] sm:text-xs font-medium mb-1">🎯 TARGET 2</div>
+                  <div className="text-base sm:text-lg font-bold text-green-500">₹{tradingSignal.target_2.toFixed(0)}</div>
+                  <div className="text-[10px] sm:text-xs text-green-400">
+                    +{Math.round(((tradingSignal.target_2 - tradingSignal.entry_price) / tradingSignal.entry_price) * 100)}%
+                  </div>
+                </div>
+                <div className="p-2 sm:p-3 bg-red-500/10 rounded-lg border border-red-500/30 text-center">
+                  <div className="text-red-500 text-[10px] sm:text-xs font-medium mb-1">🛑 STOP LOSS</div>
+                  <div className="text-base sm:text-lg font-bold text-red-500">₹{tradingSignal.stop_loss.toFixed(0)}</div>
+                  <div className="text-[10px] sm:text-xs text-red-400">
+                    -{Math.round(((tradingSignal.entry_price - tradingSignal.stop_loss) / tradingSignal.entry_price) * 100)}%
+                  </div>
+                </div>
+                <div className="p-2 sm:p-3 bg-yellow-500/10 rounded-lg border border-yellow-500/30 text-center">
+                  <div className="text-yellow-500 text-[10px] sm:text-xs font-medium mb-1">⚖️ R:R</div>
+                  <div className="text-base sm:text-lg font-bold text-yellow-500">{tradingSignal.risk_reward}</div>
+                  <div className="text-[10px] sm:text-xs text-yellow-400">Favorable</div>
+                </div>
+              </div>
+
+              {/* Enhanced Entry Analysis & Liquidity */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <div className="p-3 bg-blue-500/10 rounded-lg border border-blue-500/30">
+                  <div className="text-xs text-muted-foreground mb-1">Trading Symbol</div>
+                  <div className="text-sm font-mono text-blue-400">{tradingSignal.trading_symbol}</div>
+                </div>
+
+                {/* Best Entry Price from Discount Zone */}
+                {(tradingSignal as any).discount_zone?.best_entry && (
+                  <div className="p-3 bg-green-500/10 rounded-lg border border-green-500/30">
+                    <div className="text-xs text-muted-foreground mb-1">💎 Best Entry Price</div>
+                    <div className="text-lg font-bold text-green-400">
+                      ₹{(tradingSignal as any).discount_zone.best_entry.toFixed(2)}
+                    </div>
+                    <div className="text-xs text-green-300">
+                      {(tradingSignal as any).discount_zone.status || 'OPTIMAL'}
+                    </div>
+                  </div>
+                )}
+
+                {/* Liquidity Score */}
+                {(tradingSignal as any).liquidity_score !== undefined && (
+                  <div className="p-3 bg-purple-500/10 rounded-lg border border-purple-500/30">
+                    <div className="text-xs text-muted-foreground mb-1">💧 Liquidity</div>
+                    <div className="text-lg font-bold text-purple-400">
+                      {(tradingSignal as any).liquidity_score}/100
+                    </div>
+                    <div className="text-xs text-purple-300">
+                      {(tradingSignal as any).liquidity_grade || 'EXCELLENT'}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Sentiment & Reversal Detection */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {/* Sentiment Analysis */}
+                {(tradingSignal as any).sentiment_score !== undefined && (
+                  <div className="p-3 bg-cyan-500/10 rounded-lg border border-cyan-500/30">
+                    <div className="text-xs text-muted-foreground mb-1 flex items-center gap-2">
+                      📰 Market Sentiment
+                      {(tradingSignal as any).news_articles && (
+                        <span className="text-xs bg-cyan-600/30 px-1 rounded">
+                          {(tradingSignal as any).news_articles} articles
+                        </span>
+                      )}
+                    </div>
+                    <div className="text-sm font-semibold text-cyan-400">
+                      {(tradingSignal as any).sentiment_direction?.toUpperCase() || 'NEUTRAL'}
+                    </div>
+                    <div className="text-xs text-cyan-300 mt-1">
+                      {(tradingSignal as any).market_mood || 'Analyzing market mood...'}
+                    </div>
+                  </div>
+                )}
+
+                {/* Reversal Detection */}
+                {(tradingSignal as any).reversal_detected && (
+                  <div className="p-3 bg-orange-500/10 rounded-lg border border-orange-500/30">
+                    <div className="text-xs text-muted-foreground mb-1">🔄 Reversal Signal</div>
+                    <div className="text-sm font-semibold text-orange-400">
+                      {(tradingSignal as any).reversal_type?.replace('_', ' ') || 'DETECTED'}
+                    </div>
+                    <div className="text-xs text-orange-300 mt-1 line-clamp-2">
+                      {(tradingSignal as any).reversal_description || 'Potential trend reversal'}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* ============ NEW: TRADE RECOMMENDATION VERDICT ============ */}
+              {tradingSignal.trade_recommendation && (
+                <div className={`p-3 rounded-lg border ${tradingSignal.trade_recommendation.verdict === 'TRADE' ? 'bg-green-500/10 border-green-500/30' :
+                  tradingSignal.trade_recommendation.verdict === 'WAIT' ? 'bg-yellow-500/10 border-yellow-500/30' :
+                    'bg-red-500/10 border-red-500/30'
+                  }`}>
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="text-sm font-medium flex items-center gap-2">
+                      {tradingSignal.trade_recommendation.verdict === 'TRADE' ? '✅' : tradingSignal.trade_recommendation.verdict === 'WAIT' ? '⏳' : '⛔'}
+                      Trade Verdict: <span className={
+                        tradingSignal.trade_recommendation.verdict === 'TRADE' ? 'text-green-400' :
+                          tradingSignal.trade_recommendation.verdict === 'WAIT' ? 'text-yellow-400' : 'text-red-400'
+                      }>{tradingSignal.trade_recommendation.verdict}</span>
+                    </div>
+                    <Badge variant="outline" className={`text-xs ${tradingSignal.trade_recommendation.risk_level === 'LOW' ? 'border-green-500 text-green-500' :
+                      tradingSignal.trade_recommendation.risk_level === 'MEDIUM' ? 'border-yellow-500 text-yellow-500' :
+                        'border-red-500 text-red-500'
                       }`}>
-                      <div className="flex items-center gap-2 mb-2">
-                        <span className="text-xl">{tradingSignal.action.includes('AVOID') ? '⛔' : '⏳'}</span>
-                        <span className={`font-semibold ${tradingSignal.action.includes('AVOID') ? 'text-red-500' : 'text-orange-500'}`}>
-                          {tradingSignal.action.includes('AVOID') ? 'Avoid Entry - Poor Conditions' : 'Wait for Better Entry'}
+                      Risk: {tradingSignal.trade_recommendation.risk_level}
+                    </Badge>
+                  </div>
+                  <div className="text-xs text-muted-foreground space-y-1">
+                    {tradingSignal.trade_recommendation.reasons?.map((reason, idx) => (
+                      <p key={idx}>{reason}</p>
+                    ))}
+                  </div>
+                  <div className="mt-2 text-xs font-medium text-slate-300">
+                    Position Size: {tradingSignal.trade_recommendation.position_size_advice}
+                  </div>
+                </div>
+              )}
+
+              {/* ============ NEW: GREEKS ANALYSIS ============ */}
+              {tradingSignal.greeks && (
+                <div className="p-3 bg-violet-500/10 rounded-lg border border-violet-500/30">
+                  <div className="text-sm font-medium text-violet-300 mb-3 flex items-center gap-2">
+                    📐 Option Greeks
+                    <span className="text-xs bg-violet-600/30 px-2 py-0.5 rounded">LIVE</span>
+                  </div>
+                  <div className="grid grid-cols-4 gap-2 mb-3">
+                    <div className="p-2 bg-card rounded border text-center">
+                      <div className="text-xs text-muted-foreground">Delta</div>
+                      <div className={`text-lg font-bold ${tradingSignal.greeks.delta < 0 ? 'text-red-400' : 'text-green-400'}`}>
+                        {tradingSignal.greeks.delta.toFixed(3)}
+                      </div>
+                    </div>
+                    <div className="p-2 bg-card rounded border text-center">
+                      <div className="text-xs text-muted-foreground">Gamma</div>
+                      <div className="text-lg font-bold text-blue-400">
+                        {tradingSignal.greeks.gamma.toFixed(4)}
+                      </div>
+                    </div>
+                    <div className="p-2 bg-card rounded border text-center">
+                      <div className="text-xs text-muted-foreground">Theta</div>
+                      <div className="text-lg font-bold text-red-400">
+                        {tradingSignal.greeks.theta.toFixed(2)}
+                      </div>
+                    </div>
+                    <div className="p-2 bg-card rounded border text-center">
+                      <div className="text-xs text-muted-foreground">Vega</div>
+                      <div className="text-lg font-bold text-purple-400">
+                        {tradingSignal.greeks.vega.toFixed(2)}
+                      </div>
+                    </div>
+                  </div>
+                  {tradingSignal.greeks.interpretation && (
+                    <div className="text-xs text-violet-200 space-y-1">
+                      <p>📊 {tradingSignal.greeks.interpretation.delta_meaning}</p>
+                      <p>⏰ {tradingSignal.greeks.interpretation.theta_meaning}</p>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* ============ NEW: ML ANALYSIS ============ */}
+              {tradingSignal.ml_analysis && tradingSignal.ml_analysis.enabled && (
+                <div className={`p-3 rounded-lg border ${tradingSignal.ml_analysis.direction === 'bullish' ? 'bg-green-500/10 border-green-500/30' :
+                  tradingSignal.ml_analysis.direction === 'bearish' ? 'bg-red-500/10 border-red-500/30' :
+                    'bg-slate-500/10 border-slate-500/30'
+                  }`}>
+                  <div className="text-sm font-medium mb-3 flex items-center gap-2">
+                    🤖 ML Prediction
+                    <Badge variant="outline" className={`text-xs ${tradingSignal.ml_analysis.status === 'ACTIVE' ? 'border-green-500 text-green-500' : 'border-yellow-500 text-yellow-500'
+                      }`}>
+                      {tradingSignal.ml_analysis.status}
+                    </Badge>
+                  </div>
+                  <div className="grid grid-cols-3 gap-2 mb-2">
+                    <div className="p-2 bg-card rounded border text-center">
+                      <div className="text-xs text-muted-foreground">Direction</div>
+                      <div className={`text-base font-bold ${tradingSignal.ml_analysis.direction === 'bullish' ? 'text-green-400' :
+                        tradingSignal.ml_analysis.direction === 'bearish' ? 'text-red-400' : 'text-slate-400'
+                        }`}>
+                        {tradingSignal.ml_analysis.direction?.toUpperCase()}
+                      </div>
+                    </div>
+                    <div className="p-2 bg-card rounded border text-center">
+                      <div className="text-xs text-muted-foreground">Confidence</div>
+                      <div className="text-base font-bold text-blue-400">
+                        {tradingSignal.ml_analysis.confidence}%
+                      </div>
+                    </div>
+                    <div className="p-2 bg-card rounded border text-center">
+                      <div className="text-xs text-muted-foreground">Predicted</div>
+                      <div className="text-base font-bold text-primary">
+                        ₹{tradingSignal.ml_analysis.predicted_price?.toFixed(0)}
+                      </div>
+                    </div>
+                  </div>
+                  {tradingSignal.ml_analysis.models && (
+                    <div className="flex gap-2 mb-2">
+                      <Badge variant="outline" className="text-xs">
+                        ARIMA: {tradingSignal.ml_analysis.models.arima}
+                      </Badge>
+                      <Badge variant="outline" className="text-xs">
+                        Momentum: {tradingSignal.ml_analysis.models.momentum}
+                      </Badge>
+                    </div>
+                  )}
+                  {tradingSignal.ml_analysis.warning && (
+                    <div className="text-xs text-yellow-400">
+                      {tradingSignal.ml_analysis.warning}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* ============ NEW: THETA/EXPIRY ANALYSIS ============ */}
+              {tradingSignal.theta_analysis && (
+                <div className={`p-3 rounded-lg border ${tradingSignal.theta_analysis.risk_level === 'LOW' ? 'bg-green-500/10 border-green-500/30' :
+                  tradingSignal.theta_analysis.risk_level?.includes('MEDIUM') ? 'bg-yellow-500/10 border-yellow-500/30' :
+                    'bg-red-500/10 border-red-500/30'
+                  }`}>
+                  <div className="text-sm font-medium mb-3 flex items-center gap-2">
+                    ⏱️ Time Decay Analysis
+                    <Badge variant="outline" className="text-xs">
+                      {tradingSignal.theta_analysis.decay_phase}
+                    </Badge>
+                  </div>
+                  <div className="grid grid-cols-3 gap-2 mb-2">
+                    <div className="p-2 bg-card rounded border text-center">
+                      <div className="text-xs text-muted-foreground">Daily Decay</div>
+                      <div className="text-base font-bold text-red-400">
+                        -{tradingSignal.theta_analysis.daily_decay_pct}%
+                      </div>
+                    </div>
+                    <div className="p-2 bg-card rounded border text-center">
+                      <div className="text-xs text-muted-foreground">Hourly</div>
+                      <div className="text-base font-bold text-orange-400">
+                        -₹{Math.abs(tradingSignal.theta_analysis.theta_per_hour).toFixed(1)}/hr
+                      </div>
+                    </div>
+                    <div className="p-2 bg-card rounded border text-center">
+                      <div className="text-xs text-muted-foreground">Risk</div>
+                      <div className={`text-base font-bold ${tradingSignal.theta_analysis.risk_level === 'LOW' ? 'text-green-400' :
+                        tradingSignal.theta_analysis.risk_level?.includes('MEDIUM') ? 'text-yellow-400' : 'text-red-400'
+                        }`}>
+                        {tradingSignal.theta_analysis.risk_level}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="text-xs text-muted-foreground space-y-1">
+                    <p>💡 {tradingSignal.theta_analysis.advice}</p>
+                    <p>📅 {tradingSignal.theta_analysis.strategy_recommendation}</p>
+                  </div>
+                </div>
+              )}
+
+              {/* ============ NEW: MARKET CONTEXT ============ */}
+              {tradingSignal.market_context && (
+                <div className="p-3 bg-slate-500/10 rounded-lg border border-slate-500/30">
+                  <div className="text-sm font-medium text-slate-300 mb-3">📈 Market Context</div>
+                  <div className="grid grid-cols-4 gap-2 mb-3">
+                    <div className="p-2 bg-card rounded border text-center">
+                      <div className="text-xs text-muted-foreground">Spot</div>
+                      <div className="text-sm font-bold">₹{tradingSignal.market_context.spot_price?.toFixed(0)}</div>
+                    </div>
+                    <div className="p-2 bg-card rounded border text-center">
+                      <div className="text-xs text-muted-foreground">VIX</div>
+                      <div className={`text-sm font-bold ${tradingSignal.market_context.vix > 20 ? 'text-red-400' : 'text-green-400'}`}>
+                        {tradingSignal.market_context.vix?.toFixed(1)}
+                      </div>
+                    </div>
+                    <div className="p-2 bg-card rounded border text-center">
+                      <div className="text-xs text-muted-foreground">PCR (OI)</div>
+                      <div className={`text-sm font-bold ${tradingSignal.market_context.pcr_oi > 1 ? 'text-green-400' : 'text-red-400'}`}>
+                        {tradingSignal.market_context.pcr_oi?.toFixed(2)}
+                      </div>
+                    </div>
+                    <div className="p-2 bg-card rounded border text-center">
+                      <div className="text-xs text-muted-foreground">Max Pain</div>
+                      <div className="text-sm font-bold">₹{tradingSignal.market_context.max_pain}</div>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="text-xs">
+                      <span className="text-muted-foreground">Supports: </span>
+                      <span className="text-green-400">
+                        {tradingSignal.market_context.support_levels?.slice(0, 3).join(', ')}
+                      </span>
+                    </div>
+                    <div className="text-xs">
+                      <span className="text-muted-foreground">Resistances: </span>
+                      <span className="text-red-400">
+                        {tradingSignal.market_context.resistance_levels?.slice(0, 3).join(', ')}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* ============ NEW: PROBABILITY ANALYSIS WITH TOP MOVERS ============ */}
+              {tradingSignal.probability_analysis && (
+                <div className="p-3 bg-indigo-500/10 rounded-lg border border-indigo-500/30">
+                  <div className="text-sm font-medium text-indigo-300 mb-3 flex items-center justify-between">
+                    <span>📊 Constituent Analysis ({tradingSignal.probability_analysis.stocks_scanned} stocks)</span>
+                    <Badge variant="outline" className="text-xs">
+                      {tradingSignal.probability_analysis.market_regime}
+                    </Badge>
+                  </div>
+                  <div className="grid grid-cols-4 gap-2 mb-3">
+                    <div className="p-2 bg-green-500/10 rounded border border-green-500/20 text-center">
+                      <div className="text-xs text-muted-foreground">Bullish</div>
+                      <div className="text-lg font-bold text-green-400">{tradingSignal.probability_analysis.bullish_pct}%</div>
+                    </div>
+                    <div className="p-2 bg-red-500/10 rounded border border-red-500/20 text-center">
+                      <div className="text-xs text-muted-foreground">Bearish</div>
+                      <div className="text-lg font-bold text-red-400">{tradingSignal.probability_analysis.bearish_pct}%</div>
+                    </div>
+                    <div className="p-2 bg-card rounded border text-center">
+                      <div className="text-xs text-muted-foreground">Expected Move</div>
+                      <div className={`text-lg font-bold ${tradingSignal.probability_analysis.expected_move_pct > 0 ? 'text-green-400' : 'text-red-400'}`}>
+                        {tradingSignal.probability_analysis.expected_move_pct > 0 ? '+' : ''}{tradingSignal.probability_analysis.expected_move_pct?.toFixed(2)}%
+                      </div>
+                    </div>
+                    <div className="p-2 bg-primary/10 rounded border border-primary/20 text-center">
+                      <div className="text-xs text-muted-foreground">Recommended</div>
+                      <div className="text-lg font-bold text-primary">{tradingSignal.probability_analysis.constituent_recommendation}</div>
+                    </div>
+                  </div>
+                  {/* Top Movers */}
+                  {tradingSignal.probability_analysis.top_movers && (
+                    <div className="grid grid-cols-3 gap-2">
+                      <div className="p-2 bg-green-500/5 rounded border border-green-500/10">
+                        <div className="text-xs text-green-400 mb-1">🐂 Top Bullish</div>
+                        {tradingSignal.probability_analysis.top_movers.bullish?.slice(0, 3).map((stock, idx) => (
+                          <div key={idx} className="text-xs text-muted-foreground">
+                            {stock.symbol}: {(stock.probability * 100).toFixed(0)}%
+                          </div>
+                        ))}
+                      </div>
+                      <div className="p-2 bg-red-500/5 rounded border border-red-500/10">
+                        <div className="text-xs text-red-400 mb-1">🐻 Top Bearish</div>
+                        {tradingSignal.probability_analysis.top_movers.bearish?.slice(0, 3).map((stock, idx) => (
+                          <div key={idx} className="text-xs text-muted-foreground">
+                            {stock.symbol}: {(stock.probability * 100).toFixed(0)}%
+                          </div>
+                        ))}
+                      </div>
+                      <div className="p-2 bg-yellow-500/5 rounded border border-yellow-500/10">
+                        <div className="text-xs text-yellow-400 mb-1">📈 Volume Surge</div>
+                        {tradingSignal.probability_analysis.top_movers.volume_surge?.slice(0, 3).map((stock, idx) => (
+                          <div key={idx} className="text-xs text-muted-foreground">
+                            {stock.symbol}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* ============ NEW: MTF ANALYSIS ============ */}
+              {tradingSignal.mtf_analysis && (
+                <div className="p-3 bg-cyan-500/10 rounded-lg border border-cyan-500/30">
+                  <div className="text-sm font-medium text-cyan-300 mb-3 flex items-center gap-2">
+                    📊 Multi-Timeframe Analysis
+                    <Badge variant="outline" className={`text-xs ${tradingSignal.mtf_analysis.overall_bias === 'bullish' ? 'border-green-500 text-green-500' :
+                      tradingSignal.mtf_analysis.overall_bias === 'bearish' ? 'border-red-500 text-red-500' :
+                        'border-yellow-500 text-yellow-500'
+                      }`}>
+                      {tradingSignal.mtf_analysis.overall_bias?.toUpperCase()}
+                    </Badge>
+                  </div>
+                  <div className="flex flex-wrap gap-1 mb-2">
+                    {tradingSignal.mtf_analysis.timeframes_analyzed?.map((tf, idx) => (
+                      <Badge key={idx} variant="outline" className="text-xs">
+                        {tf === 'M' ? 'Monthly' : tf === 'W' ? 'Weekly' : tf === 'D' ? 'Daily' : `${tf}m`}
+                      </Badge>
+                    ))}
+                  </div>
+                  {/* Trend Reversal */}
+                  {tradingSignal.mtf_analysis.trend_reversal?.is_reversal && (
+                    <div className={`p-2 rounded border ${tradingSignal.mtf_analysis.trend_reversal.direction.includes('BULLISH') ? 'bg-green-500/10 border-green-500/20' : 'bg-red-500/10 border-red-500/20'
+                      }`}>
+                      <div className="text-xs font-medium mb-1">
+                        🔄 {tradingSignal.mtf_analysis.trend_reversal.direction}
+                        <span className="ml-2 text-muted-foreground">
+                          ({tradingSignal.mtf_analysis.trend_reversal.confidence}% confidence)
                         </span>
                       </div>
-                      <div className="text-xs text-muted-foreground space-y-1">
-                        {((tradingSignal as any).entry_reasons || []).slice(0, 3).map((reason: string, idx: number) => (
-                          <p key={idx}>{reason}</p>
-                        ))}
-                        {(tradingSignal as any).wait_for_pullback && (
-                          <p className="text-orange-400 font-medium">
-                            💡 Wait for pullback to ₹{(tradingSignal as any).limit_order_price?.toFixed(0) || tradingSignal.entry_price.toFixed(0)}
-                          </p>
-                        )}
+                      <div className="text-xs text-muted-foreground">
+                        {tradingSignal.mtf_analysis.trend_reversal.reason}
                       </div>
-                    </div>
-                  )}
-
-                  {/* Action & Strike */}
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="p-3 bg-card rounded-lg border">
-                      <div className="text-xs text-muted-foreground mb-1">What to Buy</div>
-                      <div className={`text-xl md:text-2xl font-bold ${tradingSignal.action.includes('AVOID') ? 'text-red-500' :
-                        tradingSignal.action.includes('WAIT') ? 'text-orange-500' :
-                          tradingSignal.action.includes('BUY CALL') || (tradingSignal.type === 'CALL' && tradingSignal.action.includes('BUY')) ? 'text-green-500' :
-                            tradingSignal.type === 'CALL' ? 'text-bullish' : 'text-bearish'
-                        }`}>
-                        {tradingSignal.action}
-                      </div>
-                      <div className="text-sm text-muted-foreground">
-                        {tradingSignal.strike} Strike
-                      </div>
-                    </div>
-                    <div className="p-3 bg-card rounded-lg border">
-                      <div className="text-xs text-muted-foreground mb-1">
-                        {(tradingSignal as any).wait_for_pullback ? 'Limit Order Price' : 'Entry Price'}
-                      </div>
-                      <div className="text-xl md:text-2xl font-bold text-primary">
-                        ₹{tradingSignal.entry_price.toFixed(2)}
-                      </div>
-                      {/* Show current LTP if different from entry */}
-                      {(tradingSignal as any).raw_ltp && Math.abs((tradingSignal as any).raw_ltp - tradingSignal.entry_price) > 0.5 && (
-                        <div className="text-xs text-muted-foreground">
-                          Current LTP: ₹{(tradingSignal as any).raw_ltp?.toFixed(2)}
-                        </div>
-                      )}
-                      <div className="text-sm text-muted-foreground">
-                        Confidence: {tradingSignal.confidence}%
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Time & Theta Warning for Intraday */}
-                  {((tradingSignal as any).time_remaining_minutes < 120 || (tradingSignal as any).theta_per_hour > 2) && (
-                    <div className="grid grid-cols-2 gap-2">
-                      {(tradingSignal as any).time_remaining_minutes < 120 && (
-                        <div className="p-2 bg-yellow-500/10 rounded-lg border border-yellow-500/30 text-center">
-                          <div className="text-yellow-500 text-xs font-medium">⏰ Time Left</div>
-                          <div className="text-sm font-bold text-yellow-500">
-                            {Math.floor((tradingSignal as any).time_remaining_minutes / 60)}h {(tradingSignal as any).time_remaining_minutes % 60}m
-                          </div>
-                        </div>
-                      )}
-                      {(tradingSignal as any).theta_per_hour > 2 && (
-                        <div className="p-2 bg-red-500/10 rounded-lg border border-red-500/30 text-center">
-                          <div className="text-red-500 text-xs font-medium">📉 Theta Decay</div>
-                          <div className="text-sm font-bold text-red-500">
-                            -₹{(tradingSignal as any).theta_per_hour?.toFixed(1)}/hr
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  {/* Targets & Stop Loss - Easy to understand */}
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                    <div className="p-2 sm:p-3 bg-green-500/10 rounded-lg border border-green-500/30 text-center">
-                      <div className="text-green-500 text-[10px] sm:text-xs font-medium mb-1">🎯 TARGET 1</div>
-                      <div className="text-base sm:text-lg font-bold text-green-500">₹{tradingSignal.target_1.toFixed(0)}</div>
-                      <div className="text-[10px] sm:text-xs text-green-400">
-                        +{Math.round(((tradingSignal.target_1 - tradingSignal.entry_price) / tradingSignal.entry_price) * 100)}%
-                      </div>
-                    </div>
-                    <div className="p-2 sm:p-3 bg-green-600/10 rounded-lg border border-green-600/30 text-center">
-                      <div className="text-green-500 text-[10px] sm:text-xs font-medium mb-1">🎯 TARGET 2</div>
-                      <div className="text-base sm:text-lg font-bold text-green-500">₹{tradingSignal.target_2.toFixed(0)}</div>
-                      <div className="text-[10px] sm:text-xs text-green-400">
-                        +{Math.round(((tradingSignal.target_2 - tradingSignal.entry_price) / tradingSignal.entry_price) * 100)}%
-                      </div>
-                    </div>
-                    <div className="p-2 sm:p-3 bg-red-500/10 rounded-lg border border-red-500/30 text-center">
-                      <div className="text-red-500 text-[10px] sm:text-xs font-medium mb-1">🛑 STOP LOSS</div>
-                      <div className="text-base sm:text-lg font-bold text-red-500">₹{tradingSignal.stop_loss.toFixed(0)}</div>
-                      <div className="text-[10px] sm:text-xs text-red-400">
-                        -{Math.round(((tradingSignal.entry_price - tradingSignal.stop_loss) / tradingSignal.entry_price) * 100)}%
-                      </div>
-                    </div>
-                    <div className="p-2 sm:p-3 bg-yellow-500/10 rounded-lg border border-yellow-500/30 text-center">
-                      <div className="text-yellow-500 text-[10px] sm:text-xs font-medium mb-1">⚖️ R:R</div>
-                      <div className="text-base sm:text-lg font-bold text-yellow-500">{tradingSignal.risk_reward}</div>
-                      <div className="text-[10px] sm:text-xs text-yellow-400">Favorable</div>
-                    </div>
-                  </div>
-
-                  {/* Enhanced Entry Analysis & Liquidity */}
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                    <div className="p-3 bg-blue-500/10 rounded-lg border border-blue-500/30">
-                      <div className="text-xs text-muted-foreground mb-1">Trading Symbol</div>
-                      <div className="text-sm font-mono text-blue-400">{tradingSignal.trading_symbol}</div>
-                    </div>
-
-                    {/* Best Entry Price from Discount Zone */}
-                    {(tradingSignal as any).discount_zone?.best_entry && (
-                      <div className="p-3 bg-green-500/10 rounded-lg border border-green-500/30">
-                        <div className="text-xs text-muted-foreground mb-1">💎 Best Entry Price</div>
-                        <div className="text-lg font-bold text-green-400">
-                          ₹{(tradingSignal as any).discount_zone.best_entry.toFixed(2)}
-                        </div>
-                        <div className="text-xs text-green-300">
-                          {(tradingSignal as any).discount_zone.status || 'OPTIMAL'}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Liquidity Score */}
-                    {(tradingSignal as any).liquidity_score !== undefined && (
-                      <div className="p-3 bg-purple-500/10 rounded-lg border border-purple-500/30">
-                        <div className="text-xs text-muted-foreground mb-1">💧 Liquidity</div>
-                        <div className="text-lg font-bold text-purple-400">
-                          {(tradingSignal as any).liquidity_score}/100
-                        </div>
-                        <div className="text-xs text-purple-300">
-                          {(tradingSignal as any).liquidity_grade || 'EXCELLENT'}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Sentiment & Reversal Detection */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    {/* Sentiment Analysis */}
-                    {(tradingSignal as any).sentiment_score !== undefined && (
-                      <div className="p-3 bg-cyan-500/10 rounded-lg border border-cyan-500/30">
-                        <div className="text-xs text-muted-foreground mb-1 flex items-center gap-2">
-                          📰 Market Sentiment
-                          {(tradingSignal as any).news_articles && (
-                            <span className="text-xs bg-cyan-600/30 px-1 rounded">
-                              {(tradingSignal as any).news_articles} articles
-                            </span>
-                          )}
-                        </div>
-                        <div className="text-sm font-semibold text-cyan-400">
-                          {(tradingSignal as any).sentiment_direction?.toUpperCase() || 'NEUTRAL'}
-                        </div>
-                        <div className="text-xs text-cyan-300 mt-1">
-                          {(tradingSignal as any).market_mood || 'Analyzing market mood...'}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Reversal Detection */}
-                    {(tradingSignal as any).reversal_detected && (
-                      <div className="p-3 bg-orange-500/10 rounded-lg border border-orange-500/30">
-                        <div className="text-xs text-muted-foreground mb-1">🔄 Reversal Signal</div>
-                        <div className="text-sm font-semibold text-orange-400">
-                          {(tradingSignal as any).reversal_type?.replace('_', ' ') || 'DETECTED'}
-                        </div>
-                        <div className="text-xs text-orange-300 mt-1 line-clamp-2">
-                          {(tradingSignal as any).reversal_description || 'Potential trend reversal'}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* ============ NEW: TRADE RECOMMENDATION VERDICT ============ */}
-                  {tradingSignal.trade_recommendation && (
-                    <div className={`p-3 rounded-lg border ${tradingSignal.trade_recommendation.verdict === 'TRADE' ? 'bg-green-500/10 border-green-500/30' :
-                      tradingSignal.trade_recommendation.verdict === 'WAIT' ? 'bg-yellow-500/10 border-yellow-500/30' :
-                        'bg-red-500/10 border-red-500/30'
-                      }`}>
-                      <div className="flex items-center justify-between mb-2">
-                        <div className="text-sm font-medium flex items-center gap-2">
-                          {tradingSignal.trade_recommendation.verdict === 'TRADE' ? '✅' : tradingSignal.trade_recommendation.verdict === 'WAIT' ? '⏳' : '⛔'}
-                          Trade Verdict: <span className={
-                            tradingSignal.trade_recommendation.verdict === 'TRADE' ? 'text-green-400' :
-                              tradingSignal.trade_recommendation.verdict === 'WAIT' ? 'text-yellow-400' : 'text-red-400'
-                          }>{tradingSignal.trade_recommendation.verdict}</span>
-                        </div>
-                        <Badge variant="outline" className={`text-xs ${tradingSignal.trade_recommendation.risk_level === 'LOW' ? 'border-green-500 text-green-500' :
-                          tradingSignal.trade_recommendation.risk_level === 'MEDIUM' ? 'border-yellow-500 text-yellow-500' :
-                            'border-red-500 text-red-500'
-                          }`}>
-                          Risk: {tradingSignal.trade_recommendation.risk_level}
-                        </Badge>
-                      </div>
-                      <div className="text-xs text-muted-foreground space-y-1">
-                        {tradingSignal.trade_recommendation.reasons?.map((reason, idx) => (
-                          <p key={idx}>{reason}</p>
-                        ))}
-                      </div>
-                      <div className="mt-2 text-xs font-medium text-slate-300">
-                        Position Size: {tradingSignal.trade_recommendation.position_size_advice}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* ============ NEW: GREEKS ANALYSIS ============ */}
-                  {tradingSignal.greeks && (
-                    <div className="p-3 bg-violet-500/10 rounded-lg border border-violet-500/30">
-                      <div className="text-sm font-medium text-violet-300 mb-3 flex items-center gap-2">
-                        📐 Option Greeks
-                        <span className="text-xs bg-violet-600/30 px-2 py-0.5 rounded">LIVE</span>
-                      </div>
-                      <div className="grid grid-cols-4 gap-2 mb-3">
-                        <div className="p-2 bg-card rounded border text-center">
-                          <div className="text-xs text-muted-foreground">Delta</div>
-                          <div className={`text-lg font-bold ${tradingSignal.greeks.delta < 0 ? 'text-red-400' : 'text-green-400'}`}>
-                            {tradingSignal.greeks.delta.toFixed(3)}
-                          </div>
-                        </div>
-                        <div className="p-2 bg-card rounded border text-center">
-                          <div className="text-xs text-muted-foreground">Gamma</div>
-                          <div className="text-lg font-bold text-blue-400">
-                            {tradingSignal.greeks.gamma.toFixed(4)}
-                          </div>
-                        </div>
-                        <div className="p-2 bg-card rounded border text-center">
-                          <div className="text-xs text-muted-foreground">Theta</div>
-                          <div className="text-lg font-bold text-red-400">
-                            {tradingSignal.greeks.theta.toFixed(2)}
-                          </div>
-                        </div>
-                        <div className="p-2 bg-card rounded border text-center">
-                          <div className="text-xs text-muted-foreground">Vega</div>
-                          <div className="text-lg font-bold text-purple-400">
-                            {tradingSignal.greeks.vega.toFixed(2)}
-                          </div>
-                        </div>
-                      </div>
-                      {tradingSignal.greeks.interpretation && (
-                        <div className="text-xs text-violet-200 space-y-1">
-                          <p>📊 {tradingSignal.greeks.interpretation.delta_meaning}</p>
-                          <p>⏰ {tradingSignal.greeks.interpretation.theta_meaning}</p>
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  {/* ============ NEW: ML ANALYSIS ============ */}
-                  {tradingSignal.ml_analysis && tradingSignal.ml_analysis.enabled && (
-                    <div className={`p-3 rounded-lg border ${tradingSignal.ml_analysis.direction === 'bullish' ? 'bg-green-500/10 border-green-500/30' :
-                      tradingSignal.ml_analysis.direction === 'bearish' ? 'bg-red-500/10 border-red-500/30' :
-                        'bg-slate-500/10 border-slate-500/30'
-                      }`}>
-                      <div className="text-sm font-medium mb-3 flex items-center gap-2">
-                        🤖 ML Prediction
-                        <Badge variant="outline" className={`text-xs ${tradingSignal.ml_analysis.status === 'ACTIVE' ? 'border-green-500 text-green-500' : 'border-yellow-500 text-yellow-500'
-                          }`}>
-                          {tradingSignal.ml_analysis.status}
-                        </Badge>
-                      </div>
-                      <div className="grid grid-cols-3 gap-2 mb-2">
-                        <div className="p-2 bg-card rounded border text-center">
-                          <div className="text-xs text-muted-foreground">Direction</div>
-                          <div className={`text-base font-bold ${tradingSignal.ml_analysis.direction === 'bullish' ? 'text-green-400' :
-                            tradingSignal.ml_analysis.direction === 'bearish' ? 'text-red-400' : 'text-slate-400'
-                            }`}>
-                            {tradingSignal.ml_analysis.direction?.toUpperCase()}
-                          </div>
-                        </div>
-                        <div className="p-2 bg-card rounded border text-center">
-                          <div className="text-xs text-muted-foreground">Confidence</div>
-                          <div className="text-base font-bold text-blue-400">
-                            {tradingSignal.ml_analysis.confidence}%
-                          </div>
-                        </div>
-                        <div className="p-2 bg-card rounded border text-center">
-                          <div className="text-xs text-muted-foreground">Predicted</div>
-                          <div className="text-base font-bold text-primary">
-                            ₹{tradingSignal.ml_analysis.predicted_price?.toFixed(0)}
-                          </div>
-                        </div>
-                      </div>
-                      {tradingSignal.ml_analysis.models && (
-                        <div className="flex gap-2 mb-2">
-                          <Badge variant="outline" className="text-xs">
-                            ARIMA: {tradingSignal.ml_analysis.models.arima}
-                          </Badge>
-                          <Badge variant="outline" className="text-xs">
-                            Momentum: {tradingSignal.ml_analysis.models.momentum}
-                          </Badge>
-                        </div>
-                      )}
-                      {tradingSignal.ml_analysis.warning && (
-                        <div className="text-xs text-yellow-400">
-                          {tradingSignal.ml_analysis.warning}
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  {/* ============ NEW: THETA/EXPIRY ANALYSIS ============ */}
-                  {tradingSignal.theta_analysis && (
-                    <div className={`p-3 rounded-lg border ${tradingSignal.theta_analysis.risk_level === 'LOW' ? 'bg-green-500/10 border-green-500/30' :
-                      tradingSignal.theta_analysis.risk_level?.includes('MEDIUM') ? 'bg-yellow-500/10 border-yellow-500/30' :
-                        'bg-red-500/10 border-red-500/30'
-                      }`}>
-                      <div className="text-sm font-medium mb-3 flex items-center gap-2">
-                        ⏱️ Time Decay Analysis
-                        <Badge variant="outline" className="text-xs">
-                          {tradingSignal.theta_analysis.decay_phase}
-                        </Badge>
-                      </div>
-                      <div className="grid grid-cols-3 gap-2 mb-2">
-                        <div className="p-2 bg-card rounded border text-center">
-                          <div className="text-xs text-muted-foreground">Daily Decay</div>
-                          <div className="text-base font-bold text-red-400">
-                            -{tradingSignal.theta_analysis.daily_decay_pct}%
-                          </div>
-                        </div>
-                        <div className="p-2 bg-card rounded border text-center">
-                          <div className="text-xs text-muted-foreground">Hourly</div>
-                          <div className="text-base font-bold text-orange-400">
-                            -₹{Math.abs(tradingSignal.theta_analysis.theta_per_hour).toFixed(1)}/hr
-                          </div>
-                        </div>
-                        <div className="p-2 bg-card rounded border text-center">
-                          <div className="text-xs text-muted-foreground">Risk</div>
-                          <div className={`text-base font-bold ${tradingSignal.theta_analysis.risk_level === 'LOW' ? 'text-green-400' :
-                            tradingSignal.theta_analysis.risk_level?.includes('MEDIUM') ? 'text-yellow-400' : 'text-red-400'
-                            }`}>
-                            {tradingSignal.theta_analysis.risk_level}
-                          </div>
-                        </div>
-                      </div>
-                      <div className="text-xs text-muted-foreground space-y-1">
-                        <p>💡 {tradingSignal.theta_analysis.advice}</p>
-                        <p>📅 {tradingSignal.theta_analysis.strategy_recommendation}</p>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* ============ NEW: MARKET CONTEXT ============ */}
-                  {tradingSignal.market_context && (
-                    <div className="p-3 bg-slate-500/10 rounded-lg border border-slate-500/30">
-                      <div className="text-sm font-medium text-slate-300 mb-3">📈 Market Context</div>
-                      <div className="grid grid-cols-4 gap-2 mb-3">
-                        <div className="p-2 bg-card rounded border text-center">
-                          <div className="text-xs text-muted-foreground">Spot</div>
-                          <div className="text-sm font-bold">₹{tradingSignal.market_context.spot_price?.toFixed(0)}</div>
-                        </div>
-                        <div className="p-2 bg-card rounded border text-center">
-                          <div className="text-xs text-muted-foreground">VIX</div>
-                          <div className={`text-sm font-bold ${tradingSignal.market_context.vix > 20 ? 'text-red-400' : 'text-green-400'}`}>
-                            {tradingSignal.market_context.vix?.toFixed(1)}
-                          </div>
-                        </div>
-                        <div className="p-2 bg-card rounded border text-center">
-                          <div className="text-xs text-muted-foreground">PCR (OI)</div>
-                          <div className={`text-sm font-bold ${tradingSignal.market_context.pcr_oi > 1 ? 'text-green-400' : 'text-red-400'}`}>
-                            {tradingSignal.market_context.pcr_oi?.toFixed(2)}
-                          </div>
-                        </div>
-                        <div className="p-2 bg-card rounded border text-center">
-                          <div className="text-xs text-muted-foreground">Max Pain</div>
-                          <div className="text-sm font-bold">₹{tradingSignal.market_context.max_pain}</div>
-                        </div>
-                      </div>
-                      <div className="grid grid-cols-2 gap-2">
-                        <div className="text-xs">
-                          <span className="text-muted-foreground">Supports: </span>
-                          <span className="text-green-400">
-                            {tradingSignal.market_context.support_levels?.slice(0, 3).join(', ')}
-                          </span>
-                        </div>
-                        <div className="text-xs">
-                          <span className="text-muted-foreground">Resistances: </span>
-                          <span className="text-red-400">
-                            {tradingSignal.market_context.resistance_levels?.slice(0, 3).join(', ')}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* ============ NEW: PROBABILITY ANALYSIS WITH TOP MOVERS ============ */}
-                  {tradingSignal.probability_analysis && (
-                    <div className="p-3 bg-indigo-500/10 rounded-lg border border-indigo-500/30">
-                      <div className="text-sm font-medium text-indigo-300 mb-3 flex items-center justify-between">
-                        <span>📊 Constituent Analysis ({tradingSignal.probability_analysis.stocks_scanned} stocks)</span>
-                        <Badge variant="outline" className="text-xs">
-                          {tradingSignal.probability_analysis.market_regime}
-                        </Badge>
-                      </div>
-                      <div className="grid grid-cols-4 gap-2 mb-3">
-                        <div className="p-2 bg-green-500/10 rounded border border-green-500/20 text-center">
-                          <div className="text-xs text-muted-foreground">Bullish</div>
-                          <div className="text-lg font-bold text-green-400">{tradingSignal.probability_analysis.bullish_pct}%</div>
-                        </div>
-                        <div className="p-2 bg-red-500/10 rounded border border-red-500/20 text-center">
-                          <div className="text-xs text-muted-foreground">Bearish</div>
-                          <div className="text-lg font-bold text-red-400">{tradingSignal.probability_analysis.bearish_pct}%</div>
-                        </div>
-                        <div className="p-2 bg-card rounded border text-center">
-                          <div className="text-xs text-muted-foreground">Expected Move</div>
-                          <div className={`text-lg font-bold ${tradingSignal.probability_analysis.expected_move_pct > 0 ? 'text-green-400' : 'text-red-400'}`}>
-                            {tradingSignal.probability_analysis.expected_move_pct > 0 ? '+' : ''}{tradingSignal.probability_analysis.expected_move_pct?.toFixed(2)}%
-                          </div>
-                        </div>
-                        <div className="p-2 bg-primary/10 rounded border border-primary/20 text-center">
-                          <div className="text-xs text-muted-foreground">Recommended</div>
-                          <div className="text-lg font-bold text-primary">{tradingSignal.probability_analysis.constituent_recommendation}</div>
-                        </div>
-                      </div>
-                      {/* Top Movers */}
-                      {tradingSignal.probability_analysis.top_movers && (
-                        <div className="grid grid-cols-3 gap-2">
-                          <div className="p-2 bg-green-500/5 rounded border border-green-500/10">
-                            <div className="text-xs text-green-400 mb-1">🐂 Top Bullish</div>
-                            {tradingSignal.probability_analysis.top_movers.bullish?.slice(0, 3).map((stock, idx) => (
-                              <div key={idx} className="text-xs text-muted-foreground">
-                                {stock.symbol}: {(stock.probability * 100).toFixed(0)}%
-                              </div>
-                            ))}
-                          </div>
-                          <div className="p-2 bg-red-500/5 rounded border border-red-500/10">
-                            <div className="text-xs text-red-400 mb-1">🐻 Top Bearish</div>
-                            {tradingSignal.probability_analysis.top_movers.bearish?.slice(0, 3).map((stock, idx) => (
-                              <div key={idx} className="text-xs text-muted-foreground">
-                                {stock.symbol}: {(stock.probability * 100).toFixed(0)}%
-                              </div>
-                            ))}
-                          </div>
-                          <div className="p-2 bg-yellow-500/5 rounded border border-yellow-500/10">
-                            <div className="text-xs text-yellow-400 mb-1">📈 Volume Surge</div>
-                            {tradingSignal.probability_analysis.top_movers.volume_surge?.slice(0, 3).map((stock, idx) => (
-                              <div key={idx} className="text-xs text-muted-foreground">
-                                {stock.symbol}
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  {/* ============ NEW: MTF ANALYSIS ============ */}
-                  {tradingSignal.mtf_analysis && (
-                    <div className="p-3 bg-cyan-500/10 rounded-lg border border-cyan-500/30">
-                      <div className="text-sm font-medium text-cyan-300 mb-3 flex items-center gap-2">
-                        📊 Multi-Timeframe Analysis
-                        <Badge variant="outline" className={`text-xs ${tradingSignal.mtf_analysis.overall_bias === 'bullish' ? 'border-green-500 text-green-500' :
-                          tradingSignal.mtf_analysis.overall_bias === 'bearish' ? 'border-red-500 text-red-500' :
-                            'border-yellow-500 text-yellow-500'
-                          }`}>
-                          {tradingSignal.mtf_analysis.overall_bias?.toUpperCase()}
-                        </Badge>
-                      </div>
-                      <div className="flex flex-wrap gap-1 mb-2">
-                        {tradingSignal.mtf_analysis.timeframes_analyzed?.map((tf, idx) => (
-                          <Badge key={idx} variant="outline" className="text-xs">
-                            {tf === 'M' ? 'Monthly' : tf === 'W' ? 'Weekly' : tf === 'D' ? 'Daily' : `${tf}m`}
-                          </Badge>
-                        ))}
-                      </div>
-                      {/* Trend Reversal */}
-                      {tradingSignal.mtf_analysis.trend_reversal?.is_reversal && (
-                        <div className={`p-2 rounded border ${tradingSignal.mtf_analysis.trend_reversal.direction.includes('BULLISH') ? 'bg-green-500/10 border-green-500/20' : 'bg-red-500/10 border-red-500/20'
-                          }`}>
-                          <div className="text-xs font-medium mb-1">
-                            🔄 {tradingSignal.mtf_analysis.trend_reversal.direction}
-                            <span className="ml-2 text-muted-foreground">
-                              ({tradingSignal.mtf_analysis.trend_reversal.confidence}% confidence)
-                            </span>
-                          </div>
-                          <div className="text-xs text-muted-foreground">
-                            {tradingSignal.mtf_analysis.trend_reversal.reason}
-                          </div>
-                          <div className="text-xs text-muted-foreground mt-1">
-                            Signaling TFs: {tradingSignal.mtf_analysis.trend_reversal.timeframes_signaling?.join(', ')}
-                          </div>
-                        </div>
-                      )}
-                      {/* Confluence Zones */}
-                      {tradingSignal.mtf_analysis.confluence_zones && tradingSignal.mtf_analysis.confluence_zones.length > 0 && (
-                        <div className="mt-2">
-                          <div className="text-xs text-muted-foreground mb-1">Key Confluence Zones:</div>
-                          <div className="space-y-1">
-                            {tradingSignal.mtf_analysis.confluence_zones.slice(0, 2).map((zone, idx) => (
-                              <div key={idx} className="text-xs flex justify-between">
-                                <span>₹{zone.center.toFixed(0)} ({zone.timeframes.join('+')})</span>
-                                <span className={zone.distance_pct < 0 ? 'text-green-400' : 'text-red-400'}>
-                                  {zone.distance_pct > 0 ? '+' : ''}{zone.distance_pct.toFixed(1)}%
-                                </span>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  {/* ============ NEW: FVG SETUP DETAILS ============ */}
-                  {tradingSignal.setup_details && (
-                    <div className="p-3 bg-amber-500/10 rounded-lg border border-amber-500/30">
-                      <div className="text-sm font-medium text-amber-300 mb-2 flex items-center gap-2">
-                        📍 ICT FVG Setup
-                        <Badge variant="outline" className="text-xs">
-                          {tradingSignal.setup_details.confidence_level}
-                        </Badge>
-                      </div>
-                      <div className="grid grid-cols-3 gap-2 mb-2">
-                        <div className="p-2 bg-card rounded border text-center">
-                          <div className="text-xs text-muted-foreground">FVG Level</div>
-                          <div className="text-sm font-bold">₹{tradingSignal.setup_details.fvg_level?.toFixed(0)}</div>
-                        </div>
-                        <div className="p-2 bg-card rounded border text-center">
-                          <div className="text-xs text-muted-foreground">Timeframe</div>
-                          <div className="text-sm font-bold">{tradingSignal.setup_details.timeframe}m</div>
-                        </div>
-                        <div className="p-2 bg-card rounded border text-center">
-                          <div className="text-xs text-muted-foreground">Probability</div>
-                          <div className="text-sm font-bold text-primary">{tradingSignal.setup_details.reversal_probability}%</div>
-                        </div>
-                      </div>
-                      {tradingSignal.setup_details.four_hour_fvg?.detected && (
-                        <div className="text-xs text-amber-200">
-                          {tradingSignal.setup_details.four_hour_fvg.direction_message}
-                        </div>
-                      )}
                       <div className="text-xs text-muted-foreground mt-1">
-                        {tradingSignal.setup_details.reasoning}
+                        Signaling TFs: {tradingSignal.mtf_analysis.trend_reversal.timeframes_signaling?.join(', ')}
                       </div>
                     </div>
                   )}
-
-                  {/* Trading Mode & Session */}
-                  {tradingSignal.trading_mode && (
-                    <div className="p-3 bg-orange-500/10 rounded-lg border border-orange-500/30">
-                      <div className="text-xs text-muted-foreground mb-1">⏰ {tradingSignal.trading_mode.mode} Trading</div>
-                      <div className="text-xs text-orange-300 space-y-1">
-                        <p>• {tradingSignal.trading_mode.description}</p>
-                        <p>• Entry Window: {tradingSignal.trading_mode.entry_window}</p>
-                        <p>• Max Hold: {tradingSignal.trading_mode.max_hold}</p>
-                        {tradingSignal.entry_session && !tradingSignal.entry_session.can_trade && (
-                          <p className="text-yellow-400 font-medium">⚠️ {tradingSignal.entry_session.advice}</p>
-                        )}
+                  {/* Confluence Zones */}
+                  {tradingSignal.mtf_analysis.confluence_zones && tradingSignal.mtf_analysis.confluence_zones.length > 0 && (
+                    <div className="mt-2">
+                      <div className="text-xs text-muted-foreground mb-1">Key Confluence Zones:</div>
+                      <div className="space-y-1">
+                        {tradingSignal.mtf_analysis.confluence_zones.slice(0, 2).map((zone, idx) => (
+                          <div key={idx} className="text-xs flex justify-between">
+                            <span>₹{zone.center.toFixed(0)} ({zone.timeframes.join('+')})</span>
+                            <span className={zone.distance_pct < 0 ? 'text-green-400' : 'text-red-400'}>
+                              {zone.distance_pct > 0 ? '+' : ''}{zone.distance_pct.toFixed(1)}%
+                            </span>
+                          </div>
+                        ))}
                       </div>
                     </div>
                   )}
+                </div>
+              )}
 
-                  {/* Simple Explanation for Traders */}
-                  <div className="p-3 bg-primary/5 rounded-lg border border-primary/20">
-                    <div className="text-sm font-medium text-primary mb-1">📋 What This Means:</div>
-                    <div className="text-xs text-muted-foreground space-y-1">
-                      <p>
-                        • Based on analyzing {scanResults.probability_analysis?.stocks_scanned || 0} stocks,
-                        the market looks <span className={tradingSignal.direction === 'BULLISH' ? 'text-green-500 font-semibold' : 'text-red-500 font-semibold'}>{tradingSignal.direction}</span>
-                      </p>
-                      <p>
-                        • {(tradingSignal as any).wait_for_pullback
-                          ? <>Place limit order for <span className="text-primary font-semibold">{tradingSignal.trading_symbol}</span> at ₹{tradingSignal.entry_price.toFixed(0)} (current: ₹{(tradingSignal as any).raw_ltp?.toFixed(0)})</>
-                          : <>Buy <span className="text-primary font-semibold">{tradingSignal.trading_symbol}</span> at around ₹{tradingSignal.entry_price.toFixed(0)}</>
-                        }
-                      </p>
-                      <p>
-                        • Book profit at ₹{tradingSignal.target_1.toFixed(0)} or ₹{tradingSignal.target_2.toFixed(0)} • Exit if price drops to ₹{tradingSignal.stop_loss.toFixed(0)}
-                      </p>
-                      {/* Entry Quality Note */}
-                      {(tradingSignal as any).entry_grade && (
-                        <p className={`font-medium ${['A', 'B'].includes((tradingSignal as any).entry_grade) ? 'text-green-500' :
-                          (tradingSignal as any).entry_grade === 'C' ? 'text-yellow-500' : 'text-red-500'
-                          }`}>
-                          • Entry Quality: Grade {(tradingSignal as any).entry_grade}
-                          {['A', 'B'].includes((tradingSignal as any).entry_grade) ? ' - Good conditions for entry' :
-                            (tradingSignal as any).entry_grade === 'C' ? ' - Average, proceed with caution' : ' - Consider waiting'}
-                        </p>
-                      )}
+              {/* ============ NEW: FVG SETUP DETAILS ============ */}
+              {tradingSignal.setup_details && (
+                <div className="p-3 bg-amber-500/10 rounded-lg border border-amber-500/30">
+                  <div className="text-sm font-medium text-amber-300 mb-2 flex items-center gap-2">
+                    📍 ICT FVG Setup
+                    <Badge variant="outline" className="text-xs">
+                      {tradingSignal.setup_details.confidence_level}
+                    </Badge>
+                  </div>
+                  <div className="grid grid-cols-3 gap-2 mb-2">
+                    <div className="p-2 bg-card rounded border text-center">
+                      <div className="text-xs text-muted-foreground">FVG Level</div>
+                      <div className="text-sm font-bold">₹{tradingSignal.setup_details.fvg_level?.toFixed(0)}</div>
+                    </div>
+                    <div className="p-2 bg-card rounded border text-center">
+                      <div className="text-xs text-muted-foreground">Timeframe</div>
+                      <div className="text-sm font-bold">{tradingSignal.setup_details.timeframe}m</div>
+                    </div>
+                    <div className="p-2 bg-card rounded border text-center">
+                      <div className="text-xs text-muted-foreground">Probability</div>
+                      <div className="text-sm font-bold text-primary">{tradingSignal.setup_details.reversal_probability}%</div>
+                    </div>
+                  </div>
+                  {tradingSignal.setup_details.four_hour_fvg?.detected && (
+                    <div className="text-xs text-amber-200">
+                      {tradingSignal.setup_details.four_hour_fvg.direction_message}
+                    </div>
+                  )}
+                  <div className="text-xs text-muted-foreground mt-1">
+                    {tradingSignal.setup_details.reasoning}
+                  </div>
+                </div>
+              )}
+
+              {/* Trading Mode & Session */}
+              {tradingSignal.trading_mode && (
+                <div className="p-3 bg-orange-500/10 rounded-lg border border-orange-500/30">
+                  <div className="text-xs text-muted-foreground mb-1">⏰ {tradingSignal.trading_mode.mode} Trading</div>
+                  <div className="text-xs text-orange-300 space-y-1">
+                    <p>• {tradingSignal.trading_mode.description}</p>
+                    <p>• Entry Window: {tradingSignal.trading_mode.entry_window}</p>
+                    <p>• Max Hold: {tradingSignal.trading_mode.max_hold}</p>
+                    {tradingSignal.entry_session && !tradingSignal.entry_session.can_trade && (
+                      <p className="text-yellow-400 font-medium">⚠️ {tradingSignal.entry_session.advice}</p>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Simple Explanation for Traders */}
+              <div className="p-3 bg-primary/5 rounded-lg border border-primary/20">
+                <div className="text-sm font-medium text-primary mb-1">📋 What This Means:</div>
+                <div className="text-xs text-muted-foreground space-y-1">
+                  <p>
+                    • Based on analyzing {scanResults.probability_analysis?.stocks_scanned || 0} stocks,
+                    the market looks <span className={tradingSignal.direction === 'BULLISH' ? 'text-green-500 font-semibold' : 'text-red-500 font-semibold'}>{tradingSignal.direction}</span>
+                  </p>
+                  <p>
+                    • {(tradingSignal as any).wait_for_pullback
+                      ? <>Place limit order for <span className="text-primary font-semibold">{tradingSignal.trading_symbol}</span> at ₹{tradingSignal.entry_price.toFixed(0)} (current: ₹{(tradingSignal as any).raw_ltp?.toFixed(0)})</>
+                      : <>Buy <span className="text-primary font-semibold">{tradingSignal.trading_symbol}</span> at around ₹{tradingSignal.entry_price.toFixed(0)}</>
+                    }
+                  </p>
+                  <p>
+                    • Book profit at ₹{tradingSignal.target_1.toFixed(0)} or ₹{tradingSignal.target_2.toFixed(0)} • Exit if price drops to ₹{tradingSignal.stop_loss.toFixed(0)}
+                  </p>
+                  {/* Entry Quality Note */}
+                  {(tradingSignal as any).entry_grade && (
+                    <p className={`font-medium ${['A', 'B'].includes((tradingSignal as any).entry_grade) ? 'text-green-500' :
+                      (tradingSignal as any).entry_grade === 'C' ? 'text-yellow-500' : 'text-red-500'
+                      }`}>
+                      • Entry Quality: Grade {(tradingSignal as any).entry_grade}
+                      {['A', 'B'].includes((tradingSignal as any).entry_grade) ? ' - Good conditions for entry' :
+                        (tradingSignal as any).entry_grade === 'C' ? ' - Average, proceed with caution' : ' - Consider waiting'}
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              {/* Confidence Breakdown - Show how probability was calculated */}
+              {(tradingSignal as any).confidence_adjustments && (
+                <div className="p-3 bg-slate-500/10 rounded-lg border border-slate-500/30">
+                  <div className="text-sm font-medium text-slate-300 mb-2">📊 Confidence Breakdown</div>
+                  <div className="space-y-2">
+                    <div className="flex justify-between items-center text-xs">
+                      <span className="text-muted-foreground">Base Probability:</span>
+                      <span className="font-semibold text-slate-300">
+                        {(tradingSignal as any).confidence_adjustments.base_probability?.toFixed(1)}%
+                      </span>
+                    </div>
+                    {(tradingSignal as any).confidence_adjustments.constituent_boost !== 0 && (
+                      <div className="flex justify-between items-center text-xs">
+                        <span className="text-muted-foreground">Constituent Alignment:</span>
+                        <span className={`font-semibold ${(tradingSignal as any).confidence_adjustments.constituent_boost > 0 ? 'text-green-400' : 'text-red-400'}`}>
+                          {(tradingSignal as any).confidence_adjustments.constituent_boost > 0 ? '+' : ''}
+                          {(tradingSignal as any).confidence_adjustments.constituent_boost?.toFixed(1)}%
+                        </span>
+                      </div>
+                    )}
+                    {(tradingSignal as any).confidence_adjustments.futures_conflict !== 0 && (
+                      <div className="flex justify-between items-center text-xs">
+                        <span className="text-muted-foreground">Futures Analysis:</span>
+                        <span className={`font-semibold ${(tradingSignal as any).confidence_adjustments.futures_conflict > 0 ? 'text-green-400' : 'text-red-400'}`}>
+                          {(tradingSignal as any).confidence_adjustments.futures_conflict > 0 ? '+' : ''}
+                          {(tradingSignal as any).confidence_adjustments.futures_conflict?.toFixed(1)}%
+                        </span>
+                      </div>
+                    )}
+                    {(tradingSignal as any).confidence_adjustments.ml_neutral_penalty !== 0 && (
+                      <div className="flex justify-between items-center text-xs">
+                        <span className="text-muted-foreground">ML Adjustment:</span>
+                        <span className={`font-semibold ${(tradingSignal as any).confidence_adjustments.ml_neutral_penalty > 0 ? 'text-green-400' : 'text-orange-400'}`}>
+                          {(tradingSignal as any).confidence_adjustments.ml_neutral_penalty > 0 ? '+' : ''}
+                          {(tradingSignal as any).confidence_adjustments.ml_neutral_penalty?.toFixed(1)}%
+                        </span>
+                      </div>
+                    )}
+                    <div className="h-px bg-slate-500/30 my-2"></div>
+                    <div className="flex justify-between items-center text-xs">
+                      <span className="text-slate-300 font-semibold">Final Confidence:</span>
+                      <span className="font-bold text-primary text-base">
+                        {(tradingSignal as any).confidence_adjustments.final_probability?.toFixed(1)}%
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* NEW: Option Chart Analysis - Support/Resistance & Pullback */}
+              {(tradingSignal as any).entry_analysis?.option_supports && (
+                <div className="p-3 bg-indigo-500/10 rounded-lg border border-indigo-500/30">
+                  <div className="text-sm font-medium text-indigo-300 mb-3 flex items-center gap-2">
+                    📊 Option Chart Analysis
+                    <span className="text-xs bg-indigo-600/30 px-2 py-0.5 rounded">NEW</span>
+                  </div>
+
+                  {/* Support & Resistance on Option Chart */}
+                  <div className="grid grid-cols-2 gap-3 mb-3">
+                    <div className="p-2 bg-green-500/10 rounded border border-green-500/20">
+                      <div className="text-xs text-muted-foreground mb-1">Option Support Levels</div>
+                      <div className="space-y-1">
+                        {((tradingSignal as any).entry_analysis.option_supports || []).slice(0, 3).map((level: number, idx: number) => (
+                          <div key={idx} className="text-sm font-semibold text-green-400">
+                            ₹{level.toFixed(0)} {idx === 0 && <span className="text-xs">(Nearest)</span>}
+                          </div>
+                        ))}
+                      </div>
+                      <div className="text-xs text-green-300 mt-1">
+                        💡 Place SL below these
+                      </div>
+                    </div>
+                    <div className="p-2 bg-red-500/10 rounded border border-red-500/20">
+                      <div className="text-xs text-muted-foreground mb-1">Option Resistance Levels</div>
+                      <div className="space-y-1">
+                        {((tradingSignal as any).entry_analysis.option_resistances || []).slice(0, 3).map((level: number, idx: number) => (
+                          <div key={idx} className="text-sm font-semibold text-red-400">
+                            ₹{level.toFixed(0)} {idx === 0 && <span className="text-xs">(Target)</span>}
+                          </div>
+                        ))}
+                      </div>
+                      <div className="text-xs text-red-300 mt-1">
+                        🎯 Book profit near these
+                      </div>
                     </div>
                   </div>
 
-                  {/* Confidence Breakdown - Show how probability was calculated */}
-                  {(tradingSignal as any).confidence_adjustments && (
-                    <div className="p-3 bg-slate-500/10 rounded-lg border border-slate-500/30">
-                      <div className="text-sm font-medium text-slate-300 mb-2">📊 Confidence Breakdown</div>
-                      <div className="space-y-2">
-                        <div className="flex justify-between items-center text-xs">
-                          <span className="text-muted-foreground">Base Probability:</span>
-                          <span className="font-semibold text-slate-300">
-                            {(tradingSignal as any).confidence_adjustments.base_probability?.toFixed(1)}%
-                          </span>
+                  {/* Chart-based Targets */}
+                  {(tradingSignal as any).entry_analysis.option_target_1 && (
+                    <div className="grid grid-cols-3 gap-2 mb-3">
+                      <div className="p-2 bg-green-600/10 rounded border border-green-600/20 text-center">
+                        <div className="text-xs text-muted-foreground">Chart Target 1</div>
+                        <div className="text-lg font-bold text-green-400">
+                          ₹{(tradingSignal as any).entry_analysis.option_target_1?.toFixed(0)}
                         </div>
-                        {(tradingSignal as any).confidence_adjustments.constituent_boost !== 0 && (
-                          <div className="flex justify-between items-center text-xs">
-                            <span className="text-muted-foreground">Constituent Alignment:</span>
-                            <span className={`font-semibold ${(tradingSignal as any).confidence_adjustments.constituent_boost > 0 ? 'text-green-400' : 'text-red-400'}`}>
-                              {(tradingSignal as any).confidence_adjustments.constituent_boost > 0 ? '+' : ''}
-                              {(tradingSignal as any).confidence_adjustments.constituent_boost?.toFixed(1)}%
-                            </span>
-                          </div>
-                        )}
-                        {(tradingSignal as any).confidence_adjustments.futures_conflict !== 0 && (
-                          <div className="flex justify-between items-center text-xs">
-                            <span className="text-muted-foreground">Futures Analysis:</span>
-                            <span className={`font-semibold ${(tradingSignal as any).confidence_adjustments.futures_conflict > 0 ? 'text-green-400' : 'text-red-400'}`}>
-                              {(tradingSignal as any).confidence_adjustments.futures_conflict > 0 ? '+' : ''}
-                              {(tradingSignal as any).confidence_adjustments.futures_conflict?.toFixed(1)}%
-                            </span>
-                          </div>
-                        )}
-                        {(tradingSignal as any).confidence_adjustments.ml_neutral_penalty !== 0 && (
-                          <div className="flex justify-between items-center text-xs">
-                            <span className="text-muted-foreground">ML Adjustment:</span>
-                            <span className={`font-semibold ${(tradingSignal as any).confidence_adjustments.ml_neutral_penalty > 0 ? 'text-green-400' : 'text-orange-400'}`}>
-                              {(tradingSignal as any).confidence_adjustments.ml_neutral_penalty > 0 ? '+' : ''}
-                              {(tradingSignal as any).confidence_adjustments.ml_neutral_penalty?.toFixed(1)}%
-                            </span>
-                          </div>
-                        )}
-                        <div className="h-px bg-slate-500/30 my-2"></div>
-                        <div className="flex justify-between items-center text-xs">
-                          <span className="text-slate-300 font-semibold">Final Confidence:</span>
-                          <span className="font-bold text-primary text-base">
-                            {(tradingSignal as any).confidence_adjustments.final_probability?.toFixed(1)}%
-                          </span>
+                      </div>
+                      <div className="p-2 bg-green-700/10 rounded border border-green-700/20 text-center">
+                        <div className="text-xs text-muted-foreground">Chart Target 2</div>
+                        <div className="text-lg font-bold text-green-400">
+                          ₹{(tradingSignal as any).entry_analysis.option_target_2?.toFixed(0)}
+                        </div>
+                      </div>
+                      <div className="p-2 bg-red-600/10 rounded border border-red-600/20 text-center">
+                        <div className="text-xs text-muted-foreground">Chart Stop Loss</div>
+                        <div className="text-lg font-bold text-red-400">
+                          ₹{(tradingSignal as any).entry_analysis.option_stop_loss?.toFixed(0)}
                         </div>
                       </div>
                     </div>
                   )}
 
-                  {/* NEW: Option Chart Analysis - Support/Resistance & Pullback */}
-                  {(tradingSignal as any).entry_analysis?.option_supports && (
-                    <div className="p-3 bg-indigo-500/10 rounded-lg border border-indigo-500/30">
-                      <div className="text-sm font-medium text-indigo-300 mb-3 flex items-center gap-2">
-                        📊 Option Chart Analysis
-                        <span className="text-xs bg-indigo-600/30 px-2 py-0.5 rounded">NEW</span>
-                      </div>
-
-                      {/* Support & Resistance on Option Chart */}
-                      <div className="grid grid-cols-2 gap-3 mb-3">
-                        <div className="p-2 bg-green-500/10 rounded border border-green-500/20">
-                          <div className="text-xs text-muted-foreground mb-1">Option Support Levels</div>
-                          <div className="space-y-1">
-                            {((tradingSignal as any).entry_analysis.option_supports || []).slice(0, 3).map((level: number, idx: number) => (
-                              <div key={idx} className="text-sm font-semibold text-green-400">
-                                ₹{level.toFixed(0)} {idx === 0 && <span className="text-xs">(Nearest)</span>}
-                              </div>
-                            ))}
-                          </div>
-                          <div className="text-xs text-green-300 mt-1">
-                            💡 Place SL below these
+                  {/* Pullback Analysis */}
+                  {(tradingSignal as any).entry_analysis.pullback_probability !== undefined && (
+                    <div className={`p-2 rounded border ${(tradingSignal as any).entry_analysis.wait_for_pullback
+                      ? 'bg-orange-500/10 border-orange-500/30'
+                      : 'bg-green-500/10 border-green-500/30'
+                      }`}>
+                      <div className="flex justify-between items-center">
+                        <div>
+                          <div className="text-xs text-muted-foreground">Pullback Analysis</div>
+                          <div className={`text-sm font-semibold ${(tradingSignal as any).entry_analysis.wait_for_pullback ? 'text-orange-400' : 'text-green-400'
+                            }`}>
+                            {(tradingSignal as any).entry_analysis.wait_for_pullback
+                              ? `⏳ Wait for pullback (${((tradingSignal as any).entry_analysis.pullback_probability * 100).toFixed(0)}% likely)`
+                              : '✅ Good to enter now'
+                            }
                           </div>
                         </div>
-                        <div className="p-2 bg-red-500/10 rounded border border-red-500/20">
-                          <div className="text-xs text-muted-foreground mb-1">Option Resistance Levels</div>
-                          <div className="space-y-1">
-                            {((tradingSignal as any).entry_analysis.option_resistances || []).slice(0, 3).map((level: number, idx: number) => (
-                              <div key={idx} className="text-sm font-semibold text-red-400">
-                                ₹{level.toFixed(0)} {idx === 0 && <span className="text-xs">(Target)</span>}
-                              </div>
-                            ))}
-                          </div>
-                          <div className="text-xs text-red-300 mt-1">
-                            🎯 Book profit near these
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Chart-based Targets */}
-                      {(tradingSignal as any).entry_analysis.option_target_1 && (
-                        <div className="grid grid-cols-3 gap-2 mb-3">
-                          <div className="p-2 bg-green-600/10 rounded border border-green-600/20 text-center">
-                            <div className="text-xs text-muted-foreground">Chart Target 1</div>
-                            <div className="text-lg font-bold text-green-400">
-                              ₹{(tradingSignal as any).entry_analysis.option_target_1?.toFixed(0)}
+                        {(tradingSignal as any).entry_analysis.limit_order_price && (tradingSignal as any).entry_analysis.wait_for_pullback && (
+                          <div className="text-right">
+                            <div className="text-xs text-muted-foreground">Limit Order</div>
+                            <div className="text-lg font-bold text-orange-400">
+                              ₹{(tradingSignal as any).entry_analysis.limit_order_price?.toFixed(0)}
                             </div>
                           </div>
-                          <div className="p-2 bg-green-700/10 rounded border border-green-700/20 text-center">
-                            <div className="text-xs text-muted-foreground">Chart Target 2</div>
-                            <div className="text-lg font-bold text-green-400">
-                              ₹{(tradingSignal as any).entry_analysis.option_target_2?.toFixed(0)}
-                            </div>
-                          </div>
-                          <div className="p-2 bg-red-600/10 rounded border border-red-600/20 text-center">
-                            <div className="text-xs text-muted-foreground">Chart Stop Loss</div>
-                            <div className="text-lg font-bold text-red-400">
-                              ₹{(tradingSignal as any).entry_analysis.option_stop_loss?.toFixed(0)}
-                            </div>
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Pullback Analysis */}
-                      {(tradingSignal as any).entry_analysis.pullback_probability !== undefined && (
-                        <div className={`p-2 rounded border ${(tradingSignal as any).entry_analysis.wait_for_pullback
-                          ? 'bg-orange-500/10 border-orange-500/30'
-                          : 'bg-green-500/10 border-green-500/30'
-                          }`}>
-                          <div className="flex justify-between items-center">
-                            <div>
-                              <div className="text-xs text-muted-foreground">Pullback Analysis</div>
-                              <div className={`text-sm font-semibold ${(tradingSignal as any).entry_analysis.wait_for_pullback ? 'text-orange-400' : 'text-green-400'
-                                }`}>
-                                {(tradingSignal as any).entry_analysis.wait_for_pullback
-                                  ? `⏳ Wait for pullback (${((tradingSignal as any).entry_analysis.pullback_probability * 100).toFixed(0)}% likely)`
-                                  : '✅ Good to enter now'
-                                }
-                              </div>
-                            </div>
-                            {(tradingSignal as any).entry_analysis.limit_order_price && (tradingSignal as any).entry_analysis.wait_for_pullback && (
-                              <div className="text-right">
-                                <div className="text-xs text-muted-foreground">Limit Order</div>
-                                <div className="text-lg font-bold text-orange-400">
-                                  ₹{(tradingSignal as any).entry_analysis.limit_order_price?.toFixed(0)}
-                                </div>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      )}
-
-                      <div className="mt-2 text-xs text-indigo-300/70">
-                        💡 These levels are from option price chart analysis, not spot index
+                        )}
                       </div>
                     </div>
                   )}
+
+                  <div className="mt-2 text-xs text-indigo-300/70">
+                    💡 These levels are from option price chart analysis, not spot index
+                  </div>
+                </div>
+              )}
             </CardContent>
           </Card>
         )}
@@ -2858,6 +2962,30 @@ export default function DashboardPage() {
         progress={loadingProgress}
         steps={loadingSteps}
       />
+
+      {/* Scan Confirmation Dialog */}
+      {scanCostData && (
+        <ScanConfirmationDialog
+          open={showConfirmDialog}
+          onOpenChange={setShowConfirmDialog}
+          scanMode={selectedScanMode}
+          index={selectedIndex}
+          costInTokens={scanCostData.cost_tokens}
+          costInRupees={scanCostData.cost_rupees}
+          currentBalance={scanCostData.current_balance}
+          balanceAfter={scanCostData.balance_after}
+          sufficientBalance={scanCostData.sufficient_balance}
+          scanDescription={scanCostData.scan_description}
+          willUseSubscription={scanCostData.will_use_subscription}
+          paymentMethod={scanCostData.payment_method}
+          onConfirm={() => {
+            confirmedExecuteScan()
+            // Refresh balance after scan
+            const token = localStorage.getItem('auth_token') || localStorage.getItem('token') || localStorage.getItem('jwt_token')
+            if (token) setTimeout(() => fetchTokenBalance(token), 1000)
+          }}
+        />
+      )}
     </DashboardLayout>
   )
 }

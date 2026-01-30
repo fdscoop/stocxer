@@ -66,8 +66,18 @@ async def validate_and_deduct_tokens(
         # Get user billing status
         billing_status = await billing_service.get_user_billing_status(user_id)
         
-        # Calculate token cost
-        token_cost = TOKEN_COSTS[scan_type] * scan_count
+        # Calculate token cost based on scan type and mode
+        # Extract scan_mode from metadata for option scans
+        scan_mode = 'full'  # default
+        if metadata and 'scan_mode' in metadata:
+            scan_mode = metadata['scan_mode']
+        
+        # Use PricingConfig for mode-aware pricing
+        from src.models.billing_models import PricingConfig
+        if scan_type == ScanType.OPTION_SCAN:
+            token_cost = PricingConfig.calculate_scan_cost('option_scan', scan_count, scan_mode)
+        else:
+            token_cost = TOKEN_COSTS[scan_type] * scan_count
         
         # Check if user has active subscription
         if billing_status.subscription_active:

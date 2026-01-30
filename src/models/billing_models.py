@@ -256,7 +256,11 @@ class RazorpayWebhookEvent(BaseModel):
 class PricingConfig(BaseModel):
     """Pricing configuration constants"""
     # PAYG Pricing (in INR)
-    OPTION_SCAN_PRICE: Decimal = Decimal('0.98')
+    # Option Scan Pricing - Mode-based
+    OPTION_QUICK_SCAN_PRICE: Decimal = Decimal('0.82')  # Quick scan (option chain only, 5-10 sec)
+    OPTION_FULL_SCAN_PRICE: Decimal = Decimal('0.98')   # Full scan (includes 50-stock analysis, 40-60 sec)
+    OPTION_SCAN_PRICE: Decimal = Decimal('0.98')        # Legacy/default (full scan)
+    
     STOCK_SCAN_PRICE: Decimal = Decimal('0.85')
     BULK_SCAN_BASE_PRICE: Decimal = Decimal('5.00')
     BULK_SCAN_PER_STOCK: Decimal = Decimal('0.50')
@@ -268,10 +272,19 @@ class PricingConfig(BaseModel):
     PRO_PLAN_ANNUAL: int = 9990  # 2 months free
     
     @staticmethod
-    def calculate_scan_cost(scan_type: str, count: int = 1) -> Decimal:
-        """Calculate cost for a scan operation"""
+    def calculate_scan_cost(scan_type: str, count: int = 1, scan_mode: str = 'full') -> Decimal:
+        """Calculate cost for a scan operation
+        
+        Args:
+            scan_type: Type of scan (option_scan, stock_scan, bulk_scan)
+            count: Number of scans
+            scan_mode: For option_scan: 'quick' or 'full'. Ignored for other scan types.
+        """
         if scan_type == 'option_scan':
-            return Decimal(str(count)) * PricingConfig.OPTION_SCAN_PRICE
+            if scan_mode == 'quick':
+                return Decimal(str(count)) * PricingConfig.OPTION_QUICK_SCAN_PRICE
+            else:
+                return Decimal(str(count)) * PricingConfig.OPTION_FULL_SCAN_PRICE
         elif scan_type == 'stock_scan':
             return Decimal(str(count)) * PricingConfig.STOCK_SCAN_PRICE
         elif scan_type == 'bulk_scan':

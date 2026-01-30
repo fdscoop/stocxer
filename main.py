@@ -6152,6 +6152,89 @@ async def get_stock_categories():
     }
 
 
+
+
+@app.post("/api/options/calculate-cost")
+async def calculate_option_scan_cost(
+    request: Request,
+    authorization: str = Header(None, description="Bearer token (required)"),
+):
+    """
+    Calculate the cost of an option scan before executing it
+    
+    Returns:
+        - scan_mode: 'quick' or 'full'
+        - cost_tokens: Total token cost for the scan
+        - cost_rupees: Cost in rupees (same as tokens, 1 token = ₹1)
+        - current_balance: Current PAYG wallet balance
+        - balance_after: Balance after scan
+        - sufficient_balance: Whether user has enough balance
+        - has_subscription: Whether user has active subscription
+        - will_use_subscription: Whether this scan will use subscription
+    """
+    try:
+        # Authenticate user
+        if not authorization:
+            raise HTTPException(status_code=401, detail="Authorization required")
+        
+        token = authorization.replace("Bearer ", "")
+        user = await auth_service.get_current_user(token)
+        
+        # Parse request body
+        body = await request.json()
+        quick_scan = body.get('quick_scan', True)
+        index = body.get('index', 'NIFTY')
+        
+        # Calculate cost based on scan mode
+        from src.models.billing_models import PricingConfig
+        scan_mode = 'quick' if quick_scan else 'full'
+        cost = PricingConfig.calculate_scan_cost('option_scan', 1, scan_mode)
+        
+        # Get user billing status
+        billing_status = await billing_service.get_user_billing_status(user.id)
+        
+        # Check if subscription can be used
+        will_use_subscription = False
+        subscription_info = None
+        
+        if billing_status.subscription_active:
+            # Check subscription limits
+            today_usage = await billing_service.get_today_usage(user.id)
+            plan_limits = billing_status.limits
+            
+            if plan_limits and plan_limits.daily_option_scans:
+                daily_scans_used = today_usage.option_scans
+                daily_limit = plan_limits.daily_option_scans
+                
+                if daily_scans_used < daily_limit:
+                    will_use_subscription = True
+                    subscription_info = {
+                        'plan_type': billing_status.plan_type,
+                        'scans_used_today': daily_scans_used,
+                        'daily_limit': daily_limit,
+                        'scans_remaining': daily_limit - daily_scans_used
+                    }
+        
+        return {
+            "index": index.upper(),
+            "scan_mode": scan_mode,
+            "scan_description": "Quick Scan (Option Chain Only)" if scan_mode == 'quick' else "Full Analysis (50 Stocks + Option Chain)",
+            "cost_tokens": float(cost),
+            "cost_rupees": float(cost),
+            "current_balance": float(billing_status.credits_balance),
+            "balance_after": float(billing_status.credits_balance - cost),
+            "sufficient_balance": billing_status.credits_balance >= cost or will_use_subscription,
+            "has_subscription": billing_status.subscription_active,
+            "will_use_subscription": will_use_subscription,
+            "subscription_info": subscription_info,
+            "payment_method": "subscription" if will_use_subscription else "wallet"
+        }
+        
+    except Exception as e:
+        logger.error(f"Error calculating option scan cost: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 # ==================== OPTIONS SCANNER ENDPOINTS ====================
 
 @app.get("/options/scanner-results/latest")
@@ -6401,7 +6484,8 @@ async def scan_options(
         scan_metadata = {
             "index": index.upper(),
             "expiry": expiry,
-            "strategy": strategy
+            "strategy": strategy,
+            "scan_mode": "quick" if quick_scan else "full"  # For differential pricing
         }
         
         # Load user's Fyers token from Supabase
