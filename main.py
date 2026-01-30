@@ -41,6 +41,9 @@ from src.analytics.ict_analysis import (
     calculate_premium_discount_zones
 )
 
+# NEW: Option-Aware ICT Analysis
+from src.analytics.option_aware_ict import OptionAwarePracticalICT
+
 # Billing system (hybrid subscription + PAYG)
 from src.api.billing_routes import router as billing_router
 
@@ -240,6 +243,9 @@ if os.path.exists(static_dir):
 
 # Include billing routes
 app.include_router(billing_router)
+
+# Initialize option-aware ICT analyzer
+option_aware_ict = OptionAwarePracticalICT(fyers_client)
 
 # Initialize background scheduler
 scheduler = AsyncIOScheduler()
@@ -1339,6 +1345,148 @@ async def generate_signal(request: SignalRequest):
         }
     except Exception as e:
         logger.error(f"Error generating signal: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/signals/{symbol}/option-aware")
+async def get_option_aware_signal(
+    symbol: str,
+    authorization: str = Header(None, description="Bearer token (optional)")
+):
+    """
+    Generate option-aware ICT trading signal
+    
+    Complete system that:
+    1. Analyzes index momentum using 3-tier ICT (FVG/OB, Momentum, EMA)
+    2. Fetches live option chain with LTP, Greeks, OI, Volume
+    3. Scores and selects best strike for 5/10/15 point premium targets
+    4. Returns specific strike + entry price + targets + stop loss
+    
+    Args:
+        symbol: Index name (NIFTY, BANKNIFTY, FINNIFTY, SENSEX, BANKEX, MIDCPNIFTY)
+        authorization: Optional bearer token for authenticated requests
+        
+    Returns:
+        Complete signal with:
+        - Specific option strike and type (CE/PE)
+        - Entry price (actual LTP)
+        - Targets in option premium (not index points)  
+        - Risk/reward per lot
+        - Option Greeks (delta, gamma, theta)
+    """
+    try:
+        # Validate symbol
+        supported_indices = ["NIFTY", "BANKNIFTY", "FINNIFTY", "SENSEX", "BANKEX", "MIDCPNIFTY"]
+        if symbol.upper() not in supported_indices:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Unsupported index. Supported: {', '.join(supported_indices)}"
+            )
+        
+        symbol = symbol.upper()
+        logger.info(f"🎯 Option-aware signal request for {symbol}")
+        
+        # Note: Market hours check disabled to allow testing with Fyers historical data
+        # Fyers can provide data even outside market hours
+        # if not is_market_open():
+        #     session_info = get_ist_session_info()
+        #     msg = session_info.get('message', 'Market is currently closed') if isinstance(session_info, dict) else 'Market is currently closed'
+        #     raise HTTPException(
+        #         status_code=400,
+        #         detail=f"Market is closed. {msg}"
+        #     )
+        
+        # Map index to Fyers symbol
+        index_map = {
+            "NIFTY": "NSE:NIFTY50-INDEX",
+            "BANKNIFTY": "NSE:NIFTYBANK-INDEX",
+            "FINNIFTY": "NSE:FINNIFTY-INDEX",
+            "SENSEX": "BSE:SENSEX-INDEX",
+            "BANKEX": "BSE:BANKEX-INDEX",
+            "MIDCPNIFTY": "NSE:MIDCPNIFTY-INDEX"
+        }
+        
+        fyers_symbol = index_map[symbol]
+        
+        # Fetch candles for multiple timeframes
+        logger.info(f"📊 Fetching candles for {symbol}...")
+        now = now_ist()  # Use IST time for Indian markets
+        date_to = now
+        date_from_15m = now - timedelta(days=5)   # 5 days for 15min
+        date_from_1h = now - timedelta(days=15)   # 15 days for 1H
+        date_from_4h = now - timedelta(days=60)   # 60 days for 4H
+        date_from_daily = now - timedelta(days=180) # 180 days for Daily
+        
+        candles_by_timeframe = {}
+        
+        # 15min
+        df_15m = get_candles_cached(fyers_symbol, "15", date_from_15m, date_to)
+        if df_15m is not None and not df_15m.empty:
+            candles_by_timeframe['15'] = df_15m
+        
+        # 1H
+        df_1h = get_candles_cached(fyers_symbol, "60", date_from_1h, date_to)
+        if df_1h is not None and not df_1h.empty:
+            candles_by_timeframe['60'] = df_1h
+        
+        # 4H
+        df_4h = get_candles_cached(fyers_symbol, "240", date_from_4h, date_to)
+        if df_4h is not None and not df_4h.empty:
+            candles_by_timeframe['240'] = df_4h
+        
+        # Daily
+        df_daily = get_candles_cached(fyers_symbol, "D", date_from_daily, date_to)
+        if df_daily is not None and not df_daily.empty:
+            candles_by_timeframe['D'] = df_daily
+        
+        if not candles_by_timeframe:
+            raise HTTPException(status_code=500, detail="Could not fetch candle data")
+        
+        logger.info(f"✅ Fetched {len(candles_by_timeframe)} timeframes")
+        
+        # Get current spot price
+        quote_response = fyers_client.get_quotes([fyers_symbol])
+        if quote_response.get('s') != 'ok' or not quote_response.get('d'):
+            raise HTTPException(status_code=500, detail="Could not fetch spot price")
+        
+        spot_price = quote_response['d'][0]['v']['lp']
+        logger.info(f"💰 Spot price: {spot_price:.2f}")
+        
+        # Calculate DTE (days to expiry) using IST date
+        today = now.date()
+        # Weekly expiry is typically Thursday
+        days_until_thursday = (3 - today.weekday()) % 7
+        if days_until_thursday == 0:  # If today is Thursday
+            days_until_thursday = 7  # Next week
+        dte = days_until_thursday
+        
+        logger.info(f"📅 Days to expiry: {dte}")
+        
+        # Generate option-aware signal
+        signal = await option_aware_ict.generate_option_signal(
+            index=symbol,
+            candles_by_timeframe=candles_by_timeframe,
+            spot_price=spot_price,
+            dte=dte
+        )
+        
+        # Sanitize for JSON
+        signal = sanitize_for_json(signal)
+        
+        return {
+            'status': 'success',
+            'index': symbol,
+            'spot_price': spot_price,
+            'signal': signal,
+            'timestamp': ist_timestamp()  # Use IST timestamp
+        }
+    
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"❌ Error generating option-aware signal: {e}")
+        import traceback
+        logger.error(traceback.format_exc())
         raise HTTPException(status_code=500, detail=str(e))
 
 
