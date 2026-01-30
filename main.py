@@ -30,6 +30,9 @@ from src.models.auth_models import UserRegister, UserLogin, FyersTokenStore
 from src.middleware.token_middleware import require_tokens, ScanType
 from src.middleware.refund_decorator import with_refund_on_failure
 
+# Performance optimization: Parallel stock analysis for fast constituent scanning
+from src.services.parallel_stock_analysis import get_fast_analyzer
+
 # NEW: Phase 1 - ICT Top-Down Modules
 from src.analytics.candlestick_patterns import analyze_candlestick_patterns
 from src.analytics.confidence_calculator import calculate_trade_confidence
@@ -71,6 +74,91 @@ logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
+
+
+# ============== PERFORMANCE OPTIMIZATION: CACHING LAYER ==============
+# In-memory cache for candle data to reduce API calls and improve scan speed
+# Target: Reduce 180s full scan to ~90s (50% improvement)
+
+CANDLE_CACHE = {}  # {cache_key: (dataframe, timestamp)}
+ANALYSIS_CACHE = {}  # Reserved for future ML result caching
+CACHE_TTL = 180  # 3 minutes time-to-live
+
+
+def get_candles_cached(symbol: str, resolution: str, date_from: datetime, date_to: datetime):
+    """
+    Cached wrapper around fyers_client.get_historical_data()
+    
+    Args:
+        symbol: Trading symbol (e.g., 'NSE:NIFTY50-INDEX')
+        resolution: Timeframe ('1', '5', '15', '60', '240', 'D', 'W', 'M')
+        date_from: Start date
+        date_to: End date
+    
+    Returns:
+        DataFrame with OHLCV data or None
+    """
+    # Create cache key from parameters
+    cache_key = f"{symbol}_{resolution}_{date_from.date()}_{date_to.date()}"
+    now = datetime.now()
+    
+    # Check if we have cached data
+    if cache_key in CANDLE_CACHE:
+        candles, cached_time = CANDLE_CACHE[cache_key]
+        age = (now - cached_time).total_seconds()
+        
+        # Return cached data if still fresh
+        if age < CACHE_TTL:
+            logger.info(f"✅ Cache HIT: {symbol} {resolution} ({age:.0f}s old)")
+            return candles
+        else:
+            logger.debug(f"🔄 Cache EXPIRED: {cache_key} ({age:.0f}s old)")
+    
+    # Cache miss - fetch fresh data
+    logger.info(f"🔄 Fetching: {symbol} {resolution}")
+    
+    try:
+        candles = fyers_client.get_historical_data(
+            symbol=symbol,
+            resolution=resolution,
+            date_from=date_from,
+            date_to=date_to
+        )
+        
+        # Cache the result if valid
+        if candles is not None and not candles.empty:
+            CANDLE_CACHE[cache_key] = (candles, now)
+            logger.debug(f"💾 Cached: {cache_key} ({len(candles)} candles)")
+        
+        return candles
+        
+    except Exception as e:
+        logger.warning(f"Error fetching {cache_key}: {e}")
+        return None
+
+
+def clear_old_cache():
+    """Remove cache entries older than TTL to prevent memory bloat"""
+    now = datetime.now()
+    
+    # Find expired entries
+    expired_keys = [
+        k for k, (_, cached_time) in CANDLE_CACHE.items()
+        if (now - cached_time).total_seconds() > CACHE_TTL
+    ]
+    
+    # Remove them
+    for key in expired_keys:
+        del CANDLE_CACHE[key]
+    
+    if expired_keys:
+        logger.info(f"🗑️  Cleared {len(expired_keys)} expired cache entries")
+    
+    # Log cache stats
+    if CANDLE_CACHE:
+        logger.debug(f"📊 Cache stats: {len(CANDLE_CACHE)} active entries")
+
+# ============== END CACHING LAYER ==============
 
 
 def sanitize_for_json(obj):
@@ -1111,7 +1199,7 @@ async def get_historical_data(
         date_to = datetime.now()
         date_from = date_to - timedelta(days=days)
         
-        df = fyers_client.get_historical_data(
+        df = get_candles_cached(
             symbol=symbol,
             resolution=resolution,
             date_from=date_from,
@@ -2468,7 +2556,7 @@ async def get_actionable_trading_signal(
             logger.info("📊 Fetching historical data for ML analysis (respecting Fyers API limits)...")
             start_date_daily = safe_end_time - timedelta(days=365)  # 365 days (within 366 limit)
             
-            historical_df = fyers_client.get_historical_data(
+            historical_df = get_candles_cached(
                 symbol=symbol,
                 resolution="D",  # Daily candles
                 date_from=start_date_daily,
@@ -2483,7 +2571,7 @@ async def get_actionable_trading_signal(
                 # Minute resolution: max 100 days per request
                 logger.warning("Daily data insufficient, trying hourly (100-day lookback - max allowed)...")
                 start_date_hourly = safe_end_time - timedelta(days=100)  # Max 100 days for minute data
-                historical_df = fyers_client.get_historical_data(
+                historical_df = get_candles_cached(
                     symbol=symbol,
                     resolution="60",  # Hourly (60 min)
                     date_from=start_date_hourly,
@@ -2497,7 +2585,7 @@ async def get_actionable_trading_signal(
                     # Step 3: Try 4-hour (240 min) for more coverage
                     logger.warning("Hourly data insufficient, trying 4H (100-day lookback)...")
                     start_date_4h = safe_end_time - timedelta(days=100)
-                    historical_df = fyers_client.get_historical_data(
+                    historical_df = get_candles_cached(
                         symbol=symbol,
                         resolution="240",  # 4-hour candles
                         date_from=start_date_4h,
@@ -2511,7 +2599,7 @@ async def get_actionable_trading_signal(
                         # Step 4: Last resort - 15min data (will get ~2400 candles in 100 days)
                         logger.warning("4H data insufficient, trying 15-min (100-day lookback)...")
                         start_date_15min = safe_end_time - timedelta(days=100)
-                        historical_df = fyers_client.get_historical_data(
+                        historical_df = get_candles_cached(
                             symbol=symbol,
                             resolution="15",  # 15-minute candles
                             date_from=start_date_15min,
@@ -2533,60 +2621,64 @@ async def get_actionable_trading_signal(
         constituent_recommendation = None
         
         # Only run expensive analysis if NOT in quick mode
-        if not quick_mode and INDEX_ANALYSIS_AVAILABLE:
+        if not quick_mode:
             try:
-                logger.info(f"📊 FULL MODE: Running constituent stock analysis for {index_name}...")
-                logger.info(f"⚠️ This will analyze ~50 stocks and may take 40-60 seconds")
-                prob_analyzer = get_probability_analyzer(fyers_client)
-                prediction = prob_analyzer.analyze_index(index_name.upper())
+                logger.info(f"📊 FULL MODE: Running PARALLEL constituent stock analysis for {index_name}...")
+                logger.info(f"⚡ Target: Analyze 50 stocks in ~10-15 seconds (was 40-60s)")
+                
+                # Use parallel fast analyzer (NEW!)
+                analyzer = get_fast_analyzer(fyers_client, CANDLE_CACHE, CACHE_TTL)
+                prediction = await analyzer.analyze_all_stocks(index_name.upper())
                 
                 if prediction:
-                    # Determine recommendation based on probability
-                    if prediction.expected_direction == "BULLISH" and prediction.prob_up > 0.55:
+                    # Determine recommendation based on direction and confidence
+                    expected_dir = prediction["expected_direction"]
+                    confidence = prediction["confidence"]
+                    
+                    if expected_dir == "BULLISH" and confidence > 15:
                         constituent_recommendation = "CALL"
-                    elif prediction.expected_direction == "BEARISH" and prediction.prob_down > 0.55:
+                    elif expected_dir == "BEARISH" and confidence > 15:
                         constituent_recommendation = "PUT"
                     else:
                         constituent_recommendation = "NEUTRAL"
                     
+                    # Convert to old format for compatibility
                     probability_analysis = {
-                        "stocks_scanned": prediction.total_stocks_analyzed,
-                        "total_stocks": len(index_manager.get_constituents(index_name.upper())) if index_manager else prediction.total_stocks_analyzed,
-                        "expected_direction": prediction.expected_direction,
-                        "expected_move_pct": round(prediction.expected_move_pct, 2),
-                        "confidence": round(prediction.prediction_confidence / 100, 3),  # Convert 0-100 to 0-1
-                        "probability_up": round(prediction.prob_up, 3),
-                        "probability_down": round(prediction.prob_down, 3),
-                        "bullish_stocks": prediction.bullish_stocks,
-                        "bearish_stocks": prediction.bearish_stocks,
-                        "bullish_pct": round((prediction.bullish_stocks / max(1, prediction.total_stocks_analyzed)) * 100, 1),
-                        "bearish_pct": round((prediction.bearish_stocks / max(1, prediction.total_stocks_analyzed)) * 100, 1),
+                        "stocks_scanned": prediction["stocks_scanned"],
+                        "total_stocks": 50,  # NIFTY 50
+                        "expected_direction": expected_dir,
+                        "expected_move_pct": 0,  # Not calculated in fast mode
+                        "confidence": confidence / 100,  # Convert to 0-1 scale
+                        "probability_up": prediction["bullish_pct"] / 100,
+                        "probability_down": prediction["bearish_pct"] / 100,
+                        "bullish_stocks": prediction["bullish_stocks"],
+                        "bearish_stocks": prediction["bearish_stocks"],
+                        "bullish_pct": prediction["bullish_pct"],
+                        "bearish_pct": prediction["bearish_pct"],
                         "constituent_recommendation": constituent_recommendation,
-                        "market_regime": prediction.regime.regime.value if prediction.regime else "unknown",
+                        "market_regime": "unknown",  # Not calculated in fast mode
+                        "analysis_time": prediction["analysis_time"],
                         "top_movers": {
                             "bullish": [
-                                {"symbol": s.symbol.split(":")[-1].replace("-EQ", ""), "probability": round(s.probability, 2)}
-                                for s in sorted(prediction.stock_signals, key=lambda x: x.probability if x.trend_direction == "up" else 0, reverse=True)[:3]
-                                if s.trend_direction == "up"
+                                {"symbol": s["symbol"], "probability": round(s["confidence"] * 100, 2), "rsi": s.get("rsi", 0)}
+                                for s in prediction["top_movers"]["bullish"]
                             ],
                             "bearish": [
-                                {"symbol": s.symbol.split(":")[-1].replace("-EQ", ""), "probability": round(s.probability, 2)}
-                                for s in sorted(prediction.stock_signals, key=lambda x: x.probability if x.trend_direction == "down" else 0, reverse=True)[:3]
-                                if s.trend_direction == "down"
+                                {"symbol": s["symbol"], "probability": round(s["confidence"] * 100, 2), "rsi": s.get("rsi", 0)}
+                                for s in prediction["top_movers"]["bearish"]
                             ],
-                            "volume_surge": [
-                                {"symbol": s.symbol.split(":")[-1].replace("-EQ", ""), "has_surge": True}
-                                for s in prediction.stock_signals if s.volume_surge
-                            ][:3]
+                            "volume_surge": []  # Not tracked in fast mode
                         }
                     }
                     
-                    logger.info(f"✅ Constituent analysis: {prediction.expected_direction} ({prediction.prob_up:.1%} up / {prediction.prob_down:.1%} down)")
-                    logger.info(f"   Bullish: {prediction.bullish_stocks}, Bearish: {prediction.bearish_stocks}")
+                    logger.info(f"✅ Parallel constituent analysis: {expected_dir} (confidence: {confidence:.1f}%) in {prediction['analysis_time']}s")
+                    logger.info(f"   Bullish: {prediction['bullish_stocks']}, Bearish: {prediction['bearish_stocks']}, Neutral: {prediction['neutral_stocks']}")
                     logger.info(f"   Recommendation from stocks: {constituent_recommendation}")
                     
             except Exception as prob_error:
-                logger.warning(f"⚠️ Constituent stock analysis failed: {prob_error}")
+                logger.warning(f"⚠️ Parallel constituent stock analysis failed: {prob_error}")
+                import traceback
+                logger.debug(traceback.format_exc())
         elif quick_mode:
             logger.info(f"🚀 QUICK MODE: Skipping 50-stock analysis (use quick_mode=false for full analysis)")
         else:
