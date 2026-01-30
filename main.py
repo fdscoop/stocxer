@@ -6048,6 +6048,57 @@ async def get_all_latest_scans():
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@app.get("/auth/debug")
+async def debug_auth_status(authorization: str = Header(None)):
+    """Debug endpoint to check authentication status"""
+    try:
+        if not authorization:
+            return {
+                "status": "error",
+                "error": "no_authorization_header", 
+                "message": "No Authorization header provided",
+                "expected_format": "Bearer <token>",
+                "help": "Include 'Authorization: Bearer <your-token>' header"
+            }
+        
+        if not authorization.startswith('Bearer '):
+            return {
+                "status": "error",
+                "error": "invalid_authorization_format",
+                "message": "Authorization header must start with 'Bearer '",
+                "received": authorization[:20] + "..." if len(authorization) > 20 else authorization,
+                "expected_format": "Bearer <token>"
+            }
+        
+        token = authorization.split(' ')[1]
+        
+        # Try to decode/validate the token
+        from src.auth.auth_config import verify_token
+        try:
+            user_data = verify_token(token)
+            return {
+                "status": "success",
+                "message": "Token is valid",
+                "user_id": user_data.get("sub") or user_data.get("user_id"),
+                "token_type": "valid_jwt",
+                "has_user_data": bool(user_data)
+            }
+        except Exception as verify_error:
+            return {
+                "status": "error",
+                "error": "token_verification_failed",
+                "message": str(verify_error),
+                "token_length": len(token),
+                "token_start": token[:10] + "..." if len(token) > 10 else token
+            }
+            
+    except Exception as e:
+        return {
+            "status": "error", 
+            "error": "debug_auth_failed",
+            "message": str(e)
+        }
+
 @app.get("/options/scan")
 @require_tokens(ScanType.OPTION_SCAN)
 @with_refund_on_failure(ScanType.OPTION_SCAN)
