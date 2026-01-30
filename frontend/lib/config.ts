@@ -16,9 +16,9 @@ export function getApiUrl(): string {
   } else if (hostname.includes('onrender.com')) {
     // Render deployment - API is on same origin
     return window.location.origin
-  } else if (hostname === 'stocxer.in' || hostname.includes('stocxer')) {
-    // Custom domain - API is on Render
-    return 'https://stocxer-ai.onrender.com'
+  } else if (hostname === 'stocxer.in' || hostname === 'www.stocxer.in' || hostname.includes('stocxer')) {
+    // Custom domain with Cloudflare routing - API is on same domain (no /api prefix needed if root is mapped to backend)
+    return `https://${hostname}`
   } else if (hostname.includes('vercel.app')) {
     // Vercel deployment - use configured API or Render
     return process.env.NEXT_PUBLIC_API_URL || 'https://stocxer-ai.onrender.com'
