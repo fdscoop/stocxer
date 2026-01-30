@@ -17,14 +17,14 @@ export function getApiUrl(): string {
     // Render deployment - API is on same origin
     return window.location.origin
   } else if (hostname === 'stocxer.in' || hostname === 'www.stocxer.in' || hostname.includes('stocxer')) {
-    // Custom domain with Cloudflare routing - API is on same domain (no /api prefix needed if root is mapped to backend)
-    return `https://${hostname}`
+    // Custom domain - use direct Render API URL
+    return 'https://stocxer-ai.onrender.com'
   } else if (hostname.includes('vercel.app')) {
     // Vercel deployment - use configured API or Render
     return process.env.NEXT_PUBLIC_API_URL || 'https://stocxer-ai.onrender.com'
   } else {
-    // Fallback - assume same origin
-    return window.location.origin
+    // Fallback - use Render API
+    return 'https://stocxer-ai.onrender.com'
   }
 }
 

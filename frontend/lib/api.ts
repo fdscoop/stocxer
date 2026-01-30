@@ -143,21 +143,21 @@ export const api = {
 
   // Auth
   async login(email: string, password: string) {
-    return fetchWithAuth('/auth/login', {
+    return fetchWithAuth('/api/auth/login', {
       method: 'POST',
       body: JSON.stringify({ email, password }),
     })
   },
 
   async register(email: string, password: string, name?: string) {
-    return fetchWithAuth('/auth/register', {
+    return fetchWithAuth('/api/auth/register', {
       method: 'POST',
       body: JSON.stringify({ email, password, name }),
     })
   },
 
   async checkAuth() {
-    return fetchWithAuth('/auth/verify')
+    return fetchWithAuth('/api/auth/verify')
   },
 
   async checkFyersAuth() {
