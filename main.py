@@ -2723,18 +2723,24 @@ async def get_actionable_trading_signal(
                 token = authorization.replace("Bearer ", "") if authorization.startswith("Bearer ") else authorization
                 user = await auth_service.get_current_user(token)
                 if user and user.id:
-                    # Save the signal
-                    save_result = await screener_service.save_options_signal(
+                    # Save the complete signal to option_scanner_results table
+                    save_result = await screener_service.save_option_scanner_result(
+                        user_id=str(user.id),
+                        signal_data=signal
+                    )
+                    if save_result.get("saved"):
+                        logger.info(f"✅ Option scanner result saved to database for user {user.email}")
+                        signal["saved_to_db"] = True
+                        signal["signal_id"] = save_result.get("signal_id")
+                    else:
+                        logger.warning(f"⚠️ Could not save option scanner result: {save_result.get('error')}")
+                    
+                    # Also save simplified version to screener_results for backward compatibility
+                    legacy_save = await screener_service.save_options_signal(
                         user_id=str(user.id),
                         signal_data=signal,
                         index=index_name
                     )
-                    if save_result.get("saved"):
-                        logger.info(f"✅ Options signal saved to database for user {user.email}")
-                        signal["saved_to_db"] = True
-                        signal["signal_id"] = save_result.get("signal_id")
-                    else:
-                        logger.warning(f"⚠️ Could not save options signal: {save_result.get('error')}")
         except Exception as save_error:
             logger.warning(f"⚠️ Error saving options signal (non-fatal): {save_error}")
         
@@ -5888,6 +5894,74 @@ async def get_stock_categories():
 
 
 # ==================== OPTIONS SCANNER ENDPOINTS ====================
+
+@app.get("/options/scanner-results/latest")
+async def get_latest_option_scanner_result(
+    authorization: str = Header(None, description="Bearer token"),
+    index: Optional[str] = Query(None, description="Filter by index (NIFTY, BANKNIFTY, etc)")
+):
+    """Get latest option scanner actionable signal result from database"""
+    try:
+        if not authorization:
+            raise HTTPException(status_code=401, detail="Authorization header required")
+        
+        token = authorization.replace("Bearer ", "")
+        user = await auth_service.get_current_user(token)
+        
+        latest_result = await screener_service.get_latest_option_scanner_result(user.id, index)
+        
+        if not latest_result:
+            index_msg = f" for {index.upper()}" if index else ""
+            return {
+                "status": "no_data",
+                "message": f"No option scanner results found{index_msg}. Run a scan to see signals.",
+                "index": index.upper() if index else "NIFTY"
+            }
+        
+        return {
+            "status": "success",
+            **latest_result
+        }
+        
+    except Exception as e:
+        logger.error(f"Error getting latest option scanner result: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/options/scanner-results/recent")
+async def get_recent_option_scanner_results(
+    authorization: str = Header(None, description="Bearer token"),
+    hours: int = Query(24, description="Time range in hours"),
+    limit: int = Query(20, description="Max results to retrieve"),
+    index: Optional[str] = Query(None, description="Filter by index")
+):
+    """Get recent option scanner results from last N hours"""
+    try:
+        if not authorization:
+            raise HTTPException(status_code=401, detail="Authorization header required")
+        
+        token = authorization.replace("Bearer ", "")
+        user = await auth_service.get_current_user(token)
+        
+        results = await screener_service.get_recent_option_scanner_results(
+            user.id, 
+            hours=hours, 
+            limit=limit,
+            index=index
+        )
+        
+        return {
+            "status": "success",
+            "count": len(results),
+            "time_range_hours": hours,
+            "index_filter": index.upper() if index else "ALL",
+            "results": results
+        }
+        
+    except Exception as e:
+        logger.error(f"Error getting recent option scanner results: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 
 @app.get("/options/scan/latest")
 async def get_latest_scan_results(

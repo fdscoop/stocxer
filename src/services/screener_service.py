@@ -414,6 +414,149 @@ class ScreenerService:
         except Exception as e:
             logger.error(f"Get recent options signals error: {str(e)}")
             return []
+    
+    async def save_option_scanner_result(
+        self,
+        user_id: str,
+        signal_data: dict
+    ) -> dict:
+        """Save complete option scanner actionable signal to option_scanner_results table"""
+        try:
+            signal_id = str(uuid.uuid4())
+            
+            # Extract nested data safely
+            option = signal_data.get("option", {})
+            pricing = signal_data.get("pricing", {})
+            entry = signal_data.get("entry", {})
+            targets = signal_data.get("targets", {})
+            risk_reward = signal_data.get("risk_reward", {})
+            greeks = signal_data.get("greeks", {})
+            index_data = signal_data.get("index_data", {})
+            htf_analysis = signal_data.get("htf_analysis", {})
+            ltf_entry_model = signal_data.get("ltf_entry_model", {})
+            confidence_breakdown = signal_data.get("confidence_breakdown", {})
+            confidence_obj = signal_data.get("confidence", {})
+            
+            # Extract index name from symbol
+            symbol = signal_data.get("spot_price", 0)  # Will use index_data.spot_price instead
+            index_name = "NIFTY"  # Default
+            if "BANKNIFTY" in str(signal_data):
+                index_name = "BANKNIFTY"
+            elif "FINNIFTY" in str(signal_data):
+                index_name = "FINNIFTY"
+            
+            # Build database record
+            record = {
+                "id": signal_id,
+                "user_id": user_id,
+                "index": index_name,
+                "symbol": f"NSE:{index_name}50-INDEX" if index_name == "NIFTY" else f"NSE:{index_name}-INDEX",
+                "signal": signal_data.get("signal", "ICT_NEUTRAL_BIAS"),
+                "action": signal_data.get("action", "WAIT"),
+                "confidence": confidence_breakdown.get("total", 50),
+                "confidence_level": confidence_obj.get("level", "MEDIUM"),
+                "strike": option.get("strike", 0),
+                "option_type": option.get("type", "CE"),
+                "trading_symbol": option.get("trading_symbol", ""),
+                "expiry_date": option.get("expiry_date"),
+                "days_to_expiry": option.get("expiry_info", {}).get("days_to_expiry", 0),
+                "entry_price": pricing.get("entry_price", 0),
+                "ltp": pricing.get("ltp"),
+                "iv_used": pricing.get("iv_used"),
+                "target_1": targets.get("target_1"),
+                "target_2": targets.get("target_2"),
+                "stop_loss": targets.get("stop_loss"),
+                "risk_per_lot": risk_reward.get("risk_per_lot"),
+                "reward_1_per_lot": risk_reward.get("reward_1_per_lot"),
+                "reward_2_per_lot": risk_reward.get("reward_2_per_lot"),
+                "risk_reward_ratio_1": risk_reward.get("ratio_1"),
+                "risk_reward_ratio_2": risk_reward.get("ratio_2"),
+                "delta": greeks.get("delta"),
+                "gamma": greeks.get("gamma"),
+                "theta": greeks.get("theta"),
+                "vega": greeks.get("vega"),
+                "spot_price": index_data.get("spot_price"),
+                "future_price": index_data.get("future_price"),
+                "basis": index_data.get("basis"),
+                "vix": index_data.get("vix"),
+                "pcr_oi": index_data.get("pcr_oi"),
+                "pcr_volume": index_data.get("pcr_volume"),
+                "htf_direction": htf_analysis.get("direction"),
+                "htf_strength": htf_analysis.get("strength"),
+                "ltf_found": ltf_entry_model.get("found", False),
+                "ltf_entry_type": ltf_entry_model.get("entry_type"),
+                "full_signal_data": signal_data,  # Store complete JSON
+                "is_reversal_play": signal_data.get("is_reversal_play", False),
+                "trading_mode": signal_data.get("trading_mode", {}).get("mode", "INTRADAY"),
+                "timestamp": signal_data.get("timestamp") or ist_timestamp()
+            }
+            
+            # Insert using admin client to bypass RLS
+            self.supabase_admin.table("option_scanner_results").insert(record).execute()
+            
+            logger.info(f"✅ Saved option scanner result: {index_name} {record['action']} {record['strike']} {record['option_type']} (ID: {signal_id})")
+            
+            return {
+                "signal_id": signal_id,
+                "saved": True,
+                "timestamp": record["timestamp"]
+            }
+            
+        except Exception as e:
+            logger.error(f"Save option scanner result error: {str(e)}")
+            import traceback
+            traceback.print_exc()
+            return {"saved": False, "error": str(e)}
+    
+    async def get_latest_option_scanner_result(self, user_id: str, index: Optional[str] = None) -> Optional[dict]:
+        """Get latest option scanner result for user, optionally filtered by index"""
+        try:
+            query = self.supabase.table("option_scanner_results")\
+                .select("*")\
+                .eq("user_id", user_id)
+            
+            if index:
+                query = query.eq("index", index.upper())
+            
+            response = query.order("timestamp", desc=True).limit(1).execute()
+            
+            if not response.data:
+                return None
+            
+            return response.data[0]
+            
+        except Exception as e:
+            logger.error(f"Get latest option scanner result error: {str(e)}")
+            return None
+    
+    async def get_recent_option_scanner_results(
+        self, 
+        user_id: str, 
+        hours: int = 24, 
+        limit: int = 20,
+        index: Optional[str] = None
+    ) -> list:
+        """Get recent option scanner results"""
+        try:
+            from datetime import datetime, timedelta, timezone
+            
+            time_threshold = (datetime.now(timezone.utc) - timedelta(hours=hours)).isoformat()
+            
+            query = self.supabase.table("option_scanner_results")\
+                .select("*")\
+                .eq("user_id", user_id)\
+                .gte("timestamp", time_threshold)
+            
+            if index:
+                query = query.eq("index", index.upper())
+            
+            response = query.order("timestamp", desc=True).limit(limit).execute()
+            
+            return response.data if response.data else []
+            
+        except Exception as e:
+            logger.error(f"Get recent option scanner results error: {str(e)}")
+            return []
 
 
 # Create screener service instance
