@@ -345,7 +345,22 @@ async def shutdown_scheduler():
             logger.info("✅ Background scheduler stopped")
     except Exception as e:
         logger.error(f"❌ Error stopping scheduler: {e}")
-        logger.warning("⚠️ No valid Fyers tokens found in database or environment. Using mock data until authenticated.")
+
+
+# Initialize Fyers client on startup
+async def initialize_fyers_client():
+    """Initialize the Fyers client with stored token"""
+    try:
+        # Try to load Fyers token from database
+        response = supabase_admin.table("fyers_tokens").select("*").limit(1).execute()
+        
+        if response.data:
+            token_data = response.data[0]
+            fyers_client.access_token = token_data["access_token"]
+            fyers_client._initialize_client()
+            logger.info(f"✅ Successfully loaded Fyers token for user {token_data['user_id'][:8]}...")
+        else:
+            logger.warning("⚠️ No valid Fyers tokens found in database or environment. Using mock data until authenticated.")
     except Exception as e:
         logger.warning(f"⚠️ Could not load Fyers token from database: {e}")
         
