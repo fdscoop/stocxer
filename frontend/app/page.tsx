@@ -344,8 +344,6 @@ export default function DashboardPage() {
   const [analysisMode, setAnalysisMode] = React.useState('auto')
   const [showScanModeDialog, setShowScanModeDialog] = React.useState(false)
   const [selectedScanMode, setSelectedScanMode] = React.useState<'quick' | 'full'>('quick')
-  const [showScanModeDialog, setShowScanModeDialog] = React.useState(false)
-  const [selectedScanMode, setSelectedScanMode] = React.useState<'quick' | 'full'>('quick')
 
   // Calculate trading signal from scan results with improved entry analysis
   const calculateTradingSignal = (data: ScanResults): TradingSignal | null => {
