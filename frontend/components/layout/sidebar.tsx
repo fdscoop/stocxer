@@ -15,7 +15,8 @@ import {
   ChevronLeft,
   ChevronRight,
   LogOut,
-  User
+  User,
+  Activity
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
@@ -32,6 +33,7 @@ const navigation = [
   { name: 'Stock Screener', href: '/screener', icon: Search, description: 'Scan stocks for signals' },
   { name: 'Index Analyzer', href: '/analyzer', icon: BarChart3, description: 'Deep option chain analysis' },
   { name: 'Options Scanner', href: '/options', icon: Target, description: 'Find optimal options' },
+  { name: 'Paper Trading', href: '/paper-trading', icon: Activity, description: 'Automated paper trading', beta: true },
   { name: 'AI Integration', href: '/mcp', icon: Bot, description: 'Connect with AI assistants (Beta)', beta: true },
   { name: 'Subscription', href: '/subscription', icon: Star, description: 'Manage your plan' },
   { name: 'Billing & Credits', href: '/billing', icon: CreditCard, description: 'View usage & credits' },

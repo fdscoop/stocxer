@@ -1,0 +1,1147 @@
+🔐 Connecting to Supabase: https://cxbcpmouqkajlxzmbomu.supabase.co
+🔑 Authenticating user...
+✅ Authenticated as: bineshch@gmail.com
+   User ID: 4f1d1b44-7459-43fa-8aec-f9b9a0605c4b
+   Access Token: eyJhbGciOiJFUzI1NiIsImtpZCI6ImZjM2UyMDkyLTIzZmMtND...
+
+================================================================================
+  📊 SCANNING PAPER TRADING DATABASE
+================================================================================
+
+================================================================================
+  1️⃣  PAPER TRADING CONFIG
+================================================================================
+
+📊 PAPER_TRADING_CONFIG
+   Total rows: 1
+   Showing first 1 rows:
+
+   Row 1:
+      id: e875f292-7f81-4b46-acf2-2d878cd13f27
+      user_id: 4f1d1b44-7459-43fa-8aec-f9b9a0605c4b
+      enabled: True
+      indices: [
+      "NIFTY",
+      "BANKNIFTY",
+      "SENSEX"
+]
+      scan_interval_minutes: 5
+      max_positions: 3
+      capital_per_trade: 10000
+      trading_mode: intraday
+      start_time: 09:15:00
+      end_time: 15:15:00
+      auto_exit_time: 15:15:00
+      min_confidence: 65
+      created_at: 2026-01-30T02:02:09.045379+00:00
+      updated_at: 2026-01-30T02:53:52.365457+00:00
+
+
+================================================================================
+  2️⃣  PAPER TRADING SIGNALS
+================================================================================
+
+📊 PAPER_TRADING_SIGNALS
+   Total rows: 10
+   Showing first 10 rows:
+
+   Row 1:
+      id: dca0cbe8-0eda-410f-b6b3-9ff02b187336
+      user_id: 4f1d1b44-7459-43fa-8aec-f9b9a0605c4b
+      scan_id: None
+      index: NIFTY
+      signal_type: BUY_CALL
+      option_symbol: NSE:NIFTY2620325550CE
+      strike: 25550
+      option_type: CE
+      entry_price: 139.3
+      stop_loss: 83.58
+      target_1: 195.02
+      target_2: 250.74
+      confidence: 22.5
+      trading_mode: INTRADAY
+      dte: 4
+      signal_timestamp: 2026-01-30T02:50:57.172245+00:00
+      executed: True
+      execution_timestamp: 2026-01-30T03:50:58.917293+00:00
+      status: REJECTED
+      rejection_reason: RED:Margin Shortfall:INR 9,015.73 Available:INR 132.87 for C-XB06384 [FYERS_RISK_CUG]
+      created_at: 2026-01-30T02:50:57.172245+00:00
+
+   Row 2:
+      id: 0d5ab1eb-7157-4ebb-8bab-ba308f0f52a1
+      user_id: 4f1d1b44-7459-43fa-8aec-f9b9a0605c4b
+      scan_id: None
+      index: NIFTY
+      signal_type: BUY_CALL
+      option_symbol: NSE:NIFTY2026020325550CE
+      strike: 25550
+      option_type: CE
+      entry_price: 139.3
+      stop_loss: 83.58
+      target_1: 195.02
+      target_2: 250.74
+      confidence: 22.5
+      trading_mode: INTRADAY
+      dte: 4
+      signal_timestamp: 2026-01-30T02:49:12.320332+00:00
+      executed: True
+      execution_timestamp: 2026-01-30T03:49:14.250471+00:00
+      status: REJECTED
+      rejection_reason: The input symbol is invalid.
+      created_at: 2026-01-30T02:49:12.320332+00:00
+
+   Row 3:
+      id: 91307d14-0301-405b-b871-90e41ded3837
+      user_id: 4f1d1b44-7459-43fa-8aec-f9b9a0605c4b
+      scan_id: None
+      index: NIFTY
+      signal_type: BUY CALL
+      option_symbol: NSE:NIFTY2620325500CE
+      strike: 25500
+      option_type: CE
+      entry_price: 145.5
+      stop_loss: 115.0
+      target_1: 175.0
+      target_2: 195.0
+      confidence: 72
+      trading_mode: INTRADAY
+      dte: 4
+      signal_timestamp: 2026-01-30T02:44:45.472633+00:00
+      executed: True
+      execution_timestamp: 2026-01-30T03:44:47.720532+00:00
+      status: REJECTED
+      rejection_reason: RED:Margin Shortfall:INR 10,488.63 Available:INR 132.87 for C-XB06384 [FYERS_RISK_CUG]
+      created_at: 2026-01-30T02:44:45.472633+00:00
+
+   Row 4:
+      id: 1e766154-131e-40b3-8cc0-a5419755d88d
+      user_id: 4f1d1b44-7459-43fa-8aec-f9b9a0605c4b
+      scan_id: None
+      index: NIFTY
+      signal_type: BUY CALL
+      option_symbol: NSE:NIFTY2620325500CE
+      strike: 25500
+      option_type: CE
+      entry_price: 145.5
+      stop_loss: 115.0
+      target_1: 175.0
+      target_2: 195.0
+      confidence: 72
+      trading_mode: INTRADAY
+      dte: 4
+      signal_timestamp: 2026-01-30T02:43:54.97392+00:00
+      executed: True
+      execution_timestamp: 2026-01-30T03:43:56.836276+00:00
+      status: REJECTED
+      rejection_reason: 50 not a multiple of minimum lot size 65
+      created_at: 2026-01-30T02:43:54.97392+00:00
+
+   Row 5:
+      id: 90b9f84f-26c2-4b58-8c93-9ff6c4386258
+      user_id: 4f1d1b44-7459-43fa-8aec-f9b9a0605c4b
+      scan_id: None
+      index: NIFTY
+      signal_type: BUY CALL
+      option_symbol: NSE:NIFTY26FEB0325500CE
+      strike: 25500
+      option_type: CE
+      entry_price: 145.5
+      stop_loss: 115.0
+      target_1: 175.0
+      target_2: 195.0
+      confidence: 72
+      trading_mode: INTRADAY
+      dte: 4
+      signal_timestamp: 2026-01-30T02:43:23.871811+00:00
+      executed: True
+      execution_timestamp: 2026-01-30T03:43:25.756104+00:00
+      status: REJECTED
+      rejection_reason: The input symbol is invalid.
+      created_at: 2026-01-30T02:43:23.871811+00:00
+
+   Row 6:
+      id: ca6359df-d627-4bac-879f-641af587912c
+      user_id: 4f1d1b44-7459-43fa-8aec-f9b9a0605c4b
+      scan_id: None
+      index: NIFTY
+      signal_type: BUY CALL
+      option_symbol: NSE:NIFTY2630325500CE
+      strike: 25500
+      option_type: CE
+      entry_price: 150.5
+      stop_loss: 120.0
+      target_1: 180.0
+      target_2: 200.0
+      confidence: 75
+      trading_mode: INTRADAY
+      dte: 0
+      signal_timestamp: 2026-01-30T02:39:08.009711+00:00
+      executed: True
+      execution_timestamp: 2026-01-30T03:39:09.957215+00:00
+      status: REJECTED
+      rejection_reason: The input symbol is invalid.
+      created_at: 2026-01-30T02:39:08.009711+00:00
+
+   Row 7:
+      id: 7bc32153-c9f7-4d0f-893b-4f22f1386162
+      user_id: 4f1d1b44-7459-43fa-8aec-f9b9a0605c4b
+      scan_id: None
+      index: NIFTY
+      signal_type: BUY CALL
+      option_symbol: NSE:NIFTY2630325500CE
+      strike: 25500
+      option_type: CE
+      entry_price: 150.5
+      stop_loss: 120.0
+      target_1: 180.0
+      target_2: 200.0
+      confidence: 75
+      trading_mode: INTRADAY
+      dte: 0
+      signal_timestamp: 2026-01-30T02:38:44.912601+00:00
+      executed: True
+      execution_timestamp: 2026-01-30T03:38:47.041761+00:00
+      status: REJECTED
+      rejection_reason: The input symbol is invalid.
+      created_at: 2026-01-30T02:38:44.912601+00:00
+
+   Row 8:
+      id: 14839f94-316c-455c-a1a3-a316ca2179fd
+      user_id: 4f1d1b44-7459-43fa-8aec-f9b9a0605c4b
+      scan_id: None
+      index: NIFTY
+      signal_type: BUY CALL
+      option_symbol: NSE:NIFTY2630325500CE
+      strike: 25500
+      option_type: CE
+      entry_price: 150.5
+      stop_loss: 120.0
+      target_1: 180.0
+      target_2: 200.0
+      confidence: 75
+      trading_mode: INTRADAY
+      dte: 0
+      signal_timestamp: 2026-01-30T02:37:49.973183+00:00
+      executed: True
+      execution_timestamp: 2026-01-30T03:37:50.832963+00:00
+      status: REJECTED
+      rejection_reason: Client not initialized
+      created_at: 2026-01-30T02:37:49.973183+00:00
+
+   Row 9:
+      id: c106f8d6-e41e-4186-aad5-203774e25200
+      user_id: 4f1d1b44-7459-43fa-8aec-f9b9a0605c4b
+      scan_id: None
+      index: NIFTY
+      signal_type: BUY CALL
+      option_symbol: NSE:NIFTY2630325500CE
+      strike: 25500
+      option_type: CE
+      entry_price: 150.5
+      stop_loss: 120.0
+      target_1: 180.0
+      target_2: 200.0
+      confidence: 75
+      trading_mode: INTRADAY
+      dte: 0
+      signal_timestamp: 2026-01-30T02:35:22.803069+00:00
+      executed: True
+      execution_timestamp: 2026-01-30T03:35:23.707293+00:00
+      status: REJECTED
+      rejection_reason: Client not initialized
+      created_at: 2026-01-30T02:35:22.803069+00:00
+
+   Row 10:
+      id: 88540fd4-1c08-40db-b662-188d80df10f4
+      user_id: 4f1d1b44-7459-43fa-8aec-f9b9a0605c4b
+      scan_id: None
+      index: NIFTY
+      signal_type: BUY CALL
+      option_symbol: NSE:NIFTY2630325500CE
+      strike: 25500
+      option_type: CE
+      entry_price: 150.5
+      stop_loss: 120.0
+      target_1: 180.0
+      target_2: 200.0
+      confidence: 75
+      trading_mode: INTRADAY
+      dte: 0
+      signal_timestamp: 2026-01-30T02:34:49.158465+00:00
+      executed: True
+      execution_timestamp: 2026-01-30T03:34:50.204081+00:00
+      status: REJECTED
+      rejection_reason: FyersClient.place_order() got an unexpected keyword argument 'type'
+      created_at: 2026-01-30T02:34:49.158465+00:00
+
+
+================================================================================
+  3️⃣  PAPER TRADING POSITIONS
+================================================================================
+
+📊 PAPER_TRADING_POSITIONS
+   Total rows: 10
+   Showing first 10 rows:
+
+   Row 1:
+      id: 60b7fa67-5719-4a5a-b3f9-5ae6d76305c0
+      user_id: 4f1d1b44-7459-43fa-8aec-f9b9a0605c4b
+      signal_id: dca0cbe8-0eda-410f-b6b3-9ff02b187336
+      index: NIFTY
+      option_symbol: NSE:NIFTY2620325550CE
+      strike: 25550.0
+      option_type: CE
+      quantity: 65
+      entry_price: 139.3
+      entry_time: 2026-01-30T03:50:58.604045+00:00
+      exit_price: None
+      exit_time: None
+      exit_reason: None
+      stop_loss: 83.58
+      target_1: 195.02
+      target_2: 250.74
+      current_ltp: None
+      current_pnl: None
+      status: OPEN
+      pnl: None
+      pnl_pct: None
+      order_id: None
+      order_response: {
+      "s": "error",
+      "id": "26013000000273",
+      "code": -99,
+      "message": "RED:Margin Shortfall:INR 9,015.73 Available:INR 132.87 for C-XB06384 [FYERS_RISK_CUG]"
+}
+      created_at: 2026-01-30T02:50:58.719477+00:00
+      updated_at: 2026-01-30T02:50:58.719477+00:00
+
+   Row 2:
+      id: d2413a3c-1722-4731-8aee-350d003abca3
+      user_id: 4f1d1b44-7459-43fa-8aec-f9b9a0605c4b
+      signal_id: 0d5ab1eb-7157-4ebb-8bab-ba308f0f52a1
+      index: NIFTY
+      option_symbol: NSE:NIFTY2026020325550CE
+      strike: 25550.0
+      option_type: CE
+      quantity: 65
+      entry_price: 139.3
+      entry_time: 2026-01-30T03:49:13.915949+00:00
+      exit_price: None
+      exit_time: None
+      exit_reason: None
+      stop_loss: 83.58
+      target_1: 195.02
+      target_2: 250.74
+      current_ltp: None
+      current_pnl: None
+      status: OPEN
+      pnl: None
+      pnl_pct: None
+      order_id: None
+      order_response: {
+      "s": "error",
+      "code": -50,
+      "message": "The input symbol is invalid."
+}
+      created_at: 2026-01-30T02:49:14.037957+00:00
+      updated_at: 2026-01-30T02:49:14.037957+00:00
+
+   Row 3:
+      id: 0ee05c75-d77e-4902-b972-20c5ca8a71d3
+      user_id: 4f1d1b44-7459-43fa-8aec-f9b9a0605c4b
+      signal_id: 91307d14-0301-405b-b871-90e41ded3837
+      index: NIFTY
+      option_symbol: NSE:NIFTY2620325500CE
+      strike: 25500.0
+      option_type: CE
+      quantity: 65
+      entry_price: 145.5
+      entry_time: 2026-01-30T03:44:47.347508+00:00
+      exit_price: None
+      exit_time: None
+      exit_reason: None
+      stop_loss: 115.0
+      target_1: 175.0
+      target_2: 195.0
+      current_ltp: None
+      current_pnl: None
+      status: OPEN
+      pnl: None
+      pnl_pct: None
+      order_id: None
+      order_response: {
+      "s": "error",
+      "id": "26013000000234",
+      "code": -99,
+      "message": "RED:Margin Shortfall:INR 10,488.63 Available:INR 132.87 for C-XB06384 [FYERS_RISK_CUG]"
+}
+      created_at: 2026-01-30T02:44:47.453155+00:00
+      updated_at: 2026-01-30T02:44:47.453155+00:00
+
+   Row 4:
+      id: 4901dea9-2ae2-4469-82ba-c632a1390e82
+      user_id: 4f1d1b44-7459-43fa-8aec-f9b9a0605c4b
+      signal_id: 1e766154-131e-40b3-8cc0-a5419755d88d
+      index: NIFTY
+      option_symbol: NSE:NIFTY2620325500CE
+      strike: 25500.0
+      option_type: CE
+      quantity: 50
+      entry_price: 145.5
+      entry_time: 2026-01-30T03:43:56.495614+00:00
+      exit_price: None
+      exit_time: None
+      exit_reason: None
+      stop_loss: 115.0
+      target_1: 175.0
+      target_2: 195.0
+      current_ltp: None
+      current_pnl: None
+      status: OPEN
+      pnl: None
+      pnl_pct: None
+      order_id: None
+      order_response: {
+      "s": "error",
+      "code": -50,
+      "message": "50 not a multiple of minimum lot size 65"
+}
+      created_at: 2026-01-30T02:43:56.586534+00:00
+      updated_at: 2026-01-30T02:43:56.586534+00:00
+
+   Row 5:
+      id: 49fbef79-6216-4267-aa4c-51f84d51c8ff
+      user_id: 4f1d1b44-7459-43fa-8aec-f9b9a0605c4b
+      signal_id: 90b9f84f-26c2-4b58-8c93-9ff6c4386258
+      index: NIFTY
+      option_symbol: NSE:NIFTY26FEB0325500CE
+      strike: 25500.0
+      option_type: CE
+      quantity: 50
+      entry_price: 145.5
+      entry_time: 2026-01-30T03:43:25.407321+00:00
+      exit_price: None
+      exit_time: None
+      exit_reason: None
+      stop_loss: 115.0
+      target_1: 175.0
+      target_2: 195.0
+      current_ltp: None
+      current_pnl: None
+      status: OPEN
+      pnl: None
+      pnl_pct: None
+      order_id: None
+      order_response: {
+      "s": "error",
+      "code": -50,
+      "message": "The input symbol is invalid."
+}
+      created_at: 2026-01-30T02:43:25.495805+00:00
+      updated_at: 2026-01-30T02:43:25.495805+00:00
+
+   Row 6:
+      id: 0e7e006e-f69a-4407-b117-049a77a3c417
+      user_id: 4f1d1b44-7459-43fa-8aec-f9b9a0605c4b
+      signal_id: ca6359df-d627-4bac-879f-641af587912c
+      index: NIFTY
+      option_symbol: NSE:NIFTY2630325500CE
+      strike: 25500.0
+      option_type: CE
+      quantity: 50
+      entry_price: 150.5
+      entry_time: 2026-01-30T03:39:09.608564+00:00
+      exit_price: None
+      exit_time: None
+      exit_reason: None
+      stop_loss: 120.0
+      target_1: 180.0
+      target_2: 200.0
+      current_ltp: None
+      current_pnl: None
+      status: OPEN
+      pnl: None
+      pnl_pct: None
+      order_id: None
+      order_response: {
+      "s": "error",
+      "code": -50,
+      "message": "The input symbol is invalid."
+}
+      created_at: 2026-01-30T02:39:09.702439+00:00
+      updated_at: 2026-01-30T02:39:09.702439+00:00
+
+   Row 7:
+      id: 7995afca-bc54-4096-8fda-d73dd4283e77
+      user_id: 4f1d1b44-7459-43fa-8aec-f9b9a0605c4b
+      signal_id: 7bc32153-c9f7-4d0f-893b-4f22f1386162
+      index: NIFTY
+      option_symbol: NSE:NIFTY2630325500CE
+      strike: 25500.0
+      option_type: CE
+      quantity: 50
+      entry_price: 150.5
+      entry_time: 2026-01-30T03:38:46.697293+00:00
+      exit_price: None
+      exit_time: None
+      exit_reason: None
+      stop_loss: 120.0
+      target_1: 180.0
+      target_2: 200.0
+      current_ltp: None
+      current_pnl: None
+      status: OPEN
+      pnl: None
+      pnl_pct: None
+      order_id: None
+      order_response: {
+      "s": "error",
+      "code": -50,
+      "message": "The input symbol is invalid."
+}
+      created_at: 2026-01-30T02:38:46.793897+00:00
+      updated_at: 2026-01-30T02:38:46.793897+00:00
+
+   Row 8:
+      id: 746b3cde-b8b2-44fb-bed3-f172314c42e4
+      user_id: 4f1d1b44-7459-43fa-8aec-f9b9a0605c4b
+      signal_id: 14839f94-316c-455c-a1a3-a316ca2179fd
+      index: NIFTY
+      option_symbol: NSE:NIFTY2630325500CE
+      strike: 25500.0
+      option_type: CE
+      quantity: 50
+      entry_price: 150.5
+      entry_time: 2026-01-30T03:37:50.518026+00:00
+      exit_price: None
+      exit_time: None
+      exit_reason: None
+      stop_loss: 120.0
+      target_1: 180.0
+      target_2: 200.0
+      current_ltp: None
+      current_pnl: None
+      status: OPEN
+      pnl: None
+      pnl_pct: None
+      order_id: None
+      order_response: {}
+      created_at: 2026-01-30T02:37:50.601917+00:00
+      updated_at: 2026-01-30T02:37:50.601917+00:00
+
+   Row 9:
+      id: 7e38c2e6-cea5-4c9a-8213-ceaf07b49a73
+      user_id: 4f1d1b44-7459-43fa-8aec-f9b9a0605c4b
+      signal_id: c106f8d6-e41e-4186-aad5-203774e25200
+      index: NIFTY
+      option_symbol: NSE:NIFTY2630325500CE
+      strike: 25500.0
+      option_type: CE
+      quantity: 50
+      entry_price: 150.5
+      entry_time: 2026-01-30T03:35:23.366443+00:00
+      exit_price: None
+      exit_time: None
+      exit_reason: None
+      stop_loss: 120.0
+      target_1: 180.0
+      target_2: 200.0
+      current_ltp: None
+      current_pnl: None
+      status: OPEN
+      pnl: None
+      pnl_pct: None
+      order_id: None
+      order_response: {}
+      created_at: 2026-01-30T02:35:23.456979+00:00
+      updated_at: 2026-01-30T02:35:23.456979+00:00
+
+   Row 10:
+      id: d6d12a58-1f54-4cfc-a553-57f48c1e7e70
+      user_id: 4f1d1b44-7459-43fa-8aec-f9b9a0605c4b
+      signal_id: 88540fd4-1c08-40db-b662-188d80df10f4
+      index: NIFTY
+      option_symbol: NSE:NIFTY2630325500CE
+      strike: 25500.0
+      option_type: CE
+      quantity: 50
+      entry_price: 150.5
+      entry_time: 2026-01-30T03:34:49.827278+00:00
+      exit_price: None
+      exit_time: None
+      exit_reason: None
+      stop_loss: 120.0
+      target_1: 180.0
+      target_2: 200.0
+      current_ltp: None
+      current_pnl: None
+      status: OPEN
+      pnl: None
+      pnl_pct: None
+      order_id: None
+      order_response: {}
+      created_at: 2026-01-30T02:34:49.940868+00:00
+      updated_at: 2026-01-30T02:34:49.940868+00:00
+
+
+================================================================================
+  4️⃣  PAPER TRADING ACTIVITY LOG
+================================================================================
+
+📊 PAPER_TRADING_ACTIVITY_LOG
+   Total rows: 15
+   Showing first 10 rows:
+
+   Row 1:
+      id: 25dcece7-5b6f-47ad-8440-971a99e365d5
+      user_id: 4f1d1b44-7459-43fa-8aec-f9b9a0605c4b
+      position_id: None
+      activity_type: SIGNAL_GENERATED
+      details: {
+      "index": "SENSEX",
+      "signal": {
+            "entry": {
+                  "price": 50,
+                  "timing": "System error"
+            },
+            "action": "WAIT",
+            "option": {
+                  "type": "CE",
+                  "strike": 25000
+            },
+            "reason": "\u274c Fyers authentication required. Please authenticate at /auth/url to get live data. Error: 'lp'",
+            "signal": "ERROR",
+            "timing": "Check system",
+            "targets": {
+                  "target_1": 65,
+                  "target_2": 90,
+                  "stop_loss": 35
+            }
+      }
+}
+      timestamp: 2026-01-30T03:59:53.737912+00:00
+
+   Row 2:
+      id: e532b5ff-26b4-4d27-aa1b-030191631f3b
+      user_id: 4f1d1b44-7459-43fa-8aec-f9b9a0605c4b
+      position_id: None
+      activity_type: SIGNAL_GENERATED
+      details: {
+      "index": "BANKNIFTY",
+      "signal": {
+            "entry": {
+                  "price": 726.2,
+                  "timing": "Wait for clear setup",
+                  "trigger_level": 59957.85,
+                  "session_advice": "CLOSED session"
+            },
+            "action": "WAIT",
+            "greeks": {
+                  "vega": 62.2057,
+                  "delta": 0.4552,
+                  "gamma": 0.0002,
+                  "theta": -21.3679
+            },
+            "option": {
+                  "type": "CE",
+                  "strike": 60500,
+                  "symbol": "60500 CE",
+                  "expiry_date": "2026-02-24",
+                  "expiry_info": {
+                        "is_weekly": false,
+                        "days_to_expiry": 25,
+                        "time_to_expiry_years": 0.0685
+                  },
+                  "trading_symbol": "NSE:NIFTY2622460500CE"
+            },
+            "signal": "ICT_NEUTRAL_BIAS",
+            "pricing": {
+                  "ltp": 726.2,
+                  "iv_used": 13.37,
+                  "entry_price": 726.2,
+                  "price_source": "LIVE_CHAIN"
+            },
+            "targets": {
+                  "target_1": 1016.68,
+                  "target_2": 1307.16,
+                  "stop_loss": 435.72
+            },
+            "warnings": [],
+            "timestamp": "2026-01-30T03:59:52.787252",
+            "confidence": {
+                  "level": "AVOID",
+                  "score": 29.5
+            },
+            "index_data": {
+                  "vix": 13.37,
+                  "basis": 59.957849999991595,
+                  "atm_iv": 13.37,
+                  "pcr_oi": 1.16,
+                  "iv_skew": 0.0,
+                  "max_pain": 60000,
+                  "basis_pct": 0.09999999999998599,
+                  "atm_strike": 60000,
+                  "pcr_volume": 0.81,
+                  "spot_price": 59957.85,
+                  "future_price": 60017.80784999999,
+                  "futures_data": null,
+                  "total_put_oi": 5252760,
+                  "total_call_oi": 4534440,
+                  "support_levels": [
+                        59500,
+                        59000,
+                        58500
+                  ],
+                  "resistance_levels": [
+                        60000,
+                        60500,
+                        61000
+                  ]
+            },
+            "spot_price": 59957.85,
+            "risk_reward": {
+                  "ratio_1": "1:1.0",
+                  "ratio_2": "1:2.0",
+                  "risk_per_lot": 14524.0,
+                  "reward_1_per_lot": 14524.0,
+                  "reward_2_per_lot": 29048.0
+            },
+            "htf_analysis": {
+                  "strength": 30,
+                  "direction": "neutral",
+                  "key_zones_count": 0,
+                  "premium_discount": "equilibrium",
+                  "structure_quality": "LOW",
+                  "timeframe_breakdown": {}
+            },
+            "mtf_analysis": {
+                  "overall_bias": "neutral",
+                  "current_price": 59957.85,
+                  "trend_reversal": {
+                        "reason": "Conflicting biases: Monthly (bearish) vs Weekly (bullish) - market in transition",
+                        "direction": "UNCERTAIN_REVERSAL",
+                        "confidence": 40,
+                        "key_levels": [
+                              {
+                                    "low": 58121.6,
+                                    "high": 60437.35,
+                                    "timeframe": "M"
+                              },
+                              {
+                                    "low": 53561.75,
+                                    "high": 57628.4,
+                                    "timeframe": "W"
+                              },
+                              {
+                                    "low": 58864.2,
+                                    "high": 60235.15,
+                                    "timeframe": "D"
+                              }
+                        ],
+                        "is_reversal": true,
+                        "timeframes_signaling": []
+                  },
+                  "confluence_zones": [
+                        {
+                              "center": 55160.450000000004,
+                              "weight": 70.0,
+                              "timeframes": [
+                                    "D"
+                              ],
+                              "distance_pct": -8.001287571185415
+                        },
+                        {
+                              "center": 58833.53333333333,
+                              "weight": 30.0,
+                              "timeframes": [
+                                    "D"
+                              ],
+                              "distance_pct": -1.875178423953937
+                        },
+                        {
+                              "center": 60094.166666666664,
+                              "weight": 12.0,
+                              "timeframes": [
+                                    "W"
+                              ],
+                              "distance_pct": 0.22735416074236436
+                        }
+                  ],
+                  "timeframe_biases": {
+                        "D": {
+                              "bos": null,
+                              "bias": "bullish",
+                              "choch": null,
+                              "trend": "ranging",
+                              "ob_count": 5,
+                              "fvg_count": 2
+                        },
+                        "M": {
+                              "bos": null,
+                              "bias": "bearish",
+                              "choch": null,
+                              "trend": "ranging",
+                              "ob_count": 0,
+                              "fvg_count": 1
+                        },
+                        "W": {
+                              "bos": null,
+                              "bias": "bullish",
+                              "choch": null,
+                              "trend": "bullish",
+                              "ob_count": 3,
+                              "fvg_count": 1
+                        }
+                  },
+                  "timeframes_analyzed": [
+                        "M",
+                        "W",
+                        "D"
+                  ]
+            },
+            "trading_mode": {
+                  "dte": 25,
+                  "mode": "AUTO",
+                  "description": "SWING/POSITIONAL",
+                  "timeframe_focus": "D/4H/1H"
+            },
+            "ltf_entry_model": {
+                  "found": false,
+                  "timeframe": null,
+                  "confidence": 0,
+                  "entry_type": null,
+                  "entry_zone": null,
+                  "trigger_price": null,
+                  "alignment_score": 0,
+                  "momentum_confirmed": false
+            },
+            "is_reversal_play": false,
+            "confirmation_stack": {
+                  "constituents": {
+                        "direction": "bearish",
+                        "confidence": 0.3,
+                        "agrees_with_htf": false
+                  },
+                  "ml_prediction": {
+                        "direction": "neutral",
+                        "confidence": 100.0,
+                        "price_target": 59945.01,
+                        "agrees_with_htf": true
+                  },
+                  "futures_sentiment": {
+                        "available": false
+                  },
+                  "candlestick_patterns": {
+                        "aligned_patterns": 0,
+                        "confidence_level": "LOW",
+                        "confluence_score": 0
+                  }
+            },
+            "confidence_breakdown": {
+                  "level": "AVOID",
+                  "total": 29.5,
+                  "weights": {
+                        "ml": 15,
+                        "ict_total": 65,
+                        "candlestick": 10,
+                        "market_data": 10
+                  },
+                  "components": {
+                        "constituents": 1.0,
+                        "ml_alignment": 7.5,
+                        "futures_basis": 2.5,
+                        "ict_htf_structure": 14.5,
+                        "candlestick_patterns": 0.0,
+                        "ict_ltf_confirmation": 4.0
+                  }
+            },
+            "probability_analysis": {
+                  "confidence": 0.262,
+                  "top_movers": {
+                        "bearish": [
+                              {
+                                    "symbol": "KOTAKBANK",
+                                    "probability": 0.72
+                              },
+                              {
+                                    "symbol": "YESBANK",
+                                    "probability": 0.64
+                              }
+                        ],
+                        "bullish": [
+                              {
+                                    "symbol": "AXISBANK",
+                                    "probability": 0.76
+                              },
+                              {
+                                    "symbol": "UNIONBANK",
+                                    "probability": 0.72
+                              },
+                              {
+                                    "symbol": "FEDERALBNK",
+                                    "probability": 0.72
+                              }
+                        ],
+                        "volume_surge": [
+                              {
+                                    "symbol": "AXISBANK",
+                                    "has_surge": true
+                              },
+                              {
+                                    "symbol": "BANKBARODA",
+                                    "has_surge": true
+                              },
+                              {
+                                    "symbol": "CANBK",
+                                    "has_surge": true
+                              }
+                        ]
+                  },
+                  "bearish_pct": 50.0,
+                  "bullish_pct": 42.9,
+                  "total_stocks": 14,
+                  "market_regime": "Range Bound",
+                  "bearish_stocks": 7,
+                  "bullish_stocks": 6,
+                  "probability_up": 0.364,
+                  "stocks_scanned": 14,
+                  "probability_down": 0.622,
+                  "expected_move_pct": -0.07,
+                  "expected_direction": "BEARISH",
+                  "constituent_recommendation": "PUT"
+            },
+            "constituent_recommendation": "PUT"
+      }
+}
+      timestamp: 2026-01-30T03:59:52.789023+00:00
+
+   Row 3:
+      id: 61c61b5b-9d9a-4104-9fe1-36b337507b15
+      user_id: 4f1d1b44-7459-43fa-8aec-f9b9a0605c4b
+      position_id: None
+      activity_type: ERROR
+      details: {
+      "error": "",
+      "context": "Signal generation for NIFTY"
+}
+      timestamp: 2026-01-30T03:59:39.085364+00:00
+
+   Row 4:
+      id: 001a7c6c-de2d-4078-9f3e-5d9ec49d135e
+      user_id: 4f1d1b44-7459-43fa-8aec-f9b9a0605c4b
+      position_id: 60b7fa67-5719-4a5a-b3f9-5ae6d76305c0
+      activity_type: POSITION_OPENED
+      details: {
+      "position": {
+            "index": "NIFTY",
+            "status": "OPEN",
+            "strike": 25550.0,
+            "user_id": "4f1d1b44-7459-43fa-8aec-f9b9a0605c4b",
+            "quantity": 65,
+            "target_1": 195.02,
+            "target_2": 250.74,
+            "signal_id": "dca0cbe8-0eda-410f-b6b3-9ff02b187336",
+            "stop_loss": 83.58,
+            "entry_time": "2026-01-30T03:50:58.604045",
+            "entry_price": 139.3,
+            "option_type": "CE",
+            "option_symbol": "NSE:NIFTY2620325550CE",
+            "order_response": {
+                  "s": "error",
+                  "id": "26013000000273",
+                  "code": -99,
+                  "message": "RED:Margin Shortfall:INR 9,015.73 Available:INR 132.87 for C-XB06384 [FYERS_RISK_CUG]"
+            }
+      },
+      "rejection_reason": "RED:Margin Shortfall:INR 9,015.73 Available:INR 132.87 for C-XB06384 [FYERS_RISK_CUG]"
+}
+      timestamp: 2026-01-30T03:50:58.761715+00:00
+
+   Row 5:
+      id: 9a0cf56c-83a7-440f-9cf9-6a1761f66d55
+      user_id: 4f1d1b44-7459-43fa-8aec-f9b9a0605c4b
+      position_id: None
+      activity_type: ORDER_PLACED
+      details: {
+      "action": "BUY",
+      "expected": "REJECTED (\u20b90 balance)",
+      "quantity": 65,
+      "signal_id": "dca0cbe8-0eda-410f-b6b3-9ff02b187336",
+      "order_response": {
+            "s": "error",
+            "id": "26013000000273",
+            "code": -99,
+            "message": "RED:Margin Shortfall:INR 9,015.73 Available:INR 132.87 for C-XB06384 [FYERS_RISK_CUG]"
+      },
+      "rejection_reason": "RED:Margin Shortfall:INR 9,015.73 Available:INR 132.87 for C-XB06384 [FYERS_RISK_CUG]"
+}
+      timestamp: 2026-01-30T03:50:58.448063+00:00
+
+   Row 6:
+      id: f07da79f-88af-4cdd-bace-33b590d6306b
+      user_id: 4f1d1b44-7459-43fa-8aec-f9b9a0605c4b
+      position_id: d2413a3c-1722-4731-8aee-350d003abca3
+      activity_type: POSITION_OPENED
+      details: {
+      "position": {
+            "index": "NIFTY",
+            "status": "OPEN",
+            "strike": 25550.0,
+            "user_id": "4f1d1b44-7459-43fa-8aec-f9b9a0605c4b",
+            "quantity": 65,
+            "target_1": 195.02,
+            "target_2": 250.74,
+            "signal_id": "0d5ab1eb-7157-4ebb-8bab-ba308f0f52a1",
+            "stop_loss": 83.58,
+            "entry_time": "2026-01-30T03:49:13.915949",
+            "entry_price": 139.3,
+            "option_type": "CE",
+            "option_symbol": "NSE:NIFTY2026020325550CE",
+            "order_response": {
+                  "s": "error",
+                  "code": -50,
+                  "message": "The input symbol is invalid."
+            }
+      },
+      "rejection_reason": "The input symbol is invalid."
+}
+      timestamp: 2026-01-30T03:49:14.085919+00:00
+
+   Row 7:
+      id: 3d536f56-4150-4e30-bd08-ce703885377a
+      user_id: 4f1d1b44-7459-43fa-8aec-f9b9a0605c4b
+      position_id: None
+      activity_type: ORDER_PLACED
+      details: {
+      "action": "BUY",
+      "expected": "REJECTED (\u20b90 balance)",
+      "quantity": 65,
+      "signal_id": "0d5ab1eb-7157-4ebb-8bab-ba308f0f52a1",
+      "order_response": {
+            "s": "error",
+            "code": -50,
+            "message": "The input symbol is invalid."
+      },
+      "rejection_reason": "The input symbol is invalid."
+}
+      timestamp: 2026-01-30T03:49:13.745768+00:00
+
+   Row 8:
+      id: 3d85becf-2652-46f3-90be-67ae3208682d
+      user_id: 4f1d1b44-7459-43fa-8aec-f9b9a0605c4b
+      position_id: 0ee05c75-d77e-4902-b972-20c5ca8a71d3
+      activity_type: POSITION_OPENED
+      details: {
+      "position": {
+            "index": "NIFTY",
+            "status": "OPEN",
+            "strike": 25500.0,
+            "user_id": "4f1d1b44-7459-43fa-8aec-f9b9a0605c4b",
+            "quantity": 65,
+            "target_1": 175.0,
+            "target_2": 195.0,
+            "signal_id": "91307d14-0301-405b-b871-90e41ded3837",
+            "stop_loss": 115.0,
+            "entry_time": "2026-01-30T03:44:47.347508",
+            "entry_price": 145.5,
+            "option_type": "CE",
+            "option_symbol": "NSE:NIFTY2620325500CE",
+            "order_response": {
+                  "s": "error",
+                  "id": "26013000000234",
+                  "code": -99,
+                  "message": "RED:Margin Shortfall:INR 10,488.63 Available:INR 132.87 for C-XB06384 [FYERS_RISK_CUG]"
+            }
+      },
+      "rejection_reason": "RED:Margin Shortfall:INR 10,488.63 Available:INR 132.87 for C-XB06384 [FYERS_RISK_CUG]"
+}
+      timestamp: 2026-01-30T03:44:47.533728+00:00
+
+   Row 9:
+      id: f25aba86-3953-47e6-ac29-c7cd64fe1049
+      user_id: 4f1d1b44-7459-43fa-8aec-f9b9a0605c4b
+      position_id: None
+      activity_type: ORDER_PLACED
+      details: {
+      "action": "BUY",
+      "expected": "REJECTED (\u20b90 balance)",
+      "quantity": 65,
+      "signal_id": "91307d14-0301-405b-b871-90e41ded3837",
+      "order_response": {
+            "s": "error",
+            "id": "26013000000234",
+            "code": -99,
+            "message": "RED:Margin Shortfall:INR 10,488.63 Available:INR 132.87 for C-XB06384 [FYERS_RISK_CUG]"
+      },
+      "rejection_reason": "RED:Margin Shortfall:INR 10,488.63 Available:INR 132.87 for C-XB06384 [FYERS_RISK_CUG]"
+}
+      timestamp: 2026-01-30T03:44:47.166876+00:00
+
+   Row 10:
+      id: 3757b967-0920-4684-82b6-2294ce299292
+      user_id: 4f1d1b44-7459-43fa-8aec-f9b9a0605c4b
+      position_id: 4901dea9-2ae2-4469-82ba-c632a1390e82
+      activity_type: POSITION_OPENED
+      details: {
+      "position": {
+            "index": "NIFTY",
+            "status": "OPEN",
+            "strike": 25500.0,
+            "user_id": "4f1d1b44-7459-43fa-8aec-f9b9a0605c4b",
+            "quantity": 50,
+            "target_1": 175.0,
+            "target_2": 195.0,
+            "signal_id": "1e766154-131e-40b3-8cc0-a5419755d88d",
+            "stop_loss": 115.0,
+            "entry_time": "2026-01-30T03:43:56.495614",
+            "entry_price": 145.5,
+            "option_type": "CE",
+            "option_symbol": "NSE:NIFTY2620325500CE",
+            "order_response": {
+                  "s": "error",
+                  "code": -50,
+                  "message": "50 not a multiple of minimum lot size 65"
+            }
+      },
+      "rejection_reason": "50 not a multiple of minimum lot size 65"
+}
+      timestamp: 2026-01-30T03:43:56.666508+00:00
+
+
+================================================================================
+  5️⃣  PAPER TRADING PERFORMANCE
+================================================================================
+
+📊 PAPER_TRADING_PERFORMANCE
+   Total rows: 0
+   ⚠️  No data found
+
+================================================================================
+  📈 SUMMARY STATISTICS
+================================================================================
+
+   Positions:
+      Total: 12
+      Open: 12
+      Closed: 0
+
+   Signals:
+      Total: 13
+      Executed: 0
+      Pending: 1
+
+   Signal Types:
+      BUY CALL: 11
+      BUY_CALL: 2
+
+   Activities:
+      Total: 30
+      ORDER_PLACED: 12
+      POSITION_OPENED: 12
+      ERROR: 4
+      SIGNAL_GENERATED: 2
+
+================================================================================
+  ✅ DATABASE SCAN COMPLETE
+================================================================================

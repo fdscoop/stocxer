@@ -12,7 +12,8 @@ const navigation = [
   { name: 'Stock Screener', href: '/screener', icon: '🔍' },
   { name: 'Index Analyzer', href: '/analyzer', icon: '📈' },
   { name: 'Options Scanner', href: '/options', icon: '🎯' },
-  { name: 'AI Integration', href: '/mcp', icon: '🤖' },
+  { name: 'Paper Trading', href: '/paper-trading', icon: '🤖' },
+  { name: 'AI Integration', href: '/mcp', icon: '🧠' },
   { name: 'Subscription', href: '/subscription', icon: '⭐' },
   { name: 'Billing & Credits', href: '/billing', icon: '💳' },
 ]

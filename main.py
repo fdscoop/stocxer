@@ -2338,6 +2338,7 @@ async def get_actionable_trading_signal(
         
         # Get option chain data (using index name from symbol)
         index_name = symbol.split(':')[1].replace('NIFTY50', 'NIFTY').replace('NIFTYBANK', 'BANKNIFTY').replace('-INDEX', '')
+        logger.info(f"📊 Extracted index name for option chain: {index_name}")
         
         chain_data = None
         index_data = None  # Store index-specific data for UI
@@ -2576,7 +2577,8 @@ async def get_actionable_trading_signal(
                 chain_data=chain_data,
                 historical_prices=historical_prices,
                 probability_analysis=probability_analysis,
-                use_new_flow=True  # 🚀 NEW ICT-FIRST FLOW ENABLED!
+                use_new_flow=True,  # 🚀 NEW ICT-FIRST FLOW ENABLED!
+                index=index_name  # Pass the extracted index name (NIFTY, BANKNIFTY, etc.)
             )
             
             # Verify NEW flow actually ran by checking for its unique fields
@@ -2764,7 +2766,7 @@ def _estimate_option_price(spot_price: float, strike: float, action: str, chain_
 
 
 
-def _generate_actionable_signal_topdown(mtf_result, session_info, chain_data, historical_prices=None, probability_analysis=None, use_new_flow=True):
+def _generate_actionable_signal_topdown(mtf_result, session_info, chain_data, historical_prices=None, probability_analysis=None, use_new_flow=True, index="NIFTY"):
     """
     Generate trading signal using ICT top-down methodology
     
@@ -3267,7 +3269,19 @@ def _generate_actionable_signal_topdown(mtf_result, session_info, chain_data, hi
     signal_type = f"ICT_{trade_direction.upper()}_{'REVERSAL' if is_reversal_play else ltf_entry.entry_type if ltf_entry else 'BIAS'}"
     expiry_date_str = expiry_date if isinstance(expiry_date, str) else expiry_date.strftime("%Y-%m-%d")
     option_suffix = "CE" if option_type == "call" else "PE"
-    full_symbol = f"NIFTY{expiry_date_str.replace('-', '')}{strike}{option_suffix}"
+    
+    # Determine if monthly expiry based on DTE
+    # BANKNIFTY, SENSEX typically use monthly format for longer expiries
+    is_monthly_expiry = dte > 7  # If DTE > 7, likely monthly
+    
+    # Use build_fyers_option_symbol for correct format
+    full_symbol = build_fyers_option_symbol(
+        index=index,  # Use actual index parameter instead of hardcoded "NIFTY"
+        expiry_date=expiry_date_str,
+        strike=strike,
+        option_type="CALL" if option_type == "call" else "PUT",
+        is_monthly=is_monthly_expiry  # Use monthly format for longer expiries
+    )
     
     return {
         "signal": signal_type,
@@ -8150,6 +8164,244 @@ async def quick_index_analysis(index_name: str):
     except Exception as e:
         logger.error(f"Quick analysis error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+
+# ==================== PAPER TRADING ENDPOINTS ====================
+
+from src.services.paper_trading_service import paper_trading_service
+
+@app.get("/api/paper-trading/config")
+async def get_paper_trading_config(
+    authorization: str = Header(None, description="Bearer token")
+):
+    """Get user's paper trading configuration"""
+    if not authorization:
+        raise HTTPException(status_code=401, detail="Authorization required")
+    
+    token = authorization.replace("Bearer ", "")
+    user = await auth_service.get_current_user(token)
+    
+    config = await paper_trading_service.get_user_config(str(user.id))
+    
+    if not config:
+        # Return default config
+        return {
+            "enabled": False,
+            "indices": ["NIFTY"],
+            "scan_interval_minutes": 5,
+            "max_positions": 3,
+            "capital_per_trade": 10000,
+            "trading_mode": "intraday",
+            "min_confidence": 65
+        }
+    
+    return config
+
+
+@app.post("/api/paper-trading/config")
+async def save_paper_trading_config(
+    config: Dict,
+    authorization: str = Header(None, description="Bearer token")
+):
+    """Save or update paper trading configuration"""
+    if not authorization:
+        raise HTTPException(status_code=401, detail="Authorization required")
+    
+    token = authorization.replace("Bearer ", "")
+    user = await auth_service.get_current_user(token)
+    
+    result = await paper_trading_service.save_user_config(str(user.id), config)
+    return result
+
+
+@app.post("/api/paper-trading/start")
+async def start_paper_trading(
+    authorization: str = Header(None, description="Bearer token")
+):
+    """Start automated paper trading"""
+    if not authorization:
+        raise HTTPException(status_code=401, detail="Authorization required")
+    
+    token = authorization.replace("Bearer ", "")
+    user = await auth_service.get_current_user(token)
+    
+    result = await paper_trading_service.start_automated_trading(str(user.id))
+    return result
+
+
+@app.post("/api/paper-trading/stop")
+async def stop_paper_trading(
+    authorization: str = Header(None, description="Bearer token")
+):
+    """Stop automated paper trading"""
+    if not authorization:
+        raise HTTPException(status_code=401, detail="Authorization required")
+    
+    token = authorization.replace("Bearer ", "")
+    user = await auth_service.get_current_user(token)
+    
+    result = await paper_trading_service.stop_automated_trading(str(user.id))
+    return result
+
+
+@app.get("/api/paper-trading/positions")
+async def get_paper_trading_positions(
+    status: str = Query("OPEN", description="OPEN, CLOSED, or ALL"),
+    authorization: str = Header(None, description="Bearer token")
+):
+    """Get paper trading positions"""
+    if not authorization:
+        raise HTTPException(status_code=401, detail="Authorization required")
+    
+    token = authorization.replace("Bearer ", "")
+    user = await auth_service.get_current_user(token)
+    
+    query = paper_trading_service.supabase.table("paper_trading_positions")\
+        .select("*")\
+        .eq("user_id", str(user.id))
+    
+    if status != "ALL":
+        query = query.eq("status", status)
+    
+    response = query.order("created_at", desc=True).execute()
+    
+    return {
+        "status": "success",
+        "positions": response.data if response.data else []
+    }
+
+
+@app.get("/api/paper-trading/signals")
+async def get_paper_trading_signals(
+    limit: int = Query(50, description="Number of signals to retrieve"),
+    authorization: str = Header(None, description="Bearer token")
+):
+    """Get paper trading signals"""
+    if not authorization:
+        raise HTTPException(status_code=401, detail="Authorization required")
+    
+    token = authorization.replace("Bearer ", "")
+    user = await auth_service.get_current_user(token)
+    
+    response = paper_trading_service.supabase.table("paper_trading_signals")\
+        .select("*")\
+        .eq("user_id", str(user.id))\
+        .order("signal_timestamp", desc=True)\
+        .limit(limit)\
+        .execute()
+    
+    return {
+        "status": "success",
+        "signals": response.data if response.data else []
+    }
+
+
+@app.get("/api/paper-trading/performance")
+async def get_paper_trading_performance(
+    days: int = Query(7, description="Number of days to retrieve"),
+    authorization: str = Header(None, description="Bearer token")
+):
+    """Get paper trading performance summary"""
+    if not authorization:
+        raise HTTPException(status_code=401, detail="Authorization required")
+    
+    token = authorization.replace("Bearer ", "")
+    user = await auth_service.get_current_user(token)
+    
+    start_date = (datetime.now() - timedelta(days=days)).date()
+    
+    response = paper_trading_service.supabase.table("paper_trading_performance")\
+        .select("*")\
+        .eq("user_id", str(user.id))\
+        .gte("date", start_date.isoformat())\
+        .order("date", desc=True)\
+        .execute()
+    
+    return {
+        "status": "success",
+        "performance": response.data if response.data else []
+    }
+
+
+@app.get("/api/paper-trading/activity")
+async def get_paper_trading_activity(
+    limit: int = Query(50, description="Number of activities to retrieve"),
+    authorization: str = Header(None, description="Bearer token")
+):
+    """Get paper trading activity log"""
+    if not authorization:
+        raise HTTPException(status_code=401, detail="Authorization required")
+    
+    token = authorization.replace("Bearer ", "")
+    user = await auth_service.get_current_user(token)
+    
+    response = paper_trading_service.supabase.table("paper_trading_activity_log")\
+        .select("*")\
+        .eq("user_id", str(user.id))\
+        .order("timestamp", desc=True)\
+        .limit(limit)\
+        .execute()
+    
+    return {
+        "status": "success",
+        "activity": response.data if response.data else []
+    }
+
+
+@app.post("/api/paper-trading/positions/{position_id}/close")
+async def close_paper_trading_position(
+    position_id: str,
+    authorization: str = Header(None, description="Bearer token")
+):
+    """Manually close a paper trading position"""
+    if not authorization:
+        raise HTTPException(status_code=401, detail="Authorization required")
+    
+    token = authorization.replace("Bearer ", "")
+    user = await auth_service.get_current_user(token)
+    
+    result = await paper_trading_service.close_position_manually(str(user.id), position_id)
+    return result
+
+
+@app.get("/api/paper-trading/status")
+async def get_paper_trading_status(
+    authorization: str = Header(None, description="Bearer token")
+):
+    """Get current paper trading status"""
+    if not authorization:
+        raise HTTPException(status_code=401, detail="Authorization required")
+    
+    token = authorization.replace("Bearer ", "")
+    user = await auth_service.get_current_user(token)
+    
+    # Get config
+    config = await paper_trading_service.get_user_config(str(user.id))
+    
+    # Check if scanner is running
+    is_running = str(user.id) in paper_trading_service.active_scanners
+    
+    # Get open positions count
+    open_positions_count = await paper_trading_service._count_open_positions(str(user.id))
+    
+    # Get today's performance
+    today = datetime.now().date()
+    perf_response = paper_trading_service.supabase.table("paper_trading_performance")\
+        .select("*")\
+        .eq("user_id", str(user.id))\
+        .eq("date", today.isoformat())\
+        .execute()
+    
+    today_performance = perf_response.data[0] if perf_response.data else None
+    
+    return {
+        "status": "success",
+        "config": config,
+        "is_running": is_running,
+        "open_positions": open_positions_count,
+        "market_open": is_market_open(),
+        "today_performance": today_performance
+    }
 
 
 if __name__ == "__main__":

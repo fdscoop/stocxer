@@ -24,7 +24,6 @@ import Link from 'next/link'
 import { getApiUrl, clearAuthData } from '@/lib/api'
 import { checkDailySessionReset, signOut } from '@/lib/supabase'
 import { BeginnerSignalCard } from '@/components/trading/beginner-signal-card'
-import { SignalViewToggle } from '@/components/trading/signal-view-toggle'
 
 // Types for scan results
 interface ProbabilityAnalysis {
@@ -343,7 +342,6 @@ export default function DashboardPage() {
   const [news, setNews] = React.useState<NewsArticle[]>([])
   const [loadingNews, setLoadingNews] = React.useState(false)
   const [analysisMode, setAnalysisMode] = React.useState('auto')
-  const [signalViewMode, setSignalViewMode] = React.useState<'beginner' | 'advanced'>('beginner')
 
   // Calculate trading signal from scan results with improved entry analysis
   const calculateTradingSignal = (data: ScanResults): TradingSignal | null => {
@@ -1370,12 +1368,6 @@ export default function DashboardPage() {
         {/* ============ TRADING SIGNAL CARD - Like Old Dashboard ============ */}
         {tradingSignal && scanResults && (
           <Card className="border-2 border-primary/50 bg-gradient-to-br from-primary/5 to-purple-500/5">
-            <CardHeader className="pb-0">
-              <SignalViewToggle
-                viewMode={signalViewMode}
-                onViewChange={setSignalViewMode}
-              />
-            </CardHeader>
             <CardHeader className="pb-3">
               <div className="flex flex-col md:flex-row md:items-center justify-between gap-2">
                 <CardTitle className="flex items-center gap-2 text-base md:text-lg">
@@ -1405,15 +1397,7 @@ export default function DashboardPage() {
               </div>
             </CardHeader>
             <CardContent className="space-y-4">
-              {/* Beginner View */}
-              {signalViewMode === 'beginner' && (
-                <BeginnerSignalCard signal={tradingSignal} />
-              )}
-
-              {/* Advanced View */}
-              {signalViewMode === 'advanced' && (
-                <>
-                  {/* WAIT/AVOID Warning if applicable */}
+              {/* WAIT/AVOID Warning if applicable */}
                   {(tradingSignal.action.includes('WAIT') || tradingSignal.action.includes('AVOID')) && (
                     <div className={`p-3 rounded-lg border ${tradingSignal.action.includes('AVOID')
                       ? 'bg-red-500/10 border-red-500/30'
@@ -2146,8 +2130,6 @@ export default function DashboardPage() {
                       </div>
                     </div>
                   )}
-                </>
-              )}
             </CardContent>
           </Card>
         )}
