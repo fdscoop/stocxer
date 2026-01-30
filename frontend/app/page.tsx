@@ -2025,7 +2025,7 @@ export default function DashboardPage() {
                         <div className="text-xs text-green-400 mb-1">🐂 Top Bullish</div>
                         {tradingSignal.probability_analysis.top_movers.bullish?.slice(0, 3).map((stock, idx) => (
                           <div key={idx} className="text-xs text-muted-foreground">
-                            {stock.symbol}: {(stock.probability * 100).toFixed(0)}%
+                            {stock.symbol}: {stock.probability.toFixed(0)}%
                           </div>
                         ))}
                       </div>
@@ -2033,7 +2033,7 @@ export default function DashboardPage() {
                         <div className="text-xs text-red-400 mb-1">🐻 Top Bearish</div>
                         {tradingSignal.probability_analysis.top_movers.bearish?.slice(0, 3).map((stock, idx) => (
                           <div key={idx} className="text-xs text-muted-foreground">
-                            {stock.symbol}: {(stock.probability * 100).toFixed(0)}%
+                            {stock.symbol}: {stock.probability.toFixed(0)}%
                           </div>
                         ))}
                       </div>
