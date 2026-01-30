@@ -13,18 +13,18 @@ export function getApiUrl(): string {
   if (hostname === 'localhost' || hostname === '127.0.0.1') {
     // Local development
     return 'http://localhost:8000'
-  } else if (hostname.includes('onrender.com')) {
-    // Render deployment - API is on same origin
-    return window.location.origin
   } else if (hostname === 'stocxer.in' || hostname === 'www.stocxer.in' || hostname.includes('stocxer')) {
-    // Custom domain - use direct Render API URL
-    return 'https://stocxer-ai.onrender.com'
+    // Production - use Google Cloud Run backend
+    return 'https://stocxer-484044910258.europe-west1.run.app'
   } else if (hostname.includes('vercel.app')) {
-    // Vercel deployment - use configured API or Render
-    return process.env.NEXT_PUBLIC_API_URL || 'https://stocxer-ai.onrender.com'
+    // Vercel deployment - use Google Cloud Run
+    return process.env.NEXT_PUBLIC_API_URL || 'https://stocxer-484044910258.europe-west1.run.app'
+  } else if (hostname.includes('onrender.com')) {
+    // Old Render deployment fallback
+    return 'https://stocxer-484044910258.europe-west1.run.app'
   } else {
-    // Fallback - use Render API
-    return 'https://stocxer-ai.onrender.com'
+    // Fallback - use Google Cloud Run
+    return 'https://stocxer-484044910258.europe-west1.run.app'
   }
 }
 
