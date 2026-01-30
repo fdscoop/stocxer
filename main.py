@@ -5941,20 +5941,33 @@ async def scan_options(
     min_volume: int = Query(1000, description="Minimum volume filter"),
     min_oi: int = Query(10000, description="Minimum Open Interest filter"),
     strategy: str = Query("all", description="all, momentum, reversal, volatility"),
-    include_probability: bool = Query(True, description="Include constituent stock probability analysis"),
+    quick_scan: bool = Query(True, description="Quick scan mode (faster, skips 50-stock analysis). Set to False for full analysis."),
+    include_probability: bool = Query(True, description="Include constituent stock probability analysis (only applies if quick_scan=False)"),
     analysis_mode: str = Query("auto", description="Analysis mode: 'intraday', 'longterm', or 'auto' (default)"),
     authorization: str = Header(None, description="Bearer token (required)"),
     token_validation: dict = None,
 ):
     """
-    Scan index options for trading opportunities with integrated probability analysis
+    Scan index options for trading opportunities with optional deep analysis
     
-    This endpoint now COMBINES:
-    1. Option chain scanning (volume, OI, IV, Greeks)
-    2. Index probability analysis (scans ALL constituent stocks)
+    SCAN MODES:
+    -----------
+    🚀 Quick Scan (default, quick_scan=True):
+       - Fast results in 5-10 seconds
+       - Analyzes option chain only (OI, volume, IV, Greeks)
+       - 10-20 API calls (low rate limit risk)
+       - Perfect for: Intraday trading, frequent monitoring
     
-    For NIFTY: Scans all 50 constituent stocks to predict index direction
-    For BANKNIFTY: Scans all 14 bank stocks
+    🎯 Full Analysis (quick_scan=False):
+       - Comprehensive analysis in 40-60 seconds
+       - Includes ALL constituent stocks (50 for NIFTY, 14 for BANKNIFTY)
+       - 100-150 API calls (may hit rate limits)
+       - Perfect for: Position trading, daily deep analysis
+    
+    This endpoint provides:
+    1. MTF/ICT Analysis on index chart (always included)
+    2. Option chain scanning (volume, OI, IV, Greeks)
+    3. Constituent stock probability analysis (only in full mode)
     
     Args:
         index: Index to scan (NIFTY, BANKNIFTY, FINNIFTY, MIDCPNIFTY, SENSEX, BANKEX)
@@ -5962,11 +5975,12 @@ async def scan_options(
         min_volume: Minimum volume threshold
         min_oi: Minimum Open Interest threshold
         strategy: Filter by strategy type (all, momentum, reversal, volatility)
-        include_probability: Include constituent stock probability analysis (default: True)
+        quick_scan: True (fast, option chain only) or False (full analysis with stocks)
+        include_probability: Include constituent stock analysis (only if quick_scan=False)
         authorization: Auth token (required)
         
     Returns:
-        Filtered and scored options with trading recommendations + index probability analysis
+        Filtered and scored options with trading recommendations
     """
     try:
         # Authenticate user first
@@ -5999,7 +6013,9 @@ async def scan_options(
             logger.warning(f"Could not load Fyers token: {token_error}")
             fyers_client.access_token = None
         
-        logger.info(f"Options scanner requested by {user.email}: {index}/{expiry}, min_vol={min_volume}, min_oi={min_oi}, strategy={strategy}")
+        # Log scan mode for monitoring
+        scan_mode = "QUICK" if quick_scan else "FULL"
+        logger.info(f"Options scanner requested by {user.email}: {index}/{expiry} [{scan_mode} MODE], min_vol={min_volume}, min_oi={min_oi}, strategy={strategy}")
         
         # ==================== MTF/ICT ANALYSIS ON INDEX =====================
         # Analyze INDEX chart with multi-timeframe ICT analysis
@@ -6105,13 +6121,16 @@ async def scan_options(
         # ====================================================================
         
         # ==================== INDEX PROBABILITY ANALYSIS ====================
-        # Scan ALL constituent stocks to predict index direction
+        # 🚀 QUICK SCAN MODE: Skip the 50-stock analysis (saves 90% of API calls)
+        # 🎯 FULL MODE: Scan ALL constituent stocks to predict index direction
         probability_analysis = None
         recommended_option_type = None
         
-        if include_probability and INDEX_ANALYSIS_AVAILABLE:
+        # Only run expensive 50-stock analysis if NOT in quick_scan mode
+        if not quick_scan and include_probability and INDEX_ANALYSIS_AVAILABLE:
             try:
-                logger.info(f"📊 Starting constituent stock analysis for {index} (mode: {analysis_mode})...")
+                logger.info(f"📊 FULL MODE: Starting constituent stock analysis for {index} (mode: {analysis_mode})...")
+                logger.info(f"⚠️ This will scan ~50 stocks and may take 40-60 seconds")
                 prob_analyzer = get_probability_analyzer(fyers_client, analysis_mode=analysis_mode)
                 prediction = prob_analyzer.analyze_index(index.upper())
                 
@@ -6189,8 +6208,21 @@ async def scan_options(
                     logger.info(f"📈 Recommended: {recommended_option_type} options")
                     
             except Exception as prob_error:
-                logger.warning(f"⚠️ Probability analysis failed: {prob_error}")
+                logger.warning(f"⚠️ Constituent stock analysis failed: {prob_error}")
                 probability_analysis = {"error": str(prob_error)}
+        elif quick_scan:
+            logger.info(f"🚀 QUICK SCAN MODE: Skipping 50-stock analysis (use quick_scan=false for full analysis)")
+            # In quick mode, only use MTF bias for direction
+            if mtf_bias:
+                if mtf_bias == "bullish":
+                    recommended_option_type = "CALL"
+                elif mtf_bias == "bearish":
+                    recommended_option_type = "PUT"
+                else:
+                    recommended_option_type = "STRADDLE"
+                logger.info(f"   Using MTF bias only: {mtf_bias.upper()} → {recommended_option_type}")
+        else:
+            logger.info(f"⚠️ Probability analysis disabled (INDEX_ANALYSIS_AVAILABLE={INDEX_ANALYSIS_AVAILABLE})")
         # ====================================================================
         
         # Get option chain data - FAIL if no live data available
@@ -6396,6 +6428,13 @@ async def scan_options(
                 "min_volume": min_volume,
                 "min_oi": min_oi,
                 "strategy": strategy
+            },
+            "scan_mode": "quick" if quick_scan else "full",
+            "scan_performance": {
+                "quick_scan": quick_scan,
+                "stocks_analyzed": 0 if quick_scan else (50 if index.upper() in ["NIFTY", "NIFTY50"] else 14 if index.upper() == "BANKNIFTY" else 0),
+                "estimated_api_calls": "10-20" if quick_scan else "100-150",
+                "estimated_time": "5-10 seconds" if quick_scan else "40-60 seconds"
             },
             "market_data": {
                 "spot_price": chain.spot_price,
