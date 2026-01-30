@@ -477,27 +477,47 @@ def calculate_premium_discount_zones(
 
 def determine_htf_bias(
     analyses_by_timeframe: Dict[str, Dict],
-    current_price: float
+    current_price: float,
+    trading_mode: str = "auto"
 ) -> HTFBias:
     """
     Establish directional bias from higher timeframes
-    Priority order: Monthly > Weekly > Daily > 4H
+    Priority order adjusts based on trading mode:
+    - LONGTERM: Monthly > Weekly > Daily > 4H
+    - INTRADAY: Daily > 4H > 1H (ignores Monthly/Weekly)
     
     Args:
         analyses_by_timeframe: Dict mapping timeframe to ICT analysis results
             Keys: 'M', 'W', 'D', '240' (4H)
             Values: Dict with 'trend', 'fvgs', 'order_blocks', etc.
         current_price: Current market price
+        trading_mode: 'intraday', 'longterm', or 'auto'
         
     Returns:
         HTFBias with overall direction and key zones
     """
     logger.info("=" * 60)
     logger.info("🎯 DETERMINING HTF BIAS")
+    logger.info(f"   Trading Mode: {trading_mode.upper()}")
     logger.info("=" * 60)
     
-    # Timeframe priority (higher = more important)
-    tf_priority = {'M': 4, 'W': 3, 'D': 2, '240': 1, '4H': 1}
+    # CRITICAL FIX: Adjust timeframe priority based on trading mode
+    # For INTRADAY: Ignore Monthly/Weekly, prioritize 4H and 1H
+    if trading_mode.lower() == "intraday":
+        # Intraday: Daily provides context, 4H/1H provide direction
+        tf_priority = {'D': 1, '240': 3, '4H': 3, '60': 2, '1H': 2}  # 4H > 1H > Daily
+        timeframes_to_analyze = ['D', '240', '4H', '60', '1H']
+        logger.info("   📊 Using INTRADAY weights: 4H (3) > 1H (2) > D (1)")
+    elif trading_mode.lower() == "longterm":
+        # Long-term: Full HTF analysis
+        tf_priority = {'M': 4, 'W': 3, 'D': 2, '240': 1, '4H': 1}
+        timeframes_to_analyze = ['M', 'W', 'D', '240', '4H']
+        logger.info("   📊 Using LONGTERM weights: M (4) > W (3) > D (2) > 4H (1)")
+    else:
+        # Auto: Default to balanced
+        tf_priority = {'M': 4, 'W': 3, 'D': 2, '240': 1, '4H': 1}
+        timeframes_to_analyze = ['M', 'W', 'D', '240', '4H']
+        logger.info("   📊 Using AUTO weights (balanced)")
     
     # Collect trends from each timeframe
     trends = {}
@@ -507,7 +527,7 @@ def determine_htf_bias(
     swing_high = current_price
     swing_low = current_price
     
-    for tf in ['M', 'W', 'D', '240', '4H']:
+    for tf in timeframes_to_analyze:
         if tf not in analyses_by_timeframe:
             continue
             
@@ -710,12 +730,15 @@ def identify_ltf_entry_model(
 
 def analyze_multi_timeframe_ict_topdown(
     candles_by_timeframe: Dict[str, pd.DataFrame],
-    current_price: float
+    current_price: float,
+    trading_mode: str = "auto"
 ) -> Dict:
     """
     Complete top-down ICT analysis
     
-    Phase 1: HTF Bias (Monthly > Weekly > Daily > 4H)
+    Phase 1: HTF Bias 
+        - LONGTERM: (Monthly > Weekly > Daily > 4H)
+        - INTRADAY: (Daily > 4H > 1H) - ignores Monthly/Weekly
     Phase 2: LTF Entry (1H > 15m > 5m > 3m)
     
     Args:
@@ -723,19 +746,29 @@ def analyze_multi_timeframe_ict_topdown(
             HTF: Keys like 'M', 'W', 'D', '240'
             LTF: Keys like '60', '15', '5', '3'
         current_price: Current market price
+        trading_mode: 'intraday', 'longterm', or 'auto'
         
     Returns:
         Dict with complete top-down analysis
     """
     logger.info("\n" + "=" * 60)
     logger.info("🚀 ICT TOP-DOWN ANALYSIS")
+    logger.info(f"   Trading Mode: {trading_mode.upper()}")
     logger.info("=" * 60)
     
     analyzer = ICTAnalyzer()
     
+    # Determine which HTF timeframes to analyze based on trading mode
+    if trading_mode.lower() == "intraday":
+        htf_timeframes = ['D', '240', '4H', '60', '1H']  # Skip M, W for intraday
+        logger.info("   📊 INTRADAY: Using D, 4H, 1H (skipping M, W)")
+    else:
+        htf_timeframes = ['M', 'W', 'D', '240', '4H']
+        logger.info("   📊 LONGTERM/AUTO: Using M, W, D, 4H")
+    
     # Phase 1: Analyze HTF for bias
     htf_analyses = {}
-    for tf in ['M', 'W', 'D', '240', '4H']:
+    for tf in htf_timeframes:
         if tf not in candles_by_timeframe:
             continue
         
@@ -763,8 +796,8 @@ def analyze_multi_timeframe_ict_topdown(
         except Exception as e:
             logger.warning(f"HTF analysis failed for {tf}: {e}")
     
-    # Determine HTF bias
-    htf_bias = determine_htf_bias(htf_analyses, current_price)
+    # Determine HTF bias - pass trading_mode for proper weighting
+    htf_bias = determine_htf_bias(htf_analyses, current_price, trading_mode=trading_mode)
     
     # Phase 2: Analyze LTF for entry
     ltf_analyses = {}

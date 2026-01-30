@@ -2808,8 +2808,99 @@ def _generate_actionable_signal_topdown(mtf_result, session_info, chain_data, hi
     logger.info(f"   DTE: {dte} days")
     logger.info(f"   IV: {atm_iv * 100:.1f}%")
     
+    # ==================== EXPIRY DAY PROTECTION ====================
+    # CRITICAL FIX: On expiry day (DTE <= 1), return AVOID signal
+    is_expiry_day = dte <= 1
+    is_last_3_days = dte <= 3
+    
+    if is_expiry_day:
+        logger.warning("🚨 EXPIRY DAY DETECTED! Returning AVOID signal.")
+        logger.warning("   Reason: Extreme theta decay (30%+ value loss possible)")
+        logger.warning("   Recommendation: Avoid buying options on expiry day")
+        
+        # Return a special AVOID signal for expiry day
+        return {
+            "signal": "EXPIRY_DAY_AVOID",
+            "action": "🚨 AVOID - EXPIRY DAY",
+            "option": {
+                "strike": atm_strike,
+                "type": "N/A",
+                "symbol": "AVOID",
+                "trading_symbol": "AVOID",
+                "expiry_date": expiry_date,
+                "expiry_info": {
+                    "days_to_expiry": dte,
+                    "is_weekly": True,
+                    "is_expiry_day": True,
+                    "time_to_expiry_years": time_to_expiry
+                }
+            },
+            "pricing": {
+                "ltp": 0,
+                "entry_price": 0,
+                "entry_reasoning": "DO NOT TRADE - Expiry day extreme theta decay"
+            },
+            "targets": {
+                "stop_loss": 0,
+                "target_1": 0,
+                "target_2": 0
+            },
+            "confidence": {
+                "score": 0,
+                "level": "AVOID",
+                "breakdown": {
+                    "htf_structure": 0,
+                    "ltf_confirmation": 0,
+                    "ml_alignment": 0,
+                    "candlestick": 0,
+                    "futures_basis": 0,
+                    "constituents": 0
+                }
+            },
+            "warnings": [
+                "🚨 EXPIRY DAY: Do NOT buy options today",
+                "⚠️ Theta decay: 30%+ of remaining value can be lost",
+                "⚠️ Only gamma scalping professionals should trade",
+                "✅ Wait for next week's expiry for safer trades"
+            ],
+            "expiry_analysis": {
+                "days_to_expiry": dte,
+                "is_expiry_day": True,
+                "theta_decay_rate": "EXTREME",
+                "recommendation": "AVOID ALL OPTIONS TRADING"
+            },
+            "htf_analysis": {
+                "direction": "N/A - Expiry Day",
+                "strength": 0,
+                "note": "HTF analysis irrelevant on expiry day due to extreme time decay"
+            },
+            "ltf_entry_model": {
+                "found": False,
+                "note": "Expiry day - no valid entry models"
+            }
+        }
+    
+    # For DTE <= 3: Add warning but allow trading with caution
+    expiry_warnings = []
+    if is_last_3_days:
+        expiry_warnings.append(f"⚠️ Only {dte} day(s) to expiry - High theta decay")
+        expiry_warnings.append("⚡ Quick in/out trades only - Set tight stop losses")
+        expiry_warnings.append("📉 Expect 15%+ daily premium decay")
+    
     # ==================== PHASE 2: ICT TOP-DOWN ANALYSIS ====================
     logger.info("\n📈 Phase 2: ICT Top-Down Analysis (HTF → LTF)")
+    
+    # CRITICAL FIX: Determine trading mode based on DTE
+    # For short DTE (<=7 days), use INTRADAY mode which prioritizes 4H/1H over Monthly/Weekly
+    if dte <= 3:
+        trading_mode = "intraday"
+        logger.info(f"   🎯 Trading Mode: INTRADAY (DTE={dte}, prioritizing 4H/1H over M/W)")
+    elif dte <= 7:
+        trading_mode = "intraday"
+        logger.info(f"   🎯 Trading Mode: INTRADAY (weekly expiry, prioritizing shorter timeframes)")
+    else:
+        trading_mode = "auto"
+        logger.info(f"   🎯 Trading Mode: AUTO (DTE={dte}, using balanced HTF weights)")
     
     # Prepare multi-timeframe candles from mtf_result
     candles_by_timeframe = {}
@@ -2817,10 +2908,11 @@ def _generate_actionable_signal_topdown(mtf_result, session_info, chain_data, hi
         if hasattr(analysis, 'candles') and analysis.candles is not None:
             candles_by_timeframe[tf] = analysis.candles
     
-    # Run complete top-down ICT analysis
+    # Run complete top-down ICT analysis with appropriate trading mode
     topdown_result = analyze_multi_timeframe_ict_topdown(
         candles_by_timeframe=candles_by_timeframe,
-        current_price=spot_price
+        current_price=spot_price,
+        trading_mode=trading_mode  # Pass trading mode for proper timeframe weighting
     )
     
     htf_bias = topdown_result['htf_bias']
@@ -2844,7 +2936,14 @@ def _generate_actionable_signal_topdown(mtf_result, session_info, chain_data, hi
         logger.info(f"      Confidence: {ltf_entry.confidence:.2%}")
     else:
         logger.info(f"\n   ⚠️ NO LTF ENTRY MODEL FOUND")
-        logger.info(f"      Will use HTF bias for trade direction")
+        
+        # CRITICAL FIX: For short-term trades (DTE <= 7), LTF confirmation is REQUIRED
+        # Without LTF entry, HTF bias alone is unreliable for intraday
+        if is_last_3_days:
+            logger.warning(f"   🚨 WEAK SIGNAL: No LTF entry + Short DTE ({dte} days)")
+            logger.warning(f"      HTF-only signals are unreliable for intraday expiry trades")
+            expiry_warnings.append("⚠️ NO LTF confirmation - HTF bias only (weak signal)")
+            expiry_warnings.append("🎯 Consider waiting for LTF setup before entry")
     
     # ==================== PHASE 3: CONFIRMATION STACK ====================
     logger.info("\n🔍 Phase 3: Confirmation Stack (ML + Candlesticks + Futures)")
@@ -3077,6 +3176,28 @@ def _generate_actionable_signal_topdown(mtf_result, session_info, chain_data, hi
     total_confidence = confidence_breakdown['total']
     confidence_level = confidence_breakdown['confidence_level']
     
+    # CRITICAL FIX: Apply DTE-based confidence penalty
+    # Short DTE + No LTF = Very unreliable signal
+    dte_penalty = 0
+    if is_last_3_days and not ltf_entry:
+        dte_penalty = 25  # Heavy penalty for no LTF in last 3 days
+        logger.warning(f"   🚨 DTE PENALTY: -{dte_penalty} (No LTF + DTE={dte})")
+    elif is_last_3_days:
+        dte_penalty = 10  # Moderate penalty for last 3 days even with LTF
+        logger.info(f"   ⚠️ DTE PENALTY: -{dte_penalty} (DTE={dte})")
+    
+    total_confidence = max(0, total_confidence - dte_penalty)
+    
+    # Re-evaluate confidence level after penalty
+    if total_confidence >= 70:
+        confidence_level = "HIGH"
+    elif total_confidence >= 50:
+        confidence_level = "MEDIUM"
+    elif total_confidence >= 30:
+        confidence_level = "LOW"
+    else:
+        confidence_level = "AVOID"
+    
     logger.info(f"\n   📊 CONFIDENCE BREAKDOWN:")
     logger.info(f"      ICT HTF Structure:    {confidence_breakdown['htf_structure']:.1f}/40")
     logger.info(f"      ICT LTF Confirmation: {confidence_breakdown['ltf_confirmation']:.1f}/25")
@@ -3268,7 +3389,15 @@ def _generate_actionable_signal_topdown(mtf_result, session_info, chain_data, hi
         },
         "is_reversal_play": is_reversal_play,
         "spot_price": spot_price,
-        "timestamp": datetime.now().isoformat()
+        "timestamp": datetime.now().isoformat(),
+        # CRITICAL: Include expiry warnings for short DTE trades
+        "warnings": expiry_warnings if expiry_warnings else [],
+        "trading_mode": {
+            "mode": trading_mode.upper(),
+            "dte": dte,
+            "description": f"{'INTRADAY (Quick trades only)' if dte <= 3 else 'INTRADAY' if dte <= 7 else 'SWING/POSITIONAL'}",
+            "timeframe_focus": "4H/1H/15min" if dte <= 7 else "D/4H/1H"
+        }
     }
 def _generate_actionable_signal(mtf_result, session_info, chain_data, historical_prices=None, probability_analysis=None):
     """Generate clear trading signal from MTF analysis with full Greeks integration, ML predictions, and constituent stock analysis"""
