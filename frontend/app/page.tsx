@@ -1250,7 +1250,7 @@ export default function DashboardPage() {
                     <div className="flex-1">
                       <div className="font-semibold text-base mb-1">Quick Scan (Recommended)</div>
                       <div className="text-sm text-muted-foreground mb-2">
-                        Fast analysis in 5-10 seconds
+                        Fast analysis in 90-180 seconds
                       </div>
                       <ul className="text-xs text-muted-foreground space-y-1">
                         <li>✓ Multi-timeframe ICT analysis</li>
@@ -1276,7 +1276,7 @@ export default function DashboardPage() {
                     <div className="flex-1">
                       <div className="font-semibold text-base mb-1">Full Analysis</div>
                       <div className="text-sm text-muted-foreground mb-2">
-                        Deep analysis in 40-60 seconds
+                        Deep analysis in 3-5 minutes
                       </div>
                       <ul className="text-xs text-muted-foreground space-y-1">
                         <li>✓ Everything in Quick Scan, PLUS:</li>

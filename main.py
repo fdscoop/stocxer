@@ -303,31 +303,35 @@ async def load_fyers_token_from_db():
     # The scan is now only triggered on-demand from the frontend
     logger.info("ℹ️ Auto options scanner disabled - scans are on-demand only")
     
-    # Start news fetch scheduler (every 1 hour)
-    if NEWS_SERVICE_AVAILABLE and news_service:
-        try:
-            # Add news fetch job - runs every 1 hour
-            scheduler.add_job(
-                fetch_market_news,
-                IntervalTrigger(hours=1),
-                id="news_fetch_job",
-                name="Fetch Market News from Marketaux",
-                replace_existing=True
-            )
-            
-            # Start the scheduler if not already running
-            if not scheduler.running:
-                scheduler.start()
-                logger.info("✅ Background scheduler started")
-            
-            logger.info("📰 News fetch scheduler configured - will fetch every 1 hour")
-            
-            # Fetch news immediately on startup
-            logger.info("📰 Fetching initial news on startup...")
-            await fetch_market_news()
-            
-        except Exception as sched_error:
-            logger.error(f"❌ Error setting up news scheduler: {sched_error}")
+    # Auto news fetching has been disabled to reduce resource usage
+    # News can be fetched on-demand via /fetch-news endpoint
+    logger.info("ℹ️ Auto news fetching disabled - news fetching is on-demand only")
+    
+    # Start news fetch scheduler (every 1 hour) - DISABLED
+    # if NEWS_SERVICE_AVAILABLE and news_service:
+    #     try:
+    #         # Add news fetch job - runs every 1 hour
+    #         scheduler.add_job(
+    #             fetch_market_news,
+    #             IntervalTrigger(hours=1),
+    #             id="news_fetch_job",
+    #             name="Fetch Market News from Marketaux",
+    #             replace_existing=True
+    #         )
+    #         
+    #         # Start the scheduler if not already running
+    #         if not scheduler.running:
+    #             scheduler.start()
+    #             logger.info("✅ Background scheduler started")
+    #         
+    #         logger.info("📰 News fetch scheduler configured - will fetch every 1 hour")
+    #         
+    #         # Fetch news immediately on startup
+    #         logger.info("📰 Fetching initial news on startup...")
+    #         await fetch_market_news()
+    #         
+    #     except Exception as sched_error:
+    #         logger.error(f"❌ Error setting up news scheduler: {sched_error}")
     else:
         logger.warning("⚠️ News service not available - MARKETAUX_API_KEY may not be set")
 
@@ -6530,8 +6534,8 @@ async def scan_options(
             "scan_performance": {
                 "quick_scan": quick_scan,
                 "stocks_analyzed": 0 if quick_scan else (50 if index.upper() in ["NIFTY", "NIFTY50"] else 14 if index.upper() == "BANKNIFTY" else 0),
-                "estimated_api_calls": "10-20" if quick_scan else "100-150",
-                "estimated_time": "5-10 seconds" if quick_scan else "40-60 seconds"
+                "estimated_api_calls": "50-100" if quick_scan else "100-150",
+                "estimated_time": "90-180 seconds" if quick_scan else "3-5 minutes"
             },
             "market_data": {
                 "spot_price": chain.spot_price,

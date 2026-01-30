@@ -18,7 +18,7 @@ This starts both backend (port 8000) and frontend (port 3000).
 python test_options_scan_debug.py
 ```
 
-**Expected time:** 30-60 seconds  
+**Expected time:** 90-180 seconds (for live data)  
 **Expected result:** Live scan with probability analysis
 
 ### What You'll See:
@@ -70,7 +70,7 @@ python test_options_scan_debug.py
 2. **Select Index:** NIFTY, BANKNIFTY, SENSEX, etc.
 3. **Select Expiry:** Weekly or Monthly
 4. **Click "Scan Options"**
-5. **Wait:** 30-60 seconds
+5. **Wait:** 90-180 seconds (for live API data)
 6. **Review Results:**
    - Probability analysis (% bullish/bearish)
    - Recommended option type (CE/PE)

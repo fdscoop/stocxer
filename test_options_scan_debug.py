@@ -185,7 +185,7 @@ def scan_options(token: str, index: str = "NIFTY", expiry: str = "weekly") -> di
         print_info(f"Parameters: {json.dumps(params, indent=2)}")
         
         # Make the request
-        print(f"\n{Colors.YELLOW}⏳ Scanning (this may take 30-60 seconds for live data)...{Colors.END}")
+        print(f"\n{Colors.YELLOW}⏳ Scanning (this may take 90-180 seconds for live data)...{Colors.END}")
         
         response = requests.get(
             f"{BASE_URL}/options/scan",

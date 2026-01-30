@@ -13,14 +13,14 @@ Your options scanner is hitting API rate limits (429 errors) because:
 ### Option 1: **Quick Scan (Default)** ⚡
 - Skip the 50-stock constituent analysis
 - Only analyze option chain data (OI, volume, Greeks)
-- **Scan time: ~5-10 seconds**
-- **API calls: ~10-20**
+- **Scan time: ~90-180 seconds**
+- **API calls: ~50-100**
 - Perfect for: Quick intraday trading, frequent scans
 
 ### Option 2: **Full Analysis (On-Demand)** 🎯
 - Include all 50 stocks probability analysis
 - Get high-confidence direction prediction
-- **Scan time: ~40-60 seconds**
+- **Scan time: ~3-5 minutes**
 - **API calls: ~100-150**
 - Perfect for: Position trading, daily analysis
 
@@ -63,8 +63,8 @@ async def scan_options(
 </label>
 
 <div class="info-box">
-  ⚡ Quick Scan: ~10 seconds, option chain only
-  🎯 Full Analysis: ~60 seconds, all stocks analyzed
+  ⚡ Quick Scan: ~90-180 seconds, option chain only
+  🎯 Full Analysis: ~3-5 minutes, all stocks analyzed
 </div>
 ```
 
@@ -82,7 +82,7 @@ def get_cached_probability_analysis(index: str, timestamp_key: int):
 
 | Feature | Quick Scan | Full Analysis |
 |---------|------------|---------------|
-| **Speed** | 5-10 sec | 40-60 sec |
+| **Speed** | 90-180 sec | 3-5 min |
 | **API Calls** | 10-20 | 100-150 |
 | **Rate Limit Risk** | Low | High |
 | **Accuracy** | Good | Excellent |
