@@ -342,6 +342,10 @@ export default function DashboardPage() {
   const [news, setNews] = React.useState<NewsArticle[]>([])
   const [loadingNews, setLoadingNews] = React.useState(false)
   const [analysisMode, setAnalysisMode] = React.useState('auto')
+  const [showScanModeDialog, setShowScanModeDialog] = React.useState(false)
+  const [selectedScanMode, setSelectedScanMode] = React.useState<'quick' | 'full'>('quick')
+  const [showScanModeDialog, setShowScanModeDialog] = React.useState(false)
+  const [selectedScanMode, setSelectedScanMode] = React.useState<'quick' | 'full'>('quick')
 
   // Calculate trading signal from scan results with improved entry analysis
   const calculateTradingSignal = (data: ScanResults): TradingSignal | null => {
@@ -770,6 +774,18 @@ export default function DashboardPage() {
       return
     }
 
+    // Show scan mode selection dialog
+    setShowScanModeDialog(true)
+  }
+
+  // Execute scan with selected mode
+  const executeScan = async (mode: 'quick' | 'full') => {
+    setSelectedScanMode(mode)
+    setShowScanModeDialog(false)
+    
+    const token = localStorage.getItem('auth_token') || localStorage.getItem('token') || localStorage.getItem('jwt_token')
+    if (!token) return
+
     setLoading(true)
     setLoadingMessage('Loading Data...')
     setLoadingProgress(0)
@@ -812,7 +828,9 @@ export default function DashboardPage() {
       updateStep('2', 'complete', 33)
       updateStep('3', 'loading', 40)
 
-      const url = `${apiUrl}/options/scan?index=${selectedIndex}&expiry=${selectedExpiry}&min_volume=1000&min_oi=10000&strategy=all&include_probability=true&analysis_mode=${analysisMode}`
+      // Use selected scan mode (quick_scan parameter)
+      const quickScan = selectedScanMode === 'quick'
+      const url = `${apiUrl}/options/scan?index=${selectedIndex}&expiry=${selectedExpiry}&min_volume=1000&min_oi=10000&strategy=all&include_probability=true&quick_scan=${quickScan}`
 
       console.log(`📡 Fetching scan data from: ${url}`)
       console.log(`📈 Selected index: ${selectedIndex}`)
@@ -1209,6 +1227,86 @@ export default function DashboardPage() {
       showBackButton={false}
     >
       <div className="container mx-auto px-3 md:px-4 py-4 md:py-6 space-y-4 md:space-y-6">
+        
+        {/* Scan Mode Selection Dialog */}
+        {showScanModeDialog && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <Card className="w-full max-w-md">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Zap className="w-5 h-5" />
+                  Choose Scan Mode
+                </CardTitle>
+                <p className="text-sm text-muted-foreground">
+                  Select the analysis depth for {selectedIndex} options scanning
+                </p>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {/* Quick Scan Option */}
+                <button
+                  onClick={() => executeScan('quick')}
+                  className="w-full p-4 border-2 border-border rounded-lg hover:border-primary hover:bg-accent transition-all text-left"
+                >
+                  <div className="flex items-start gap-3">
+                    <div className="mt-1">⚡</div>
+                    <div className="flex-1">
+                      <div className="font-semibold text-base mb-1">Quick Scan (Recommended)</div>
+                      <div className="text-sm text-muted-foreground mb-2">
+                        Fast analysis in 5-10 seconds
+                      </div>
+                      <ul className="text-xs text-muted-foreground space-y-1">
+                        <li>✓ Multi-timeframe ICT analysis</li>
+                        <li>✓ Option chain analysis</li>
+                        <li>✓ ML predictions</li>
+                        <li>✓ Greeks & risk metrics</li>
+                        <li className="text-yellow-600">⚠ Skips 50-stock constituent analysis</li>
+                      </ul>
+                      <div className="mt-2 text-xs font-medium text-blue-600">
+                        Perfect for: Automated trading, quick decisions
+                      </div>
+                    </div>
+                  </div>
+                </button>
+
+                {/* Full Scan Option */}
+                <button
+                  onClick={() => executeScan('full')}
+                  className="w-full p-4 border-2 border-border rounded-lg hover:border-primary hover:bg-accent transition-all text-left"
+                >
+                  <div className="flex items-start gap-3">
+                    <div className="mt-1">🎯</div>
+                    <div className="flex-1">
+                      <div className="font-semibold text-base mb-1">Full Analysis</div>
+                      <div className="text-sm text-muted-foreground mb-2">
+                        Deep analysis in 40-60 seconds
+                      </div>
+                      <ul className="text-xs text-muted-foreground space-y-1">
+                        <li>✓ Everything in Quick Scan, PLUS:</li>
+                        <li>✓ 50-stock constituent analysis</li>
+                        <li>✓ Probability breakdown by stock</li>
+                        <li>✓ Market regime detection</li>
+                        <li>✓ Higher confidence signals</li>
+                      </ul>
+                      <div className="mt-2 text-xs font-medium text-purple-600">
+                        Perfect for: Manual trading, detailed analysis
+                      </div>
+                    </div>
+                  </div>
+                </button>
+
+                {/* Cancel Button */}
+                <Button
+                  variant="outline"
+                  className="w-full"
+                  onClick={() => setShowScanModeDialog(false)}
+                >
+                  Cancel
+                </Button>
+              </CardContent>
+            </Card>
+          </div>
+        )}
+        
         {/* User Dashboard Header */}
         <Card className="bg-gradient-to-r from-primary/10 to-purple-500/10 border-primary/30">
           <CardContent className="p-4 md:p-6">
