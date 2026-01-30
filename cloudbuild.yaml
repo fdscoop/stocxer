@@ -1,0 +1,32 @@
+steps:
+  # Build the container image
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['build', '-t', 'gcr.io/$PROJECT_ID/tradewise-backend:$COMMIT_SHA', '.']
+  
+  # Push the container image to Container Registry
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['push', 'gcr.io/$PROJECT_ID/tradewise-backend:$COMMIT_SHA']
+  
+  # Deploy container image to Cloud Run
+  - name: 'gcr.io/cloud-builders/gcloud'
+    args:
+      - 'run'
+      - 'deploy'
+      - 'tradewise-backend'
+      - '--image=gcr.io/$PROJECT_ID/tradewise-backend:$COMMIT_SHA'
+      - '--region=us-central1'
+      - '--platform=managed'
+      - '--allow-unauthenticated'
+      - '--memory=2Gi'
+      - '--cpu=1'
+      - '--timeout=300s'
+      - '--max-instances=10'
+      - '--set-env-vars=FYERS_CLIENT_ID=${_FYERS_CLIENT_ID},FYERS_SECRET_KEY=${_FYERS_SECRET_KEY}'
+
+images:
+  - 'gcr.io/$PROJECT_ID/tradewise-backend:$COMMIT_SHA'
+
+timeout: '1200s'
+
+options:
+  machineType: 'E2_HIGHCPU_8'

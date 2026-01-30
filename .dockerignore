@@ -1,0 +1,54 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+ENV/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Git
+.git/
+.gitignore
+
+# Logs
+*.log
+logs/
+fyersApi.log
+fyersRequests.log
+
+# Environment
+.env.local
+.env
+
+# Testing
+.pytest_cache/
+*.coverage
+htmlcov/
+
+# Frontend (not needed for backend)
+frontend/
+node_modules/
+
+# Documentation
+*.md
+!README.md
+
+# Data files
+data/
+*.json
+!package.json
+
+# Cache
+.cache/
+
+# OS
+.DS_Store
+Thumbs.db
