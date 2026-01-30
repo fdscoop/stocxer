@@ -656,6 +656,47 @@ async def set_auth_token(auth_code: str):
 # User Authentication Endpoints
 # ============================================
 
+# Non-API auth endpoints for Cloudflare routing compatibility
+@app.post("/auth/register")
+async def register_no_api(user_data: UserRegister):
+    """Register a new user (non-API path for Cloudflare routing)"""
+    return await auth_service.register_user(user_data)
+
+
+@app.post("/auth/login")
+async def login_no_api(login_data: UserLogin):
+    """Login user (non-API path for Cloudflare routing)"""
+    return await auth_service.login_user(login_data)
+
+
+@app.post("/auth/logout")
+async def logout_no_api(authorization: str = Query(..., description="Bearer token")):
+    """Logout user (non-API path for Cloudflare routing)"""
+    token = authorization.replace("Bearer ", "")
+    return await auth_service.logout_user(token)
+
+
+@app.get("/auth/me")
+async def get_current_user_no_api(authorization: str = Query(..., description="Bearer token")):
+    """Get current user info (non-API path for Cloudflare routing)"""
+    token = authorization.replace("Bearer ", "")
+    return await auth_service.get_current_user(token)
+
+
+@app.post("/auth/refresh")
+async def refresh_token_no_api(refresh_token: str):
+    """Refresh access token (non-API path for Cloudflare routing)"""
+    return await auth_service.refresh_access_token(refresh_token)
+
+
+@app.get("/auth/verify")
+async def verify_token_no_api(authorization: str = Query(..., description="Bearer token")):
+    """Verify auth token (non-API path for Cloudflare routing)"""
+    token = authorization.replace("Bearer ", "")
+    return await auth_service.verify_token(token)
+
+
+# API prefixed endpoints (for direct backend access)
 @app.post("/api/auth/register")
 async def register(user_data: UserRegister):
     """Register a new user"""
