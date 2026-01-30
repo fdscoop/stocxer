@@ -149,6 +149,12 @@ class FyersClient:
         if date_from is None:
             date_from = date_to - timedelta(days=365)
         
+        # Validate date range - from must be before to
+        if date_from >= date_to:
+            logger.warning(f"Invalid date range: from ({date_from}) >= to ({date_to}). Adjusting dates.")
+            # Set from to 30 days before to
+            date_from = date_to - timedelta(days=30)
+        
         # Fyers API v3 requires date_format=0 for epoch timestamps
         # or date_format=1 for YYYY-MM-DD strings
         data = {

@@ -1,17 +1,19 @@
--- Fix action column constraint to support options signals
--- This migration allows action values: 'BUY', 'SELL', 'BUY CALL', 'BUY PUT', 'SELL CALL', 'SELL PUT'
+-- Fix screener_results action constraint to include WAIT and AVOID
+-- Run this in your Supabase SQL Editor
 
--- Drop existing constraint
+-- Step 1: Drop the existing constraint
 ALTER TABLE public.screener_results 
 DROP CONSTRAINT IF EXISTS screener_results_action_check;
 
--- Add updated constraint with options support
+-- Step 2: Add the updated constraint with WAIT and AVOID
 ALTER TABLE public.screener_results 
 ADD CONSTRAINT screener_results_action_check 
 CHECK (action IN ('BUY', 'SELL', 'BUY CALL', 'BUY PUT', 'SELL CALL', 'SELL PUT', 'WAIT', 'AVOID'));
 
--- Verify the constraint was added
-SELECT conname, pg_get_constraintdef(oid) 
+-- Step 3: Verify the constraint was added correctly
+SELECT 
+    conname AS constraint_name,
+    pg_get_constraintdef(oid) AS constraint_definition
 FROM pg_constraint 
 WHERE conrelid = 'public.screener_results'::regclass 
 AND conname = 'screener_results_action_check';
