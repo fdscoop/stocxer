@@ -356,7 +356,14 @@ class CohereAnalysisService:
                 )
             
             ai_response = response.text
-            tokens_used = response.meta.get('tokens', {}).get('total_tokens', 0) if hasattr(response, 'meta') else 0
+            # Fix: response.meta is an ApiMeta object, not a dict
+            if hasattr(response, 'meta') and hasattr(response.meta, 'tokens'):
+                if isinstance(response.meta.tokens, dict):
+                    tokens_used = response.meta.tokens.get('total_tokens', 0)
+                else:
+                    tokens_used = getattr(response.meta.tokens, 'total_tokens', 0)
+            else:
+                tokens_used = 0
             
             # Extract citations if available
             citations = self._extract_citations(response, context)
