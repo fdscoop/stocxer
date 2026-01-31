@@ -12,6 +12,7 @@ const plans = [
         features: [
             '100 free credits on signup',
             'All features included',
+            'AI Chat: ₹0.20 per response',
             'Watchman AI v3.5 included',
             'No card required',
         ],
@@ -29,6 +30,7 @@ const plans = [
         features: [
             '₹0.85 per stock scan',
             '₹0.98 per option scan',
+            'AI Chat: ₹0.20 per response',
             'Credits never expire',
             'Watchman AI v3.5 included',
         ],
@@ -48,6 +50,7 @@ const plans = [
             '200 stock scans/day',
             '50 option scans/day',
             '10 bulk scans/day (25 stocks each)',
+            'Unlimited AI Chat',
             'Watchman AI v3.5 included',
             'Email support',
         ],
@@ -65,6 +68,7 @@ const plans = [
         features: [
             'Unlimited scans',
             'Unlimited bulk scans (100 stocks each)',
+            'Unlimited AI Chat',
             'Watchman AI v3.5 included',
             'Accuracy tracking',
             'Historical data access',

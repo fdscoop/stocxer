@@ -7,6 +7,7 @@ import CompetitorComparison from '@/components/landing/CompetitorComparison'
 import WatchmanAISection from '@/components/landing/WatchmanAISection'
 import AnalysisFeaturesDetail from '@/components/landing/AnalysisFeaturesDetail'
 import AIIntegrationSection from '@/components/landing/AIIntegrationSection'
+import AIChatFeatureSection from '@/components/landing/AIChatFeatureSection'
 import PricingSection from '@/components/landing/PricingSection'
 import FAQSection from '@/components/landing/FAQSection'
 import DisclaimerSection from '@/components/landing/DisclaimerSection'
@@ -96,6 +97,9 @@ export default function LandingPage() {
 
             {/* AI Integration - Talk to Your Trading Account */}
             <AIIntegrationSection />
+
+            {/* AI Chat Feature - In-App Conversation */}
+            <AIChatFeatureSection />
 
             {/* Pricing Section */}
             <section id="pricing">

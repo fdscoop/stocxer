@@ -133,7 +133,7 @@ export function ChatInput({
 
       <div className="mt-2 text-xs text-gray-500 flex items-center gap-1">
         <Sparkles className="w-3 h-3" />
-        <span>AI-powered by Cohere • Press Enter to send, Shift+Enter for new line</span>
+        <span>AI-powered by Watchman i3.5 • Press Enter to send, Shift+Enter for new line</span>
       </div>
     </div>
   );

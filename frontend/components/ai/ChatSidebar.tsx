@@ -86,7 +86,7 @@ export function ChatSidebar({
                   AI Assistant
                   <span className="px-1.5 py-0.5 text-[10px] font-bold bg-blue-500 text-white rounded">BETA</span>
                 </h3>
-                <p className="text-xs text-gray-500">Powered by Cohere</p>
+                <p className="text-xs text-gray-500">Powered by Watchman i3.5</p>
               </div>
             </div>
             <div className="flex items-center gap-2">
