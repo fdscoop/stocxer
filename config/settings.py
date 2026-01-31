@@ -78,6 +78,7 @@ class Settings(BaseSettings):
     
     class Config:
         env_file = ".env"
+        case_sensitive = False  # Allow case-insensitive env vars
         extra = "allow"  # Allow extra fields from .env file
 
 

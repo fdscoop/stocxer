@@ -8,15 +8,19 @@ import WatchmanAISection from '@/components/landing/WatchmanAISection'
 import AnalysisFeaturesDetail from '@/components/landing/AnalysisFeaturesDetail'
 import AIIntegrationSection from '@/components/landing/AIIntegrationSection'
 import AIChatFeatureSection from '@/components/landing/AIChatFeatureSection'
+import BlogSection from '@/components/landing/BlogSection'
 import PricingSection from '@/components/landing/PricingSection'
 import FAQSection from '@/components/landing/FAQSection'
 import DisclaimerSection from '@/components/landing/DisclaimerSection'
 import FooterSection from '@/components/landing/FooterSection'
 
 export const metadata: Metadata = {
-    title: 'Best Stock Screener & Options Scanner India - AI Analysis Tool | Stocxer AI',
-    description: 'Best AI stock screener & options scanner in India for analytical & research purposes. Advanced market data analysis with stock screener, options screener, NIFTY scanner, BANKNIFTY scanner. ICT Smart Money Concepts, ML models, News Sentiment & Options Greeks.',
+    title: 'Best Free AI Stock Screener & Options Scanner India | Stocxer AI',
+    description: 'Free AI stock screener & options scanner in India for Indian stock market analysis. Best AI tool for stock analysis with NIFTY/BANKNIFTY scanner, ICT Smart Money Concepts, ML models, News Sentiment & Options Greeks. No credit card required.',
     keywords: [
+        'best AI for stock analysis India',
+        'free AI tool for stock market India',
+        'best free AI tool for stock market India',
         'best stock screener India',
         'options screener India',
         'stock scanner India',
@@ -50,6 +54,9 @@ export const metadata: Metadata = {
         'Options Greeks calculator',
         'Watchman AI',
         'technical analysis software India',
+        'free stock market analysis tool',
+        'AI-powered stock market tool',
+        'intelligent stock screener',
     ],
     openGraph: {
         title: 'Stocxer AI - AI-Powered Market Data Analysis Tool',
@@ -100,6 +107,9 @@ export default function LandingPage() {
 
             {/* AI Chat Feature - In-App Conversation */}
             <AIChatFeatureSection />
+
+            {/* Blog Section - SEO Content */}
+            <BlogSection />
 
             {/* Pricing Section */}
             <section id="pricing">

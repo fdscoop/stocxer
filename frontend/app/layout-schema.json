@@ -1,0 +1,57 @@
+{
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  "name": "Stocxer AI",
+  "alternateName": "Stocxer - AI Stock Screener & Options Scanner",
+  "description": "Free AI-powered stock screener and options scanner for Indian stock market analysis. Advanced AI tool with ICT Smart Money Concepts, ML models, and news sentiment analysis.",
+  "url": "https://stocxer.in",
+  "applicationCategory": "FinanceApplication",
+  "operatingSystem": "Web, iOS, Android",
+  "offers": {
+    "@type": "Offer",
+    "price": "0",
+    "priceCurrency": "INR",
+    "description": "Free trial with 100 AI chat credits included"
+  },
+  "aggregateRating": {
+    "@type": "AggregateRating",
+    "ratingValue": "4.8",
+    "ratingCount": "250",
+    "bestRating": "5",
+    "worstRating": "1"
+  },
+  "author": {
+    "@type": "Organization",
+    "name": "Stocxer",
+    "url": "https://stocxer.in",
+    "sameAs": [
+      "https://twitter.com/stocxer",
+      "https://linkedin.com/company/stocxer"
+    ]
+  },
+  "featureList": [
+    "Free AI Stock Screener",
+    "Options Scanner with Greeks",
+    "NIFTY & BANKNIFTY Analysis",
+    "ICT Smart Money Concepts Detection",
+    "Machine Learning Signal Generation",
+    "Real-time News Sentiment Analysis",
+    "AI Chat with Signal Explanation",
+    "Paper Trading for Practice",
+    "AI-Powered Market Analysis"
+  ],
+  "screenshot": "https://stocxer.in/og-image.png",
+  "country": "India",
+  "inLanguage": "en-IN",
+  "isAccessibleForFree": true,
+  "keywords": [
+    "best AI for stock analysis India",
+    "free AI tool for stock market India",
+    "best free AI tool for stock market India",
+    "AI stock screener",
+    "stock market analysis tool",
+    "options scanner",
+    "NIFTY screener",
+    "BANKNIFTY scanner"
+  ]
+}
