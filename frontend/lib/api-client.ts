@@ -14,18 +14,20 @@ async function refreshAccessToken(): Promise<string | null> {
   try {
     const refreshToken = localStorage.getItem('refresh_token')
     if (!refreshToken) {
+      console.warn('No refresh token found')
       return null
     }
 
     const apiUrl = getApiUrl()
-    const response = await fetch(`${apiUrl}/api/auth/refresh`, {
+    // Send refresh token as query parameter (backend expects it this way)
+    const response = await fetch(`${apiUrl}/api/auth/refresh?refresh_token=${encodeURIComponent(refreshToken)}`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ refresh_token: refreshToken })
+      headers: { 'Content-Type': 'application/json' }
     })
 
     if (!response.ok) {
       // Refresh token is invalid, clear all tokens
+      console.warn(`Token refresh failed with status ${response.status}`)
       localStorage.removeItem('token')
       localStorage.removeItem('auth_token')
       localStorage.removeItem('jwt_token')
@@ -37,6 +39,7 @@ async function refreshAccessToken(): Promise<string | null> {
     const data = await response.json()
     
     if (data.access_token) {
+      console.log('✅ Token refreshed successfully')
       // Store new tokens
       localStorage.setItem('token', data.access_token)
       localStorage.setItem('auth_token', data.access_token)
@@ -53,6 +56,7 @@ async function refreshAccessToken(): Promise<string | null> {
       return data.access_token
     }
 
+    console.warn('No access_token in refresh response')
     return null
   } catch (error) {
     console.error('Error refreshing token:', error)

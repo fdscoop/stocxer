@@ -26,17 +26,25 @@ from src.models.billing_models import (
 router = APIRouter(prefix="/api/billing", tags=["billing"])
 
 
+import logging
+
+logger = logging.getLogger(__name__)
+
 async def get_current_user_id(authorization: Optional[str] = Header(None)) -> str:
     """Extract and verify user from authorization header"""
     if not authorization or not authorization.startswith("Bearer "):
+        logger.warning(f"🚫 No valid authorization header provided. Got: {authorization[:50] if authorization else 'None'}...")
         raise HTTPException(status_code=401, detail="Not authenticated")
     
     token = authorization.replace("Bearer ", "")
+    logger.info(f"🔑 Verifying token: {token[:30]}...")
     user = await auth_service.get_current_user(token)
     
     if not user:
+        logger.warning(f"🚫 Invalid token - no user found")
         raise HTTPException(status_code=401, detail="Invalid token")
     
+    logger.info(f"✅ User verified: {user.email}")
     return user.id
 
 

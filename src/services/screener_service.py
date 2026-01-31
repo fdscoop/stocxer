@@ -511,7 +511,8 @@ class ScreenerService:
     async def get_latest_option_scanner_result(self, user_id: str, index: Optional[str] = None) -> Optional[dict]:
         """Get latest option scanner result for user, optionally filtered by index"""
         try:
-            query = self.supabase.table("option_scanner_results")\
+            # Use admin client to bypass RLS
+            query = self.supabase_admin.table("option_scanner_results")\
                 .select("*")\
                 .eq("user_id", user_id)
             
@@ -542,7 +543,8 @@ class ScreenerService:
             
             time_threshold = (datetime.now(timezone.utc) - timedelta(hours=hours)).isoformat()
             
-            query = self.supabase.table("option_scanner_results")\
+            # Use admin client to bypass RLS
+            query = self.supabase_admin.table("option_scanner_results")\
                 .select("*")\
                 .eq("user_id", user_id)\
                 .gte("timestamp", time_threshold)

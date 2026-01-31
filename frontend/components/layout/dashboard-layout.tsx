@@ -3,10 +3,13 @@
 import * as React from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
-import { Menu, TrendingUp, X, ArrowLeft, ChevronDown } from 'lucide-react'
+import { Menu, TrendingUp, X, ArrowLeft, ChevronDown, MessageSquare, Sparkles } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Sidebar, MobileNavigation } from './sidebar'
 import { cn } from '@/lib/utils'
+import { DashboardModeToggle, DashboardMode } from '@/components/ai/DashboardModeToggle'
+import { ChatSidebar } from '@/components/ai/ChatSidebar'
+import { useAIChat } from '@/lib/hooks/useAIChat'
 
 const indices = ['NIFTY', 'BANKNIFTY', 'FINNIFTY', 'MIDCPNIFTY', 'SENSEX', 'BANKEX']
 
@@ -29,6 +32,8 @@ interface DashboardLayoutProps {
   showBackButton?: boolean
   pageTitle?: string
   showIndexSelector?: boolean
+  signalData?: any
+  scanData?: any
 }
 
 export function DashboardLayout({ 
@@ -39,12 +44,22 @@ export function DashboardLayout({
   onLogout,
   showBackButton = true,
   pageTitle,
-  showIndexSelector = true
+  showIndexSelector = true,
+  signalData,
+  scanData
 }: DashboardLayoutProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false)
   const [sidebarCollapsed, setSidebarCollapsed] = React.useState(false)
+  const [isChatOpen, setIsChatOpen] = React.useState(false)
+  const [dashboardMode, setDashboardMode] = React.useState<DashboardMode>('dashboard')
   const pathname = usePathname()
   const router = useRouter()
+  
+  // AI Chat Integration
+  const { messages, isLoading: isChatLoading, sendMessage } = useAIChat({
+    signalData,
+    scanData: scanData || { selectedIndex }
+  })
 
   // Persist sidebar collapsed state
   React.useEffect(() => {
@@ -185,6 +200,13 @@ export function DashboardLayout({
         </div>
 
         <div className="flex items-center gap-3">
+          {/* AI Chat Toggle */}
+          <DashboardModeToggle 
+            mode={dashboardMode} 
+            onModeChange={setDashboardMode}
+            showHybrid={false}
+          />
+          
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <span className="w-2 h-2 bg-bullish rounded-full animate-pulse" />
             <span>Live</span>
@@ -199,6 +221,32 @@ export function DashboardLayout({
       )}>
         {children}
       </main>
+      
+      {/* AI Chat Sidebar */}
+      <ChatSidebar
+        isOpen={isChatOpen || dashboardMode === 'chat'}
+        onClose={() => {
+          setIsChatOpen(false)
+          if (dashboardMode === 'chat') setDashboardMode('dashboard')
+        }}
+        onSendMessage={sendMessage}
+        messages={messages}
+        isLoading={isChatLoading}
+        signalContext={{
+          symbol: selectedIndex,
+          signal: 'Dashboard View'
+        }}
+      />
+      
+      {/* Floating AI Chat Button */}
+      {!isChatOpen && dashboardMode === 'dashboard' && (
+        <button
+          onClick={() => setIsChatOpen(true)}
+          className="fixed bottom-24 right-6 w-14 h-14 bg-gradient-to-br from-blue-600 to-purple-600 text-white rounded-full shadow-lg flex items-center justify-center md:hidden z-40 hover:scale-110 transition-transform"
+        >
+          <MessageSquare className="w-6 h-6" />
+        </button>
+      )}
 
       {/* Mobile Bottom Navigation */}
       <MobileNavigation />

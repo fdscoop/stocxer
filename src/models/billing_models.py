@@ -253,7 +253,7 @@ class RazorpayWebhookEvent(BaseModel):
 # PRICING CONFIGURATION
 # ============================================
 
-class PricingConfig(BaseModel):
+class PricingConfig:
     """Pricing configuration constants"""
     # PAYG Pricing (in INR)
     # Option Scan Pricing - Mode-based

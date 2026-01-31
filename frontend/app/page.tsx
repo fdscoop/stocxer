@@ -291,6 +291,8 @@ interface ScanResults {
   index?: string
   expiry?: string
   spot_price?: number
+  timestamp?: string
+  market_sentiment?: string
   market_data?: {
     spot_price: number
     atm_strike: number
@@ -512,6 +514,29 @@ export default function DashboardPage() {
       setCurrentTime(new Date().toLocaleTimeString('en-IN'))
     }, 60000)
 
+    // ✅ Background token refresh - every 50 minutes to prevent expiry
+    const tokenRefreshInterval = setInterval(() => {
+      const token = localStorage.getItem('refresh_token')
+      if (token) {
+        const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
+        fetch(`${apiUrl}/api/auth/refresh?refresh_token=${encodeURIComponent(token)}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' }
+        }).then(r => r.json())
+          .then(data => {
+            if (data.access_token) {
+              localStorage.setItem('auth_token', data.access_token)
+              localStorage.setItem('token', data.access_token)
+              localStorage.setItem('jwt_token', data.access_token)
+              if (data.refresh_token) localStorage.setItem('refresh_token', data.refresh_token)
+              if (data.expires_at) localStorage.setItem('token_expires_at', data.expires_at)
+              console.log('🔄 Token refreshed automatically in background')
+            }
+          })
+          .catch(err => console.warn('Background token refresh failed:', err))
+      }
+    }, 50 * 60 * 1000) // Every 50 minutes
+
     // ✅ Check if daily session reset is needed (7 AM IST)
     if (checkDailySessionReset()) {
       // Time to logout - session expired based on daily 7 AM rule
@@ -530,6 +555,9 @@ export default function DashboardPage() {
       localStorage.getItem('jwt_token')
     ) : null
     const email = localStorage.getItem('userEmail')
+    
+    console.log('🔐 Auth check:', { hasToken: !!token, hasEmail: !!email, tokenStart: token?.substring(0, 30) })
+    
     if (token && email) {
       setUser({ email })
       // Check Fyers authentication status on page load
@@ -540,8 +568,10 @@ export default function DashboardPage() {
       fetchTokenBalance(token)
     } else {
       // Redirect to landing page if not authenticated
+      console.log('❌ No auth token or email found, redirecting to landing')
       router.push('/landing')
     }
+
 
     // Listen for messages from Fyers callback popup
     const handleMessage = (event: MessageEvent) => {
@@ -714,6 +744,14 @@ export default function DashboardPage() {
           setScanResults(null)
           // Don't show toast on initial load, only when manually changing index
         }
+      } else if (response.status === 401) {
+        console.error('❌ Token expired or invalid - clearing auth data')
+        // Token expired - clear and redirect to login
+        localStorage.removeItem('auth_token')
+        localStorage.removeItem('token')
+        localStorage.removeItem('jwt_token')
+        setToast({ message: 'Session expired. Please login again.', type: 'error' })
+        setTimeout(() => router.push('/login'), 2000)
       } else if (response.status === 404) {
         console.log('No scan results available yet - user needs to run a scan first')
         setScanResults(null)
@@ -729,9 +767,7 @@ export default function DashboardPage() {
   const fetchTokenBalance = async (token: string) => {
     setLoadingBalance(true)
     try {
-      const apiUrl = typeof window !== 'undefined'
-        ? (localStorage.getItem('apiUrl') || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000')
-        : 'http://localhost:8000'
+      const apiUrl = getApiUrl()
 
       const response = await fetch(`${apiUrl}/api/billing/status`, {
         method: 'GET',
@@ -743,7 +779,10 @@ export default function DashboardPage() {
 
       if (response.ok) {
         const data = await response.json()
-        setTokenBalance(data.billing_status?.credits_balance || 0)
+        console.log('Token balance response:', data)
+        setTokenBalance(data.billing_status?.credits_balance ?? data.credits_balance ?? 0)
+      } else {
+        console.error('Failed to fetch token balance:', response.status, response.statusText)
       }
     } catch (error) {
       console.error('Error fetching token balance:', error)
@@ -1307,6 +1346,16 @@ export default function DashboardPage() {
       onIndexChange={setSelectedIndex}
       onLogout={handleLogout}
       showBackButton={false}
+      signalData={tradingSignal}
+      scanData={scanResults ? {
+        symbol: selectedIndex,
+        timestamp: scanResults.timestamp,
+        results: scanResults,
+        probability: scanResults.probability_analysis,
+        totalOptions: scanResults.options?.length || 0,
+        marketSentiment: scanResults.market_sentiment,
+        recommendedOption: scanResults.recommended_option_type
+      } : null}
     >
       <div className="container mx-auto px-3 md:px-4 py-4 md:py-6 space-y-4 md:space-y-6">
 

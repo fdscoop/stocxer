@@ -30,6 +30,15 @@ from src.models.auth_models import UserRegister, UserLogin, FyersTokenStore
 from src.middleware.token_middleware import require_tokens, ScanType
 from src.middleware.refund_decorator import with_refund_on_failure
 
+# AI Integration - Cohere-powered signal analysis
+from src.services.ai_analysis_service import get_ai_service
+from src.services.ai_cache_service import ai_cache
+from src.models.ai_models import (
+    ChatRequest, ChatResponse, ExplainSignalRequest,
+    CompareIndicesRequest, TradePlanRequest, QuerySuggestion
+)
+
+
 # Performance optimization: Parallel stock analysis for fast constituent scanning
 from src.services.parallel_stock_analysis import get_fast_analyzer
 
@@ -1180,6 +1189,604 @@ async def get_news_service_status():
             "available": True,
             "error": str(e)
         }
+
+
+# ============================================
+# AI Analysis Endpoints (Cohere Integration)
+# ============================================
+
+@app.post("/api/ai/chat")
+async def ai_chat(
+    request: ChatRequest,
+    authorization: str = Header(None, description="Bearer token (required)")
+):
+    """
+    Main AI chat endpoint for conversational analysis of trading signals.
+    
+    Supports:
+    - Signal explanations
+    - Risk analysis  
+    - Comparisons
+    - Trade planning
+    - General queries about scans
+    """
+    if not authorization:
+        raise HTTPException(status_code=401, detail="Authentication required")
+    
+    token = authorization.replace("Bearer ", "")
+    
+    try:
+        # Verify user authentication
+        user = await auth_service.get_current_user(token)
+        logger.info(f"🤖 AI chat request from user {user.email}: {request.query[:50]}...")
+        logger.info(f"📥 Request data received:")
+        logger.info(f"   - scan_data: {bool(request.scan_data)} | Type: {type(request.scan_data).__name__}")
+        logger.info(f"   - signal_data: {bool(request.signal_data)} | Type: {type(request.signal_data).__name__}")
+        logger.info(f"   - scan_id: {request.scan_id}")
+        if request.scan_data:
+            logger.info(f"   - scan_data keys: {list(request.scan_data.keys()) if isinstance(request.scan_data, dict) else 'not a dict'}")
+        if request.signal_data:
+            logger.info(f"   - signal_data preview: {str(request.signal_data)[:200]}")
+        
+        # Get AI service
+        ai_service = get_ai_service()
+        if not ai_service:
+            raise HTTPException(
+                status_code=503,
+                detail="AI service is not available. Please check COHERE_API_KEY configuration."
+            )
+        
+        # Get scan data if scan_id provided or from request
+        scan_data = request.scan_data
+        signal_data = request.signal_data  # IMPORTANT: Use signal_data from request first!
+        
+        if request.scan_id and not scan_data:
+            try:
+                from config.supabase_config import get_supabase_admin_client
+                supabase = get_supabase_admin_client()
+                
+                response = supabase.table("option_scan_results").select("*").eq(
+                    "id", request.scan_id
+                ).single().execute()
+                
+                if response.data:
+                    scan_data = response.data.get("scan_results")
+            except Exception as e:
+                logger.warning(f"Could not load scan data: {e}")
+        
+        # Fallback: If no data provided from frontend, try to get latest scan results from database
+        # Only fetch from DB if BOTH scan_data and signal_data are missing
+        has_valid_scan_data = (
+            scan_data and 
+            isinstance(scan_data, dict) and 
+            (scan_data.get("results") or scan_data.get("options") or scan_data.get("index"))
+        )
+        has_valid_signal_data = (
+            signal_data and 
+            isinstance(signal_data, dict) and 
+            signal_data.get("action")  # Trading signal has "action" field
+        )
+        
+        if not has_valid_scan_data and not has_valid_signal_data:
+            logger.info("⚠️ No data from frontend, fetching from database...")
+            try:
+                from config.supabase_config import get_supabase_admin_client
+                supabase = get_supabase_admin_client()
+                
+                # Try to get latest scan results - use option_scanner_results table
+                latest_response = supabase.table("option_scanner_results").select(
+                    "*"
+                ).eq("user_id", str(user.id)).order(
+                    "timestamp", desc=True
+                ).limit(1).execute()
+                
+                if latest_response.data and len(latest_response.data) > 0:
+                    latest_record = latest_response.data[0]
+                    scan_data = latest_record.get("full_signal_data")
+                    signal_data = latest_record.get("full_signal_data")
+                    index_name = latest_record.get("index", "NIFTY")
+                    logger.info(f"✅ Using latest scan from database: {index_name} {latest_record.get('action')} signal (confidence: {latest_record.get('confidence')}%)")
+                else:
+                    logger.warning(f"⚠️ No scans found in database for user {user.id}")
+            except Exception as e:
+                logger.warning(f"Could not load latest scan data: {e}")
+                import traceback
+                logger.error(f"Traceback: {traceback.format_exc()}")
+        else:
+            logger.info(f"✅ Using data from frontend - signal_data: {bool(signal_data)}, scan_data: {bool(scan_data)}")
+            if signal_data:
+                logger.info(f"📊 Signal: {signal_data.get('action')} {signal_data.get('strike')} {signal_data.get('type')} @ ₹{signal_data.get('entry_price')}")
+        
+        # Call AI service with context and authorization for agentic features
+        ai_response = await ai_service.analyze_signal(
+            query=request.query,
+            signal_data=signal_data,
+            scan_data=scan_data,
+            scan_id=request.scan_id,
+            use_cache=request.use_cache,
+            authorization=authorization
+        )
+        
+        # Deduct 0.20 tokens for successful chat response
+        from decimal import Decimal
+        from src.services.billing_service import billing_service
+        
+        CHAT_TOKEN_COST = Decimal("0.20")
+        success, message, result = await billing_service.deduct_credits(
+            user_id=str(user.id),
+            amount=CHAT_TOKEN_COST,
+            description=f"AI Chat: {request.query[:50]}...",
+            scan_type="ai_chat",
+            metadata={"query_type": ai_response.query_type, "cached": ai_response.cached}
+        )
+        
+        if not success:
+            raise HTTPException(
+                status_code=402,  # Payment Required
+                detail=f"Insufficient tokens. {message}"
+            )
+        
+        logger.info(f"✅ Chat tokens deducted: 0.20 credits | {message}")
+        
+        # Log analytics (optional - don't fail if table doesn't exist)
+        try:
+            from config.supabase_config import get_supabase_admin_client
+            supabase = get_supabase_admin_client()
+            
+            # Safely serialize citations
+            citations_data = []
+            if ai_response.citations:
+                for c in ai_response.citations:
+                    if isinstance(c, dict):
+                        citations_data.append(c)
+                    else:
+                        citations_data.append(c.dict())
+            
+            supabase.table("ai_chat_history").insert({
+                "user_id": str(user.id),
+                "scan_id": request.scan_id,
+                "query": request.query,
+                "response": ai_response.response,
+                "citations": citations_data,
+                "tokens_used": ai_response.tokens_used,
+                "cached": ai_response.cached,
+                "confidence_score": ai_response.confidence_score,
+                "query_type": ai_response.query_type,
+                "tokens_deducted": 0.20
+            }).execute()
+            logger.info("✅ AI chat logged to history")
+        except Exception as log_error:
+            # Don't fail the request if logging fails
+            if "PGRST205" in str(log_error):
+                logger.warning("ℹ️ ai_chat_history table not found - skipping logging")
+            else:
+                logger.error(f"Failed to log AI chat: {log_error}")
+        
+        # Return response with properly serialized citations
+        response_dict = ai_response.dict()
+        if response_dict.get('citations'):
+            # Ensure citations are properly serialized as dicts
+            response_dict['citations'] = [
+                c if isinstance(c, dict) else c.dict() 
+                for c in ai_response.citations
+            ]
+        
+        # Add tokens info to response
+        if result:
+            response_dict['tokens_remaining'] = result.get('balance', 0)
+        
+        return response_dict
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        import traceback
+        logger.error(f"AI chat error: {e}")
+        logger.error(f"Traceback: {traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail=f"AI analysis failed: {str(e)}")
+
+
+@app.post("/api/ai/explain-signal")
+async def explain_signal(
+    request: ExplainSignalRequest,
+    authorization: str = Header(None, description="Bearer token (required)")
+):
+    """
+    Quick explanation of a specific signal.
+    Used for "Explain this signal" button on signal cards.
+    """
+    if not authorization:
+        raise HTTPException(status_code=401, detail="Authentication required")
+    
+    token = authorization.replace("Bearer ", "")
+    
+    try:
+        user = await auth_service.get_current_user(token)
+        
+        # Get AI service
+        ai_service = get_ai_service()
+        if not ai_service:
+            raise HTTPException(status_code=503, detail="AI service not available")
+        
+        # Get signal data
+        signal_data = request.signal_data
+        if not signal_data and request.signal_id:
+            try:
+                from config.supabase_config import get_supabase_admin_client
+                supabase = get_supabase_admin_client()
+                
+                response = supabase.table("trading_signals").select("*").eq(
+                    "id", request.signal_id
+                ).single().execute()
+                
+                if response.data:
+                    signal_data = response.data
+            except Exception as e:
+                raise HTTPException(status_code=404, detail=f"Signal not found: {str(e)}")
+        
+        if not signal_data:
+            raise HTTPException(status_code=400, detail="No signal data provided")
+        
+        # Generate explanation
+        explanation = await ai_service.explain_signal(
+            signal_data=signal_data,
+            detail_level=request.detail_level
+        )
+        
+        # Deduct 0.20 tokens for successful signal explanation
+        from decimal import Decimal
+        from src.services.billing_service import billing_service
+        
+        CHAT_TOKEN_COST = Decimal("0.20")
+        success, message, result = await billing_service.deduct_credits(
+            user_id=str(user.id),
+            amount=CHAT_TOKEN_COST,
+            description=f"AI Explain Signal: {request.signal_id or 'unknown'}",
+            scan_type="ai_chat",
+            metadata={"action": "explain_signal", "detail_level": request.detail_level}
+        )
+        
+        if not success:
+            raise HTTPException(
+                status_code=402,  # Payment Required
+                detail=f"Insufficient tokens. {message}"
+            )
+        
+        logger.info(f"✅ Explain signal tokens deducted: 0.20 credits")
+        
+        return {
+            "explanation": explanation,
+            "signal_id": request.signal_id,
+            "detail_level": request.detail_level,
+            "tokens_remaining": result.get('balance', 0) if result else 0
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Explain signal error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/ai/compare-indices")
+async def compare_indices(
+    request: CompareIndicesRequest,
+    authorization: str = Header(None, description="Bearer token (required)")
+):
+    """
+    Compare signals across multiple indices.
+    Example: "Compare NIFTY vs BANKNIFTY"
+    """
+    if not authorization:
+        raise HTTPException(status_code=401, detail="Authentication required")
+    
+    token = authorization.replace("Bearer ", "")
+    
+    try:
+        user = await auth_service.get_current_user(token)
+        
+        # Get AI service
+        ai_service = get_ai_service()
+        if not ai_service:
+            raise HTTPException(status_code=503, detail="AI service not available")
+        
+        # Fetch latest scans for requested indices
+        from config.supabase_config import get_supabase_admin_client
+        supabase = get_supabase_admin_client()
+        
+        indices_data = []
+        for index in request.indices:
+            response = supabase.table("option_scan_results").select("*").eq(
+                "index", index
+            ).eq(
+                "user_id", str(user.id)
+            ).order("created_at", desc=True).limit(1).execute()
+            
+            if response.data:
+                scan_results = response.data[0].get("scan_results", {})
+                scan_results["index"] = index
+                indices_data.append(scan_results)
+        
+        if not indices_data:
+            raise HTTPException(
+                status_code=404,
+                detail="No scan results found for the specified indices. Please run scans first."
+            )
+        
+        # Compare with AI
+        comparison = await ai_service.compare_indices(
+            indices_data=indices_data,
+            comparison_type=request.comparison_type
+        )
+        
+        # Deduct 0.20 tokens for successful comparison
+        from decimal import Decimal
+        from src.services.billing_service import billing_service
+        
+        CHAT_TOKEN_COST = Decimal("0.20")
+        success, message, result = await billing_service.deduct_credits(
+            user_id=str(user.id),
+            amount=CHAT_TOKEN_COST,
+            description=f"AI Compare Indices: {', '.join(request.indices)}",
+            scan_type="ai_chat",
+            metadata={"action": "compare_indices", "indices": request.indices}
+        )
+        
+        if not success:
+            raise HTTPException(
+                status_code=402,  # Payment Required
+                detail=f"Insufficient tokens. {message}"
+            )
+        
+        logger.info(f"✅ Compare indices tokens deducted: 0.20 credits")
+        
+        response = comparison.dict()
+        if result:
+            response['tokens_remaining'] = result.get('balance', 0)
+        
+        return response
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Compare indices error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/ai/trade-plan")
+async def generate_trade_plan(
+    request: TradePlanRequest,
+    authorization: str = Header(None, description="Bearer token (required)")
+):
+    """
+    Generate detailed trade plan with position sizing.
+    """
+    if not authorization:
+        raise HTTPException(status_code=401, detail="Authentication required")
+    
+    token = authorization.replace("Bearer ", "")
+    
+    try:
+        user = await auth_service.get_current_user(token)
+        
+        # Get AI service
+        ai_service = get_ai_service()
+        if not ai_service:
+            raise HTTPException(status_code=503, detail="AI service not available")
+        
+        # Get signal data
+        signal_data = request.signal_data
+        if not signal_data and request.signal_id:
+            from config.supabase_config import get_supabase_admin_client
+            supabase = get_supabase_admin_client()
+            
+            response = supabase.table("trading_signals").select("*").eq(
+                "id", request.signal_id
+            ).single().execute()
+            
+            if response.data:
+                signal_data = response.data
+        
+        if not signal_data:
+            raise HTTPException(status_code=400, detail="No signal data provided")
+        
+        # Generate trade plan
+        trade_plan = await ai_service.plan_trade(
+            signal_data=signal_data,
+            capital=request.capital,
+            risk_percentage=request.risk_percentage,
+            risk_profile=request.risk_profile
+        )
+        
+        # Deduct 0.20 tokens for successful trade plan generation
+        from decimal import Decimal
+        from src.services.billing_service import billing_service
+        
+        CHAT_TOKEN_COST = Decimal("0.20")
+        success, message, result = await billing_service.deduct_credits(
+            user_id=str(user.id),
+            amount=CHAT_TOKEN_COST,
+            description=f"AI Trade Plan: {request.signal_id or 'custom signal'}",
+            scan_type="ai_chat",
+            metadata={"action": "trade_plan", "capital": request.capital, "risk_profile": request.risk_profile}
+        )
+        
+        if not success:
+            raise HTTPException(
+                status_code=402,  # Payment Required
+                detail=f"Insufficient tokens. {message}"
+            )
+        
+        logger.info(f"✅ Trade plan tokens deducted: 0.20 credits")
+        
+        if result:
+            trade_plan['tokens_remaining'] = result.get('balance', 0)
+        
+        return trade_plan
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Trade plan generation error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/ai/suggestions")
+async def get_query_suggestions(
+    scan_id: str,
+    authorization: str = Header(None, description="Bearer token (required)")
+):
+    """
+    Get smart query suggestions based on scan results.
+    """
+    if not authorization:
+        raise HTTPException(status_code=401, detail="Authentication required")
+    
+    token = authorization.replace("Bearer ", "")
+    
+    try:
+        user = await auth_service.get_current_user(token)
+        
+        # Get AI service
+        ai_service = get_ai_service()
+        if not ai_service:
+            raise HTTPException(status_code=503, detail="AI service not available")
+        
+        # Get scan data
+        from config.supabase_config import get_supabase_admin_client
+        supabase = get_supabase_admin_client()
+        
+        response = supabase.table("option_scan_results").select("*").eq(
+            "id", scan_id
+        ).single().execute()
+        
+        if not response.data:
+            raise HTTPException(status_code=404, detail="Scan not found")
+        
+        scan_data = response.data.get("scan_results", {})
+        
+        # Generate suggestions
+        suggestions = ai_service.get_query_suggestions(scan_data)
+        
+        return {
+            "suggestions": suggestions,
+            "scan_id": scan_id
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Query suggestions error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/ai/cache/stats")
+async def get_ai_cache_stats(authorization: str = Header(None)):
+    """
+    Get AI cache statistics (admin endpoint).
+    """
+    if not authorization:
+        raise HTTPException(status_code=401, detail="Authentication required")
+    
+    try:
+        if ai_cache:
+            stats = ai_cache.get_cache_stats()
+            return {
+                "success": True,
+                "cache_stats": stats
+            }
+        else:
+            return {
+                "success": False,
+                "message": "AI cache not available"
+            }
+    except Exception as e:
+        logger.error(f"Cache stats error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/ai/cache/clear")
+async def clear_ai_cache(authorization: str = Header(None)):
+    """
+    Clear AI response cache (admin endpoint).
+    """
+    if not authorization:
+        raise HTTPException(status_code=401, detail="Authentication required")
+    
+    try:
+        if ai_cache:
+            cleared = ai_cache.clear_cache()
+            return {
+                "success": True,
+                "message": f"Cleared {cleared} cached responses"
+            }
+        else:
+            return {
+                "success": False,
+                "message": "AI cache not available"
+            }
+    except Exception as e:
+        logger.error(f"Cache clear error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/ai/usage-stats")
+async def get_ai_usage_stats(authorization: str = Header(None)):
+    """
+    Get AI usage statistics and rate limit status.
+    
+    Returns current usage metrics, cost estimates, and rate limits.
+    """
+    if not authorization:
+        raise HTTPException(status_code=401, detail="Authentication required")
+    
+    token = authorization.replace("Bearer ", "")
+    
+    try:
+        user = await auth_service.get_current_user(token)
+        
+        from src.services.ai_cost_optimizer import get_cost_optimizers
+        cost_tools = get_cost_optimizers()
+        rate_limiter = cost_tools['rate_limiter']
+        
+        usage_stats = rate_limiter.get_usage_stats()
+        
+        # Estimate costs (Cohere pricing: ~$0.15 per 1K tokens)
+        estimated_tokens_per_query = 500  # Conservative estimate
+        calls_today = usage_stats['calls_today']
+        estimated_cost_today = (calls_today * estimated_tokens_per_query * 0.00015)
+        
+        # Get cache stats if available
+        cache_stats = {}
+        if ai_cache:
+            try:
+                cache_stats = await ai_cache.get_cache_stats()
+            except:
+                pass
+        
+        return {
+            "success": True,
+            "usage": usage_stats,
+            "cache_stats": cache_stats,
+            "cost_estimate": {
+                "queries_today": calls_today,
+                "estimated_tokens_today": calls_today * estimated_tokens_per_query,
+                "estimated_cost_today_usd": round(estimated_cost_today, 4),
+                "estimated_cost_today_inr": round(estimated_cost_today * 83, 2),  # Approx USD to INR
+                "note": "Actual costs depend on query complexity and response length"
+            },
+            "rate_limits": {
+                "remaining_this_minute": max(0, usage_stats['limits']['per_minute'] - usage_stats['calls_last_minute']),
+                "remaining_this_hour": max(0, usage_stats['limits']['per_hour'] - usage_stats['calls_last_hour']),
+                "remaining_today": max(0, usage_stats['limits']['per_day'] - usage_stats['calls_today'])
+            }
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Usage stats error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 # Market data endpoints
@@ -6002,7 +6609,8 @@ async def get_latest_scan(
         token = authorization.replace("Bearer ", "")
         user = await auth_service.get_current_user(token)
         
-        latest_scan = await screener_service.get_latest_scan(user.id, index)
+        # Get latest option scanner result (actual scan data, not just metadata)
+        latest_scan = await screener_service.get_latest_option_scanner_result(user.id, index)
         
         if not latest_scan:
             index_msg = f" for {index.upper()}" if index else ""
@@ -6017,6 +6625,8 @@ async def get_latest_scan(
             **latest_scan
         }
         
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Error getting latest scan: {e}")
         raise HTTPException(status_code=500, detail=str(e))

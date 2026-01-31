@@ -17,7 +17,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { Target, Search, Loader2, TrendingUp, TrendingDown } from 'lucide-react'
+import { Target, Search, Loader2, TrendingUp, TrendingDown, MessageSquare, Sparkles } from 'lucide-react'
+
+// AI Chat Integration
+import { ChatSidebar } from '@/components/ai/ChatSidebar'
+import { useAIChat } from '@/lib/hooks/useAIChat'
+import { DashboardModeToggle, DashboardMode } from '@/components/ai/DashboardModeToggle'
 
 interface OptionResult {
   strike: number
@@ -59,6 +64,26 @@ export default function OptionsPage() {
     confidence: 72,
     direction: 'BULLISH',
     recommendation: 'BUY CE',
+  })
+
+  // AI Chat Integration
+  const [isChatOpen, setIsChatOpen] = React.useState(false)
+  const [dashboardMode, setDashboardMode] = React.useState<DashboardMode>('dashboard')
+  const { messages, isLoading: isChatLoading, sendMessage } = useAIChat({
+    signalData: results.length > 0 ? results[0] : null,
+    scanData: {
+      symbol: selectedIndex,
+      expiry: expiry,
+      analysisMode: analysisMode,
+      results: results,
+      totalOptions: results.length,
+      probability: probability,
+      filters: {
+        minVolume,
+        minOI
+      },
+      timestamp: new Date().toISOString()
+    }
   })
 
   React.useEffect(() => {
@@ -185,10 +210,50 @@ export default function OptionsPage() {
       pageTitle="Options Scanner"
     >
       <div className="container mx-auto px-3 md:px-4 py-4 md:py-6 space-y-4 md:space-y-6">
-        {/* Page Description */}
-        <p className="text-sm text-muted-foreground">
-          Find high-probability option trades with constituent analysis
-        </p>
+        {/* AI Info Banner */}
+        {results.length === 0 && (
+          <div className="bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
+            <div className="flex items-start gap-2">
+              <Sparkles className="w-5 h-5 text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0" />
+              <div className="flex-1">
+                <p className="text-sm font-medium text-blue-900 dark:text-blue-100">
+                  AI Assistant Ready
+                </p>
+                <p className="text-xs text-blue-700 dark:text-blue-300 mt-1">
+                  Scan options first to get AI-powered analysis and recommendations. The AI will analyze your scan results and answer questions about the best trades.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* AI Chat Mode Toggle and Page Description */}
+        <div className="flex items-center justify-between">
+          <p className="text-sm text-muted-foreground">
+            Find high-probability option trades with constituent analysis
+          </p>
+          
+          <div className="flex items-center gap-3">
+            {/* Dashboard Mode Toggle */}
+            <DashboardModeToggle 
+              mode={dashboardMode} 
+              onModeChange={setDashboardMode}
+              showHybrid={false}
+            />
+            
+            {/* AI Chat Button */}
+            {dashboardMode === 'dashboard' && (
+              <Button 
+                onClick={() => setIsChatOpen(true)}
+                variant="outline"
+                className="gap-2"
+              >
+                <Sparkles className="w-4 h-4" />
+                <span className="hidden sm:inline">AI Assistant</span>
+              </Button>
+            )}
+          </div>
+        </div>
 
         {/* Scanner Controls */}
         <Card>
@@ -449,6 +514,55 @@ export default function OptionsPage() {
           </Card>
         )}
       </div>
+
+      {/* AI Chat Sidebar */}
+      <ChatSidebar
+        isOpen={isChatOpen || dashboardMode === 'chat'}
+        onClose={() => {
+          setIsChatOpen(false)
+          if (dashboardMode === 'chat') setDashboardMode('dashboard')
+        }}
+        onSendMessage={sendMessage}
+        messages={messages}
+        isLoading={isChatLoading}
+        signalContext={{
+          symbol: selectedIndex,
+          expiry: expiry,
+          analysisMode: analysisMode,
+          scanResults: results,
+          totalOptions: results.length,
+          probability: probability,
+          filters: {
+            minVolume,
+            minOI
+          },
+          timestamp: new Date().toISOString()
+        }}
+        suggestions={[
+          results.length > 0 
+            ? `Analyze these ${results.length} ${selectedIndex} options signals` 
+            : `What should I look for when scanning ${selectedIndex} options?`,
+          "What's the best strike price to trade based on this data?",
+          "Analyze the risk/reward for these options",
+          probability.direction 
+            ? `Explain why ${probability.direction} probability is ${probability.confidence}%`
+            : "What probability analysis should I consider?",
+          "Should I trade CE or PE based on this analysis?",
+          results.length > 0
+            ? "Which option has the best risk-reward ratio?"
+            : "How do I interpret volume and OI in options?"
+        ]}
+      />
+
+      {/* Floating AI Chat Button (Mobile) */}
+      {!isChatOpen && dashboardMode === 'dashboard' && (
+        <button
+          onClick={() => setIsChatOpen(true)}
+          className="fixed bottom-6 right-6 w-14 h-14 bg-gradient-to-br from-blue-600 to-purple-600 text-white rounded-full shadow-lg flex items-center justify-center lg:hidden z-40 hover:scale-110 transition-transform"
+        >
+          <MessageSquare className="w-6 h-6" />
+        </button>
+      )}
     </DashboardLayout>
   )
 }
