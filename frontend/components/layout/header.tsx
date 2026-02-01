@@ -10,7 +10,6 @@ import { cn } from '@/lib/utils'
 const navigation = [
   { name: 'Dashboard', href: '/', icon: '📊' },
   { name: 'Stock Screener', href: '/screener', icon: '🔍' },
-  { name: 'Paper Trading', href: '/paper-trading', icon: '🤖' },
   { name: 'AI Integration', href: '/mcp', icon: '🧠' },
   { name: 'Subscription', href: '/subscription', icon: '⭐' },
   { name: 'Billing & Credits', href: '/billing', icon: '💳' },
