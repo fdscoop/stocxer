@@ -102,6 +102,8 @@ class ConfidenceCalculator:
         """
         Score HTF structure quality (0-40 points)
         
+        ENHANCED: Better scoring when all timeframes align strongly
+        
         Args:
             htf_bias: Dict with HTF analysis results
                 - overall_direction: 'bullish'/'bearish'/'neutral'
@@ -115,9 +117,15 @@ class ConfidenceCalculator:
         """
         score = 0.0
         
-        # Factor 1: Bias strength (0-15 points)
+        # Factor 1: Bias strength (0-18 points) - INCREASED from 15
         bias_strength = htf_bias.get('bias_strength', 0)
-        score += (bias_strength / 100) * 15
+        direction = htf_bias.get('overall_direction', 'neutral')
+        
+        # ENHANCEMENT: Bonus for very strong directional bias
+        base_strength_score = (bias_strength / 100) * 15
+        if bias_strength >= 80 and direction != 'neutral':
+            base_strength_score += 3  # Bonus for overwhelming consensus
+        score += base_strength_score
         
         # Factor 2: Structure quality (0-15 points)
         structure_quality = htf_bias.get('structure_quality', 'LOW')
@@ -131,7 +139,6 @@ class ConfidenceCalculator:
         # Factor 3: Premium/Discount position (0-10 points)
         # Trading from discount zones (buying low) is ideal
         premium_discount = htf_bias.get('premium_discount', 'equilibrium')
-        direction = htf_bias.get('overall_direction', 'neutral')
         
         if direction == 'bullish' and premium_discount == 'discount':
             score += 10  # Perfect: buying at discount in uptrend
@@ -142,7 +149,7 @@ class ConfidenceCalculator:
         else:
             score += 2   # Poor: buying premium or selling discount
         
-        logger.info(f"🔢 HTF Structure Score: {score:.1f}/40 (strength={bias_strength}, quality={structure_quality})")
+        logger.info(f"🔢 HTF Structure Score: {score:.1f}/40 (strength={bias_strength:.1f}, quality={structure_quality}, P/D={premium_discount})")
         return min(score, 40.0)
     
     def calculate_ltf_confirmation_score(
@@ -332,10 +339,14 @@ class ConfidenceCalculator:
         """
         Score constituent stock alignment (0-5 points)
         
+        ENHANCED: Now properly weighs strong directional percentages
+        
         Args:
             probability_analysis: Dict with constituent analysis
                 - expected_direction: 'BULLISH'/'BEARISH'/'NEUTRAL'
                 - confidence: 0-1
+                - bearish_pct: Percentage of bearish stocks
+                - bullish_pct: Percentage of bullish stocks
                 
             htf_direction: HTF bias direction
             
@@ -348,16 +359,39 @@ class ConfidenceCalculator:
         
         constituent_dir = probability_analysis.get('expected_direction', 'NEUTRAL').lower()
         constituent_conf = probability_analysis.get('confidence', 0)
+        bearish_pct = probability_analysis.get('bearish_pct', 0)
+        bullish_pct = probability_analysis.get('bullish_pct', 0)
         
-        if constituent_dir == htf_direction and htf_direction != 'neutral':
-            score = constituent_conf * 5
-            logger.info(f"✅ Constituents ALIGN: {score:.1f}/5")
-        elif constituent_dir == 'neutral':
-            score = 2.5
-            logger.info(f"📊 Constituents NEUTRAL: {score:.1f}/5")
+        # Calculate score based on actual percentages when available
+        if bearish_pct > 0 or bullish_pct > 0:
+            # Use actual percentages for more accurate scoring
+            if constituent_dir == 'bearish' and htf_direction == 'bearish':
+                # Scale bearish percentage: 60% = 3.0, 70% = 4.0, 80% = 5.0
+                score = min(((bearish_pct - 50) / 30) * 5, 5.0)
+                score = max(score, 2.0)  # Minimum 2.0 if aligned
+                logger.info(f"✅ Constituents ALIGN (Bearish): {score:.1f}/5 ({bearish_pct}% bearish stocks)")
+            elif constituent_dir == 'bullish' and htf_direction == 'bullish':
+                score = min(((bullish_pct - 50) / 30) * 5, 5.0)
+                score = max(score, 2.0)
+                logger.info(f"✅ Constituents ALIGN (Bullish): {score:.1f}/5 ({bullish_pct}% bullish stocks)")
+            elif constituent_dir == 'neutral':
+                score = 2.5
+                logger.info(f"📊 Constituents NEUTRAL: {score:.1f}/5")
+            else:
+                # Conflict case
+                score = 1.0
+                logger.info(f"⚠️ Constituents CONFLICT: {score:.1f}/5 (dir={constituent_dir}, htf={htf_direction})")
         else:
-            score = 1.0
-            logger.info(f"⚠️ Constituents CONFLICT: {score:.1f}/5")
+            # Fallback to old confidence-based scoring
+            if constituent_dir == htf_direction and htf_direction != 'neutral':
+                score = constituent_conf * 5
+                logger.info(f"✅ Constituents ALIGN: {score:.1f}/5")
+            elif constituent_dir == 'neutral':
+                score = 2.5
+                logger.info(f"📊 Constituents NEUTRAL: {score:.1f}/5")
+            else:
+                score = 1.0
+                logger.info(f"⚠️ Constituents CONFLICT: {score:.1f}/5")
         
         return min(score, 5.0)
     

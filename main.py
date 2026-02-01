@@ -4123,9 +4123,40 @@ def _generate_actionable_signal_topdown(mtf_result, session_info, chain_data, hi
             target_delta = 0.40
             
     else:  # neutral
-        option_type = 'call'  # Default to call in neutral
-        action = "WAIT"
-        target_delta = 0.40
+        # CRITICAL FIX: Override neutral when evidence is overwhelming
+        # Check if we have strong HTF bias + trend reversal + constituent confirmation
+        if probability_analysis and not probability_analysis.get('error'):
+            constituent_dir = probability_analysis.get('expected_direction', 'NEUTRAL').lower()
+            constituent_conf = probability_analysis.get('confidence', 0)
+            
+            # Check for overwhelming bearish evidence
+            if (constituent_dir == 'bearish' and 
+                constituent_conf >= 40 and 
+                probability_analysis.get('bearish_pct', 0) >= 60):
+                logger.info("🚨 OVERRIDE: Overwhelming bearish evidence despite neutral HTF")
+                logger.info(f"   Constituent: {probability_analysis.get('bearish_pct')}% bearish stocks")
+                trade_direction = 'bearish'
+                option_type = 'put'
+                action = "BUY PUT (OVERRIDE)"
+                target_delta = 0.40
+            # Check for overwhelming bullish evidence
+            elif (constituent_dir == 'bullish' and 
+                  constituent_conf >= 40 and 
+                  probability_analysis.get('bullish_pct', 0) >= 60):
+                logger.info("🚨 OVERRIDE: Overwhelming bullish evidence despite neutral HTF")
+                logger.info(f"   Constituent: {probability_analysis.get('bullish_pct')}% bullish stocks")
+                trade_direction = 'bullish'
+                option_type = 'call'
+                action = "BUY CALL (OVERRIDE)"
+                target_delta = 0.40
+            else:
+                option_type = 'call'  # Default to call in neutral
+                action = "WAIT"
+                target_delta = 0.40
+        else:
+            option_type = 'call'  # Default to call in neutral
+            action = "WAIT"
+            target_delta = 0.40
     
     logger.info(f"   Direction: {trade_direction.upper()}")
     logger.info(f"   Option Type: {option_type.upper()}")
