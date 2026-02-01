@@ -7058,8 +7058,8 @@ async def get_available_scan_dates(
         for item in options_response.data:
             if item.get('scanned_at') or item.get('timestamp'):
                 date_str = (item.get('scanned_at') or item.get('timestamp')).split('T')[0]
-                option_datimestamp'):  # option_scanner_results uses 'timestamp'
-                date_str = item['timestamp']
+                option_dates.add(date_str)
+        
         return {
             "status": "success",
             "stock_dates": sorted(list(stock_dates), reverse=True),
