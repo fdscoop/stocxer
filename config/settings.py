@@ -38,7 +38,7 @@ class Settings(BaseSettings):
     
     # API
     api_host: str = "0.0.0.0"
-    api_port: int = 8000
+    api_port: int = int(os.getenv("PORT", "8000"))  # Use PORT from env (Cloud Run) or default to 8000
     debug_mode: bool = True
     
     # ML Configuration

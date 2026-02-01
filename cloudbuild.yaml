@@ -23,6 +23,7 @@ steps:
       - '--timeout=300s'
       - '--max-instances=10'
       - '--min-instances=0'
+      - '--port=8080'
 
 images:
   - 'gcr.io/$PROJECT_ID/tradewise-backend:$COMMIT_SHA'
