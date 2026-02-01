@@ -67,6 +67,7 @@ export default function ScansPage() {
   const [actionFilter, setActionFilter] = React.useState<'all' | 'BUY' | 'SELL'>('all')
   const [selectedDate, setSelectedDate] = React.useState<Date | undefined>(undefined)
   const [availableDates, setAvailableDates] = React.useState<string[]>([])
+  const [dateCounts, setDateCounts] = React.useState<{ [key: string]: number }>({})
   const [calendarOpen, setCalendarOpen] = React.useState(false)
 
   React.useEffect(() => {
@@ -91,6 +92,13 @@ export default function ScansPage() {
       if (response.ok) {
         const data = await response.json()
         setAvailableDates(data.all_dates || [])
+        
+        // Create a count map for better visualization
+        const counts: { [key: string]: number } = {}
+        data.all_dates?.forEach((date: string) => {
+          counts[date] = (counts[date] || 0) + 1
+        })
+        setDateCounts(counts)
       }
     } catch (error) {
       console.error('Failed to fetch available dates:', error)
@@ -224,39 +232,79 @@ export default function ScansPage() {
             Last 7 Days
           </Button>
           
-          {/* Calendar Picker */}
+          {/* Calendar Picker - Shows last 3 months */}
           <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
             <PopoverTrigger asChild>
               <Button
                 variant={dateFilter === 'custom' ? 'default' : 'outline'}
                 size="sm"
+                className="relative"
               >
                 <CalendarIcon className="w-4 h-4 mr-1" />
                 {selectedDate ? format(selectedDate, 'MMM d, yyyy') : 'Pick Date'}
+                {availableDates.length > 0 && (
+                  <span className="ml-1 text-xs text-green-500">({availableDates.length})</span>
+                )}
               </Button>
             </PopoverTrigger>
-            <PopoverContent className="w-auto p-0" align="start">
+            <PopoverContent className="w-auto p-0 max-w-2xl" align="start" sideOffset={5}>
+              <div className="p-3 border-b bg-muted/50">
+                <p className="text-sm font-medium mb-1">Select a Scan Date</p>
+                <p className="text-xs text-muted-foreground">
+                  <span className="inline-flex items-center gap-1">
+                    <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
+                    <strong>{availableDates.length}</strong> days with scan results in the last 90 days
+                  </span>
+                </p>
+              </div>
               <Calendar
                 mode="single"
                 selected={selectedDate}
                 onSelect={handleDateSelect}
                 disabled={(date) => date > new Date() || date < new Date('2024-01-01')}
+                numberOfMonths={2}
+                defaultMonth={selectedDate || (() => {
+                  // Show most recent available date's month by default
+                  if (availableDates.length > 0) {
+                    return parseISO(availableDates[0])
+                  }
+                  return new Date()
+                })()}
                 modifiers={{
                   available: (date) => {
                     const dateStr = format(date, 'yyyy-MM-dd')
                     return availableDates.includes(dateStr)
                   }
                 }}
-                modifiersStyles={{
-                  available: {
-                    position: 'relative',
-                  }
-                }}
                 modifiersClassNames={{
-                  available: 'relative after:absolute after:bottom-1 after:left-1/2 after:-translate-x-1/2 after:w-1 after:h-1 after:bg-green-500 after:rounded-full'
+                  available: 'bg-green-100 dark:bg-green-900/30 font-bold text-green-700 dark:text-green-400 hover:bg-green-200 dark:hover:bg-green-800/50 relative after:absolute after:bottom-1 after:left-1/2 after:-translate-x-1/2 after:w-2 after:h-2 after:bg-green-500 after:rounded-full after:shadow-lg'
                 }}
+                className="border-0"
                 initialFocus
               />
+              <div className="p-3 border-t bg-muted/30 max-h-32 overflow-y-auto">
+                <p className="text-xs font-medium text-muted-foreground mb-2">Recent Scans:</p>
+                <div className="flex flex-wrap gap-1">
+                  {availableDates.slice(0, 10).map((date) => (
+                    <button
+                      key={date}
+                      onClick={() => {
+                        setSelectedDate(parseISO(date))
+                        setDateFilter('custom')
+                        setCalendarOpen(false)
+                      }}
+                      className="px-2 py-1 text-xs bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 rounded hover:bg-green-200 dark:hover:bg-green-800/50 transition-colors"
+                    >
+                      {format(parseISO(date), 'MMM d')}
+                    </button>
+                  ))}
+                  {availableDates.length > 10 && (
+                    <span className="px-2 py-1 text-xs text-muted-foreground">
+                      +{availableDates.length - 10} more
+                    </span>
+                  )}
+                </div>
+              </div>
             </PopoverContent>
           </Popover>
         </div>
