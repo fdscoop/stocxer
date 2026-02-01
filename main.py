@@ -7023,6 +7023,63 @@ async def get_recent_screener_scans(
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@app.get("/screener/available-dates")
+async def get_available_scan_dates(
+    authorization: str = Header(None, description="Bearer token"),
+    days_back: int = Query(90, description="Number of days to look back for scans")
+):
+    """Get all dates that have scan results available"""
+    try:
+        if not authorization:
+            raise HTTPException(status_code=401, detail="Authorization header required")
+        
+        token = authorization.replace("Bearer ", "")
+        user = await auth_service.get_current_user(token)
+        
+        from datetime import datetime, timedelta, timezone
+        time_threshold = (datetime.now(timezone.utc) - timedelta(days=days_back)).isoformat()
+        
+        # Get distinct dates for stock screener
+        stock_response = screener_service.supabase_admin.table("screener_results")\
+            .select("scanned_at")\
+            .eq("user_id", user.id)\
+            .eq("signal_type", "STOCK")\
+            .gte("scanned_at", time_threshold)\
+            .execute()
+        
+        # Get distinct dates for options scanner
+        options_response = screener_service.supabase_admin.table("screener_results")\
+            .select("scanned_at")\
+            .eq("user_id", user.id)\
+            .eq("signal_type", "OPTIONS")\
+            .gte("scanned_at", time_threshold)\
+            .execute()
+        
+        # Extract unique dates
+        stock_dates = set()
+        for item in stock_response.data:
+            if item.get('scanned_at'):
+                date_str = item['scanned_at'].split('T')[0]
+                stock_dates.add(date_str)
+        
+        option_dates = set()
+        for item in options_response.data:
+            if item.get('scanned_at') or item.get('timestamp'):
+                date_str = (item.get('scanned_at') or item.get('timestamp')).split('T')[0]
+                option_dates.add(date_str)
+        
+        return {
+            "status": "success",
+            "stock_dates": sorted(list(stock_dates), reverse=True),
+            "option_dates": sorted(list(option_dates), reverse=True),
+            "all_dates": sorted(list(stock_dates.union(option_dates)), reverse=True)
+        }
+        
+    except Exception as e:
+        logger.error(f"Error getting available scan dates: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @app.get("/options/scan/latest")
 async def get_latest_scan_results(
     index: str = Query("NIFTY", description="Index to get results for")

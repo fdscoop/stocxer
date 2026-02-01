@@ -6,8 +6,11 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Calendar, TrendingUp, TrendingDown, Target, Search, RefreshCw, Loader2 } from 'lucide-react'
+import { Calendar as CalendarIcon, TrendingUp, TrendingDown, Target, Search, RefreshCw, Loader2 } from 'lucide-react'
 import { getApiUrl } from '@/lib/api'
+import { Calendar } from '@/components/ui/calendar'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import { format, parseISO } from 'date-fns'
 
 interface OptionScanResult {
   id: string
@@ -60,17 +63,39 @@ export default function ScansPage() {
   const [loading, setLoading] = React.useState(false)
   const [optionResults, setOptionResults] = React.useState<OptionScanResult[]>([])
   const [screenerResults, setScreenerResults] = React.useState<ScreenerResult[]>([])
-  const [dateFilter, setDateFilter] = React.useState<'today' | 'yesterday' | 'week'>('today')
+  const [dateFilter, setDateFilter] = React.useState<'today' | 'yesterday' | 'week' | 'custom'>('today')
   const [actionFilter, setActionFilter] = React.useState<'all' | 'BUY' | 'SELL'>('all')
+  const [selectedDate, setSelectedDate] = React.useState<Date | undefined>(undefined)
+  const [availableDates, setAvailableDates] = React.useState<string[]>([])
+  const [calendarOpen, setCalendarOpen] = React.useState(false)
 
   React.useEffect(() => {
     const token = localStorage.getItem('auth_token') || localStorage.getItem('token')
     const email = localStorage.getItem('userEmail')
     if (token && email) {
       setUser({ email })
+      fetchAvailableDates()
       fetchResults()
     }
-  }, [dateFilter])
+  }, [dateFilter, selectedDate])
+
+  const fetchAvailableDates = async () => {
+    try {
+      const apiUrl = getApiUrl()
+      const token = localStorage.getItem('auth_token') || localStorage.getItem('token')
+      
+      const response = await fetch(`${apiUrl}/screener/available-dates?days_back=90`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      })
+      
+      if (response.ok) {
+        const data = await response.json()
+        setAvailableDates(data.all_dates || [])
+      }
+    } catch (error) {
+      console.error('Failed to fetch available dates:', error)
+    }
+  }
 
   const fetchResults = async () => {
     setLoading(true)
@@ -78,13 +103,22 @@ export default function ScansPage() {
       const apiUrl = getApiUrl()
       const token = localStorage.getItem('auth_token') || localStorage.getItem('token')
 
-      // Calculate hours based on filter
-      let hours = 24
-      if (dateFilter === 'yesterday') hours = 48
-      if (dateFilter === 'week') hours = 168
+      // Calculate hours or use selected date
+      let params = ''
+      if (dateFilter === 'custom' && selectedDate) {
+        // For custom date, fetch results from that specific day
+        const dateStr = format(selectedDate, 'yyyy-MM-dd')
+        // Get 24 hours from selected date
+        params = `hours=24&date=${dateStr}`
+      } else {
+        let hours = 24
+        if (dateFilter === 'yesterday') hours = 48
+        if (dateFilter === 'week') hours = 168
+        params = `hours=${hours}`
+      }
 
       // Fetch option scanner results
-      const optionResponse = await fetch(`${apiUrl}/screener/option-scanner-results?hours=${hours}`, {
+      const optionResponse = await fetch(`${apiUrl}/screener/option-scanner-results?${params}`, {
         headers: { 'Authorization': `Bearer ${token}` }
       })
       if (optionResponse.ok) {
@@ -93,7 +127,7 @@ export default function ScansPage() {
       }
 
       // Fetch screener results
-      const screenerResponse = await fetch(`${apiUrl}/screener/recent-scans?hours=${hours}`, {
+      const screenerResponse = await fetch(`${apiUrl}/screener/recent-scans?${params}`, {
         headers: { 'Authorization': `Bearer ${token}` }
       })
       if (screenerResponse.ok) {
@@ -106,6 +140,12 @@ export default function ScansPage() {
     } finally {
       setLoading(false)
     }
+  }
+
+  const handleDateSelect = (date: Date | undefined) => {
+    setSelectedDate(date)
+    setDateFilter('custom')
+    setCalendarOpen(false)
   }
 
   const handleLogout = () => {
@@ -155,53 +195,70 @@ export default function ScansPage() {
           <Button
             variant={dateFilter === 'today' ? 'default' : 'outline'}
             size="sm"
-            onClick={() => setDateFilter('today')}
+            onClick={() => {
+              setDateFilter('today')
+              setSelectedDate(undefined)
+            }}
           >
-            <Calendar className="w-4 h-4 mr-1" />
+            <CalendarIcon className="w-4 h-4 mr-1" />
             Today
           </Button>
           <Button
             variant={dateFilter === 'yesterday' ? 'default' : 'outline'}
             size="sm"
-            onClick={() => setDateFilter('yesterday')}
+            onClick={() => {
+              setDateFilter('yesterday')
+              setSelectedDate(undefined)
+            }}
           >
             Yesterday
           </Button>
           <Button
             variant={dateFilter === 'week' ? 'default' : 'outline'}
             size="sm"
-            onClick={() => setDateFilter('week')}
+            onClick={() => {
+              setDateFilter('week')
+              setSelectedDate(undefined)
+            }}
           >
             Last 7 Days
           </Button>
-        </div>
-
-        {/* Action Filters */}
-        <div className="flex gap-2 overflow-x-auto pb-2">
-          <span className="text-sm text-muted-foreground flex items-center mr-2">Filter:</span>
-          <Button
-            variant={actionFilter === 'all' ? 'default' : 'outline'}
-            size="sm"
-            onClick={() => setActionFilter('all')}
-          >
-            All
-          </Button>
-          <Button
-            variant={actionFilter === 'BUY' ? 'default' : 'outline'}
-            size="sm"
-            onClick={() => setActionFilter('BUY')}
-          >
-            <TrendingUp className="w-4 h-4 mr-1" />
-            BUY Only
-          </Button>
-          <Button
-            variant={actionFilter === 'SELL' ? 'default' : 'outline'}
-            size="sm"
-            onClick={() => setActionFilter('SELL')}
-          >
-            <TrendingDown className="w-4 h-4 mr-1" />
-            SELL Only
-          </Button>
+          
+          {/* Calendar Picker */}
+          <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
+            <PopoverTrigger asChild>
+              <Button
+                variant={dateFilter === 'custom' ? 'default' : 'outline'}
+                size="sm"
+              >
+                <CalendarIcon className="w-4 h-4 mr-1" />
+                {selectedDate ? format(selectedDate, 'MMM d, yyyy') : 'Pick Date'}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="start">
+              <Calendar
+                mode="single"
+                selected={selectedDate}
+                onSelect={handleDateSelect}
+                disabled={(date) => date > new Date() || date < new Date('2024-01-01')}
+                modifiers={{
+                  available: (date) => {
+                    const dateStr = format(date, 'yyyy-MM-dd')
+                    return availableDates.includes(dateStr)
+                  }
+                }}
+                modifiersStyles={{
+                  available: {
+                    position: 'relative',
+                  }
+                }}
+                modifiersClassNames={{
+                  available: 'relative after:absolute after:bottom-1 after:left-1/2 after:-translate-x-1/2 after:w-1 after:h-1 after:bg-green-500 after:rounded-full'
+                }}
+                initialFocus
+              />
+            </PopoverContent>
+          </Popover>
         </div>
 
         {/* Action Filters */}
