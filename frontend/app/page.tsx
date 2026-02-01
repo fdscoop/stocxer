@@ -270,6 +270,40 @@ interface TradingSignal {
     strike_position: string
     distance_pct: number
   }
+  // Scalp Feasibility Analysis
+  scalp_feasibility?: {
+    feasible: boolean
+    risk_level: string
+    risk_score: number
+    recommendation: string
+    time_window: string
+    targets: {
+      entry: number
+      target_5: number
+      target_10: number
+      target_15: number
+      stop_loss: number
+    }
+    index_moves_needed: {
+      for_5_pts: number
+      for_10_pts: number
+      for_15_pts: number
+    }
+    per_lot_pnl: {
+      profit_5: number
+      profit_10: number
+      profit_15: number
+      max_loss: number
+      lot_size: number
+    }
+    theta_impact?: {
+      per_hour: number
+      per_30_min: number
+      warning: string
+    }
+    risk_factors: string[]
+    momentum_boost: boolean
+  }
 }
 
 interface NewsArticle {
@@ -1299,6 +1333,21 @@ export default function DashboardPage() {
             distance_pct: backendSignal.option.chain_data.distance_pct
           } : undefined,
 
+          // Scalp Feasibility - NEW
+          scalp_feasibility: backendSignal.scalp_feasibility ? {
+            feasible: backendSignal.scalp_feasibility.feasible,
+            risk_level: backendSignal.scalp_feasibility.risk_level,
+            risk_score: backendSignal.scalp_feasibility.risk_score,
+            recommendation: backendSignal.scalp_feasibility.recommendation,
+            time_window: backendSignal.scalp_feasibility.time_window,
+            targets: backendSignal.scalp_feasibility.targets,
+            index_moves_needed: backendSignal.scalp_feasibility.index_moves_needed,
+            per_lot_pnl: backendSignal.scalp_feasibility.per_lot_pnl,
+            theta_impact: backendSignal.scalp_feasibility.theta_impact,
+            risk_factors: backendSignal.scalp_feasibility.risk_factors,
+            momentum_boost: backendSignal.scalp_feasibility.momentum_boost
+          } : undefined,
+
           // Keep legacy for backward compatibility
           confidence_adjustments: backendSignal.confidence_adjustments
         }
@@ -1750,6 +1799,103 @@ export default function DashboardPage() {
                   <div className="text-[10px] sm:text-xs text-yellow-400">Favorable</div>
                 </div>
               </div>
+
+              {/* ⚡ Quick Scalp Targets - 5/10/15 Point Zones */}
+              {tradingSignal.scalp_feasibility && tradingSignal.greeks?.delta && (
+                <div className={`p-3 rounded-lg border ${
+                  !tradingSignal.scalp_feasibility.feasible || tradingSignal.scalp_feasibility.risk_level === 'EXTREME'
+                    ? 'bg-red-500/10 border-red-500/30'
+                    : tradingSignal.scalp_feasibility.risk_level === 'HIGH'
+                    ? 'bg-yellow-500/10 border-yellow-500/30'
+                    : 'bg-cyan-500/10 border-cyan-500/30'
+                }`}>
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-2">
+                      <span className="text-cyan-400 text-xs font-semibold">⚡ Quick Scalp Targets</span>
+                      <Badge variant="outline" className="text-[10px] border-cyan-500 text-cyan-400">
+                        INTRADAY
+                      </Badge>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] text-muted-foreground">
+                        Delta: <span className="text-cyan-300 font-mono">{tradingSignal.greeks.delta.toFixed(3)}</span>
+                      </span>
+                      <Badge
+                        variant="outline"
+                        className={`text-[10px] ${
+                          !tradingSignal.scalp_feasibility.feasible || tradingSignal.scalp_feasibility.risk_level === 'EXTREME'
+                            ? 'border-red-500 text-red-400 bg-red-500/20'
+                            : tradingSignal.scalp_feasibility.risk_level === 'HIGH'
+                            ? 'border-yellow-500 text-yellow-400 bg-yellow-500/20'
+                            : 'border-green-500 text-green-400 bg-green-500/20'
+                        }`}
+                      >
+                        {!tradingSignal.scalp_feasibility.feasible || tradingSignal.scalp_feasibility.risk_level === 'EXTREME'
+                          ? '⛔ HIGH RISK'
+                          : tradingSignal.scalp_feasibility.risk_level === 'HIGH'
+                          ? '⚠️ RISKY'
+                          : '✅ VIABLE'
+                        }
+                      </Badge>
+                    </div>
+                  </div>
+
+                  {/* Scalp Target Grid */}
+                  <div className="grid grid-cols-3 gap-2 mb-2">
+                    <div className="p-2 bg-green-900/40 rounded-lg border border-green-500/30 text-center">
+                      <div className="text-[10px] text-green-400/70">+5 Points</div>
+                      <div className="text-sm font-bold text-green-400">
+                        ₹{tradingSignal.scalp_feasibility.targets.target_5.toFixed(1)}
+                      </div>
+                      <div className="text-[10px] text-gray-400">
+                        ~{tradingSignal.scalp_feasibility.index_moves_needed.for_5_pts} idx pts
+                      </div>
+                    </div>
+                    <div className="p-2 bg-green-900/50 rounded-lg border border-green-500/40 text-center">
+                      <div className="text-[10px] text-green-400/70">+10 Points</div>
+                      <div className="text-sm font-bold text-green-400">
+                        ₹{tradingSignal.scalp_feasibility.targets.target_10.toFixed(1)}
+                      </div>
+                      <div className="text-[10px] text-gray-400">
+                        ~{tradingSignal.scalp_feasibility.index_moves_needed.for_10_pts} idx pts
+                      </div>
+                    </div>
+                    <div className="p-2 bg-green-900/60 rounded-lg border border-green-500/50 text-center">
+                      <div className="text-[10px] text-green-400/70">+15 Points</div>
+                      <div className="text-sm font-bold text-green-400">
+                        ₹{tradingSignal.scalp_feasibility.targets.target_15.toFixed(1)}
+                      </div>
+                      <div className="text-[10px] text-gray-400">
+                        ~{tradingSignal.scalp_feasibility.index_moves_needed.for_15_pts} idx pts
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Stop Loss and Per Lot Info */}
+                  <div className="flex justify-between items-center text-xs">
+                    <span>
+                      SL: <span className="text-red-400">₹{tradingSignal.scalp_feasibility.targets.stop_loss.toFixed(1)}</span>
+                    </span>
+                    <span>
+                      Per Lot: <span className="text-cyan-300">
+                        ₹{tradingSignal.scalp_feasibility.per_lot_pnl.profit_5} - ₹{tradingSignal.scalp_feasibility.per_lot_pnl.profit_15}
+                      </span>
+                      {tradingSignal.scalp_feasibility.theta_impact && tradingSignal.scalp_feasibility.theta_impact.per_hour > 1.5 && (
+                        <span className="text-red-400 ml-2">
+                          ⏱️ θ: -₹{tradingSignal.scalp_feasibility.theta_impact.per_hour.toFixed(1)}/hr
+                        </span>
+                      )}
+                    </span>
+                  </div>
+
+                  {/* Recommendation */}
+                  {tradingSignal.scalp_feasibility.recommendation && (
+                    <div className="mt-2 text-[10px] text-gray-400 border-t border-gray-700 pt-2">
+                      {tradingSignal.scalp_feasibility.recommendation}
+                    </div>
+                  )}
+                </div>
+              )}
 
               {/* Enhanced Entry Analysis & Liquidity */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
