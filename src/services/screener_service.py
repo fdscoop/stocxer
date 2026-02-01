@@ -533,7 +533,8 @@ class ScreenerService:
     async def get_recent_option_scanner_results(
         self, 
         user_id: str, 
-        hours: int = 24, 
+        hours: int = 24,
+        date: Optional[str] = None,
         limit: int = 20,
         index: Optional[str] = None
     ) -> list:
@@ -541,13 +542,26 @@ class ScreenerService:
         try:
             from datetime import datetime, timedelta, timezone
             
-            time_threshold = (datetime.now(timezone.utc) - timedelta(hours=hours)).isoformat()
+            # Use specific date if provided, otherwise use hours
+            if date:
+                # Parse date and get start/end of that day
+                from dateutil import parser as date_parser
+                selected_date = date_parser.parse(date).replace(tzinfo=timezone.utc)
+                time_threshold = selected_date.replace(hour=0, minute=0, second=0, microsecond=0).isoformat()
+                time_end = selected_date.replace(hour=23, minute=59, second=59, microsecond=999999).isoformat()
+            else:
+                time_threshold = (datetime.now(timezone.utc) - timedelta(hours=hours)).isoformat()
+                time_end = None
             
             # Use admin client to bypass RLS
             query = self.supabase_admin.table("option_scanner_results")\
                 .select("*")\
                 .eq("user_id", user_id)\
                 .gte("timestamp", time_threshold)
+            
+            # Add end time filter if specific date was provided
+            if date and time_end:
+                query = query.lte("timestamp", time_end)
             
             if index:
                 query = query.eq("index", index.upper())

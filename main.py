@@ -6903,6 +6903,7 @@ async def get_recent_option_scanner_results(
 async def get_option_scanner_results(
     authorization: str = Header(None, description="Bearer token"),
     hours: int = Query(24, description="Time range in hours"),
+    date: str = Query(None, description="Specific date to fetch (YYYY-MM-DD format)"),
     limit: int = Query(50, description="Max results to retrieve"),
     index: Optional[str] = Query(None, description="Filter by index")
 ):
@@ -6916,7 +6917,8 @@ async def get_option_scanner_results(
         
         results = await screener_service.get_recent_option_scanner_results(
             user.id, 
-            hours=hours, 
+            hours=hours,
+            date=date,
             limit=limit,
             index=index
         )
@@ -6973,6 +6975,7 @@ async def get_ai_chat_history(
 async def get_recent_screener_scans(
     authorization: str = Header(None, description="Bearer token"),
     hours: int = Query(24, description="Time range in hours"),
+    date: str = Query(None, description="Specific date to fetch (YYYY-MM-DD format)"),
     limit: int = Query(50, description="Max results to retrieve")
 ):
     """Get recent stock screener results for the scan results page"""
@@ -6984,15 +6987,30 @@ async def get_recent_screener_scans(
         user = await auth_service.get_current_user(token)
         
         from datetime import datetime, timedelta, timezone
-        time_threshold = (datetime.now(timezone.utc) - timedelta(hours=hours)).isoformat()
+        
+        # Use specific date if provided, otherwise use hours
+        if date:
+            # Parse date and get start/end of that day
+            from dateutil import parser as date_parser
+            selected_date = date_parser.parse(date).replace(tzinfo=timezone.utc)
+            time_threshold = selected_date.replace(hour=0, minute=0, second=0, microsecond=0).isoformat()
+            time_end = selected_date.replace(hour=23, minute=59, second=59, microsecond=999999).isoformat()
+        else:
+            time_threshold = (datetime.now(timezone.utc) - timedelta(hours=hours)).isoformat()
+            time_end = None
         
         # Fetch from screener_results table - only STOCK signals
-        response = screener_service.supabase_admin.table("screener_results")\
+        query = screener_service.supabase_admin.table("screener_results")\
             .select("*")\
             .eq("user_id", user.id)\
             .eq("signal_type", "STOCK")\
-            .gte("scanned_at", time_threshold)\
-            .order("scanned_at", desc=True)\
+            .gte("scanned_at", time_threshold)
+        
+        # Add end time filter if specific date was provided
+        if date and time_end:
+            query = query.lte("scanned_at", time_end)
+        
+        response = query.order("scanned_at", desc=True)\
             .limit(limit)\
             .execute()
         
