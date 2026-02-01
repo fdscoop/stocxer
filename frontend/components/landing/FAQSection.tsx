@@ -6,7 +6,7 @@ import { ChevronDown } from 'lucide-react'
 const faqs = [
     {
         question: 'What features are included in Stocxer AI?',
-        answer: 'All plans include: Stock Dashboard, Stock Screener, Options Scanner, Index Analyzer, live market data, technical analysis, probability scores, and AI-powered insights via Watchman AI v3.5. All users get the same features — differences are only in rate limits and bulk scan limits.',
+        answer: 'All plans include: Stock Dashboard, Stock Screener, Options Scanner, live market data, technical analysis, probability scores, and AI-powered insights via Watchman AI v3.5. All users get the same features — differences are only in rate limits and bulk scan limits.',
     },
     {
         question: 'Is Watchman AI v3.5 available in the free trial?',

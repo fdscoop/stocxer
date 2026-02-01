@@ -1476,12 +1476,6 @@ export default function DashboardPage() {
               <span className="text-sm font-medium">Options Scanner</span>
             </Button>
           </Link>
-          <Link href="/analyzer" className="block">
-            <Button variant="outline" className="w-full h-auto py-3 px-4 flex items-center justify-start gap-3 hover:bg-accent">
-              <TrendingUp className="w-5 h-5" />
-              <span className="text-sm font-medium">Index Analyzer</span>
-            </Button>
-          </Link>
           <Button
             variant="outline"
             className="w-full h-auto py-3 px-4 flex items-center justify-start gap-3 hover:bg-accent"

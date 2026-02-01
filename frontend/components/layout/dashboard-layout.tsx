@@ -16,7 +16,6 @@ const indices = ['NIFTY', 'BANKNIFTY', 'FINNIFTY', 'MIDCPNIFTY', 'SENSEX', 'BANK
 const navigation = [
   { name: 'Dashboard', href: '/', icon: '📊' },
   { name: 'Stock Screener', href: '/screener', icon: '🔍' },
-  { name: 'Index Analyzer', href: '/analyzer', icon: '📈' },
   { name: 'Options Scanner', href: '/options', icon: '🎯' },
   { name: 'AI Integration', href: '/mcp', icon: '🤖' },
   { name: 'Subscription', href: '/subscription', icon: '⭐' },

@@ -8,7 +8,6 @@ const footerLinks = {
         { name: 'Dashboard', href: '/' },
         { name: 'Stock Screener', href: '/screener' },
         { name: 'Options Scanner', href: '/' },
-        { name: 'Index Analyzer', href: '/analyzer' },
     ],
     account: [
         { name: 'Billing & Credits', href: '/billing' },

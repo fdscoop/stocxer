@@ -42,7 +42,7 @@ const faqs = [
             },
             {
                 question: 'What features are included in the platform?',
-                answer: 'Features include the Stock Dashboard, Stock Screener, Options Scanner, Index Analyzer, live market data, technical analysis, probability scores, and AI-powered insights. Available features vary by subscription plan.'
+                answer: 'Features include the Stock Dashboard, Stock Screener, Options Scanner, live market data, technical analysis, probability scores, and AI-powered insights. Available features vary by subscription plan.'
             },
         ]
     },
