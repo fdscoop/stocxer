@@ -45,7 +45,8 @@ interface ScreenerResult {
   target_2: number
   stop_loss: number
   rsi: number
-  timestamp: string
+  scanned_at: string
+  reasons?: string[]
 }
 
 export default function ScansPage() {
@@ -288,7 +289,7 @@ export default function ScansPage() {
                         </div>
                         <div className="text-right">
                           <div className="text-lg font-semibold">₹{result.current_price?.toFixed(2)}</div>
-                          <div className="text-xs text-muted-foreground">{formatDate(result.timestamp)}</div>
+                          <div className="text-xs text-muted-foreground">{formatDate(result.scanned_at)}</div>
                         </div>
                       </div>
 
@@ -310,6 +311,17 @@ export default function ScansPage() {
                       {result.rsi && (
                         <div className="mt-3 pt-3 border-t text-xs text-muted-foreground">
                           RSI: {result.rsi?.toFixed(1)}
+                        </div>
+                      )}
+                      
+                      {result.reasons && result.reasons.length > 0 && (
+                        <div className="mt-3 pt-3 border-t">
+                          <div className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-2">Reasons:</div>
+                          <ul className="text-xs text-gray-600 dark:text-gray-400 space-y-1">
+                            {result.reasons.slice(0, 3).map((reason, idx) => (
+                              <li key={idx}>{reason}</li>
+                            ))}
+                          </ul>
                         </div>
                       )}
                     </CardContent>
