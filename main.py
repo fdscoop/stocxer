@@ -7631,7 +7631,7 @@ async def scan_options(
                     for tf_key, tf_analysis in mtf_result.analyses.items()
                 },
                 "confluence_zones": [
-                    {"level": z.level, "strength": z.strength, "timeframes": z.timeframes}
+                    {"level": z.get("center", z.get("level")), "strength": z.get("total_weight", 0), "timeframes": z.get("timeframes", [])}
                     for z in mtf_result.confluence_zones[:3]
                 ] if mtf_result.confluence_zones else [],
                 "trade_setups": len(mtf_result.trade_setups) if mtf_result.trade_setups else 0
