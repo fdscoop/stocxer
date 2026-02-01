@@ -31,7 +31,7 @@ import {
 const navigation = [
   { name: 'Dashboard', href: '/', icon: LayoutDashboard, description: 'Overview & latest scans' },
   { name: 'Stock Screener', href: '/screener', icon: Search, description: 'Scan stocks for signals' },
-  { name: 'Options Scanner', href: '/options', icon: Target, description: 'Find optimal options' },
+  { name: 'Scan Results', href: '/scans', icon: Target, description: 'View scan history' },
   { name: 'AI Integration', href: '/mcp', icon: Bot, description: 'Connect with AI assistants (Beta)', beta: true },
   { name: 'Subscription', href: '/subscription', icon: Star, description: 'Manage your plan' },
   { name: 'Billing & Credits', href: '/billing', icon: CreditCard, description: 'View usage & credits' },

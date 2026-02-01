@@ -5,10 +5,11 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
-import { X, Bot, Trash2, History } from 'lucide-react';
+import { X, Bot, Trash2, History, Clock } from 'lucide-react';
 import { ChatMessage, MessageProps } from './ChatMessage';
 import { ChatInput } from './ChatInput';
 import { cn } from '@/lib/utils';
+import { getApiUrl } from '@/lib/api';
 
 interface ChatSidebarProps {
   isOpen: boolean;
@@ -31,6 +32,9 @@ export function ChatSidebar({
 }: ChatSidebarProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [chatHistory, setChatHistory] = useState<MessageProps[]>(messages);
+  const [showHistory, setShowHistory] = useState(false);
+  const [pastChats, setPastChats] = useState<any[]>([]);
+  const [loadingHistory, setLoadingHistory] = useState(false);
 
   useEffect(() => {
     setChatHistory(messages);
@@ -43,11 +47,46 @@ export function ChatSidebar({
     }
   }, [chatHistory]);
 
-  const handleClearChat = () => {
-    if (confirm('Clear chat history?')) {
-      setChatHistory([]);
-      localStorage.removeItem('ai-chat-history');
+  useEffect(() => {
+    if (isOpen && showHistory) {
+      fetchChatHistory();
     }
+  }, [isOpen, showHistory]);
+
+  const fetchChatHistory = async () => {
+    setLoadingHistory(true);
+    try {
+      const apiUrl = getApiUrl();
+      const token = localStorage.getItem('auth_token') || localStorage.getItem('token');
+      
+      const response = await fetch(`${apiUrl}/ai/chat-history?limit=20&hours=168`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        setPastChats(data.history || []);
+      }
+    } catch (error) {
+      console.error('Failed to fetch chat history:', error);
+    } finally {
+      setLoadingHistory(false);
+    }
+  };
+
+  const handleClearChat = () => {
+    if (confirm('Clear current chat?')) {
+      setChatHistory([]);
+    }
+  };
+
+  const formatHistoryDate = (timestamp: string) => {
+    return new Date(timestamp).toLocaleString('en-IN', {
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
   };
 
   const defaultSuggestions = suggestions.length > 0 ? suggestions : [
@@ -93,6 +132,14 @@ export function ChatSidebar({
               <Button
                 variant="ghost"
                 size="sm"
+                onClick={() => setShowHistory(!showHistory)}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                <History className="w-4 h-4" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
                 onClick={handleClearChat}
                 className="text-gray-500 hover:text-gray-700"
               >
@@ -109,17 +156,74 @@ export function ChatSidebar({
             </div>
           </div>
 
-          {/* Context Indicator */}
-          {signalContext && (
-            <div className="px-4 py-2 bg-blue-50 dark:bg-blue-900/20 border-b border-blue-100 dark:border-blue-800">
-              <p className="text-xs text-blue-700 dark:text-blue-300">
-                💡 Context: {signalContext.symbol || 'Current Scan'} - {signalContext.signal || 'Analysis Active'}
-              </p>
-            </div>
-          )}
+          {/* Chat History View */}
+          {showHistory ? (
+            <ScrollArea className="flex-1 p-4">
+              <div className="space-y-4">
+                <div className="flex items-center justify-between mb-4">
+                  <h4 className="font-semibold text-sm text-gray-700 dark:text-gray-300">
+                    Recent Conversations
+                  </h4>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setShowHistory(false)}
+                    className="text-xs"
+                  >
+                    Back to Chat
+                  </Button>
+                </div>
+                
+                {loadingHistory ? (
+                  <div className="flex items-center justify-center py-12">
+                    <div className="animate-spin w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full" />
+                  </div>
+                ) : pastChats.length === 0 ? (
+                  <div className="text-center py-12">
+                    <Clock className="w-12 h-12 mx-auto text-gray-400 mb-4" />
+                    <p className="text-sm text-gray-500">No chat history yet</p>
+                  </div>
+                ) : (
+                  pastChats.map((chat, idx) => (
+                    <Card key={idx} className="p-3 bg-gray-50 dark:bg-gray-800">
+                      <div className="text-xs text-gray-500 mb-2">
+                        {formatHistoryDate(chat.created_at)}
+                      </div>
+                      <div className="space-y-2">
+                        <div className="text-sm">
+                          <span className="font-medium text-blue-600">You:</span>
+                          <p className="text-gray-700 dark:text-gray-300 mt-1">{chat.query}</p>
+                        </div>
+                        <div className="text-sm">
+                          <span className="font-medium text-purple-600">AI:</span>
+                          <p className="text-gray-700 dark:text-gray-300 mt-1 line-clamp-3">
+                            {chat.response}
+                          </p>
+                        </div>
+                      </div>
+                      {chat.confidence_score && (
+                        <div className="mt-2 text-xs text-gray-500">
+                          Confidence: {(chat.confidence_score * 100).toFixed(0)}%
+                        </div>
+                      )}
+                    </Card>
+                  ))
+                )}
+              </div>
+            </ScrollArea>
+          ) : (
+            <>
+              {/* Context Indicator */}
+              {signalContext && (
+                <div className="px-4 py-2 bg-blue-50 dark:bg-blue-900/20 border-b border-blue-100 dark:border-blue-800">
+                  <p className="text-xs text-blue-700 dark:text-blue-300">
+                    💡 Context: {signalContext.symbol || 'Current Scan'} - {signalContext.signal || 'Analysis Active'}
+                  </p>
+                </div>
+              )}
 
-          {/* Messages */}
-          <ScrollArea className="flex-1 p-4" ref={scrollRef}>
+              {/* Messages */}
+              <ScrollArea className="flex-1 p-4" ref={scrollRef}>
             {chatHistory.length === 0 ? (
               <div className="flex flex-col items-center justify-center h-full text-center py-12">
                 <div className="w-16 h-16 bg-gradient-to-br from-blue-100 to-purple-100 dark:from-blue-900/20 dark:to-purple-900/20 rounded-full flex items-center justify-center mb-4">
@@ -170,6 +274,8 @@ export function ChatSidebar({
             disabled={isLoading}
             suggestions={defaultSuggestions}
           />
+            </>
+          )}
         </div>
       </div>
     </>

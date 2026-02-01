@@ -6915,6 +6915,113 @@ async def get_recent_option_scanner_results(
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@app.get("/screener/option-scanner-results")
+async def get_option_scanner_results(
+    authorization: str = Header(None, description="Bearer token"),
+    hours: int = Query(24, description="Time range in hours"),
+    limit: int = Query(50, description="Max results to retrieve"),
+    index: Optional[str] = Query(None, description="Filter by index")
+):
+    """Get option scanner results for the scan results page"""
+    try:
+        if not authorization:
+            raise HTTPException(status_code=401, detail="Authorization header required")
+        
+        token = authorization.replace("Bearer ", "")
+        user = await auth_service.get_current_user(token)
+        
+        results = await screener_service.get_recent_option_scanner_results(
+            user.id, 
+            hours=hours, 
+            limit=limit,
+            index=index
+        )
+        
+        return {
+            "status": "success",
+            "count": len(results),
+            "results": results
+        }
+        
+    except Exception as e:
+        logger.error(f"Error getting option scanner results: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/ai/chat-history")
+async def get_ai_chat_history(
+    authorization: str = Header(None, description="Bearer token"),
+    limit: int = Query(50, description="Max messages to retrieve"),
+    hours: int = Query(168, description="Time range in hours (default: 7 days)")
+):
+    """Get AI chat history for the current user"""
+    try:
+        if not authorization:
+            raise HTTPException(status_code=401, detail="Authorization header required")
+        
+        token = authorization.replace("Bearer ", "")
+        user = await auth_service.get_current_user(token)
+        
+        from datetime import datetime, timedelta, timezone
+        time_threshold = (datetime.now(timezone.utc) - timedelta(hours=hours)).isoformat()
+        
+        # Fetch chat history
+        response = supabase.table("ai_chat_history")\
+            .select("*")\
+            .eq("user_id", str(user.id))\
+            .gte("created_at", time_threshold)\
+            .order("created_at", desc=True)\
+            .limit(limit)\
+            .execute()
+        
+        return {
+            "status": "success",
+            "count": len(response.data),
+            "history": response.data
+        }
+        
+    except Exception as e:
+        logger.error(f"Error getting AI chat history: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/screener/recent-scans")
+async def get_recent_screener_scans(
+    authorization: str = Header(None, description="Bearer token"),
+    hours: int = Query(24, description="Time range in hours"),
+    limit: int = Query(50, description="Max results to retrieve")
+):
+    """Get recent stock screener results for the scan results page"""
+    try:
+        if not authorization:
+            raise HTTPException(status_code=401, detail="Authorization header required")
+        
+        token = authorization.replace("Bearer ", "")
+        user = await auth_service.get_current_user(token)
+        
+        from datetime import datetime, timedelta, timezone
+        time_threshold = (datetime.now(timezone.utc) - timedelta(hours=hours)).isoformat()
+        
+        # Fetch from screener_results table
+        response = screener_service.supabase_admin.table("screener_results")\
+            .select("*")\
+            .eq("user_id", user.id)\
+            .gte("scanned_at", time_threshold)\
+            .order("scanned_at", desc=True)\
+            .limit(limit)\
+            .execute()
+        
+        return {
+            "status": "success",
+            "count": len(response.data),
+            "signals": response.data
+        }
+        
+    except Exception as e:
+        logger.error(f"Error getting recent screener scans: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @app.get("/options/scan/latest")
 async def get_latest_scan_results(
     index: str = Query("NIFTY", description="Index to get results for")
