@@ -48,7 +48,7 @@ export function ChatInput({
   };
 
   return (
-    <div className="relative border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-4">
+    <div className="relative border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-4 pb-20 md:pb-4">
       {showSuggestions && suggestions.length > 0 && (
         <div 
           className="absolute bottom-full left-4 right-4 mb-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg overflow-hidden max-h-48 z-40"
