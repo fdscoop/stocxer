@@ -7626,7 +7626,7 @@ async def scan_options(
                     tf_key: {
                         "bias": tf_analysis.bias,
                         "trend": tf_analysis.market_structure.trend,
-                        "structure": tf_analysis.market_structure.last_break
+                        "structure": tf_analysis.market_structure.break_of_structure or tf_analysis.market_structure.change_of_character
                     }
                     for tf_key, tf_analysis in mtf_result.analyses.items()
                 },
