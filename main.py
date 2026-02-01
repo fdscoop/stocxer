@@ -3637,6 +3637,171 @@ def _estimate_option_price(spot_price: float, strike: float, action: str, chain_
             return max(spot_price * 0.005, 10)
 
 
+def _calculate_scalp_feasibility(
+    entry_price: float,
+    delta: float,
+    theta: float,
+    gamma: float,
+    spot_price: float,
+    dte: int,
+    trade_direction: str,
+    ltf_momentum: bool,
+    session: str
+) -> dict:
+    """
+    Calculate scalp feasibility for quick 5/10/15 point targets.
+    
+    Even when main signal is WAIT, this shows if quick scalps are feasible
+    based on delta, theta decay, and current momentum.
+    
+    Returns:
+        Dictionary with scalp feasibility analysis including:
+        - feasible: bool - whether quick scalps are viable
+        - targets: dict with 5/10/15 point target prices
+        - index_moves_needed: how many index points needed for each target
+        - risk_level: LOW/MEDIUM/HIGH/EXTREME
+        - recommendation: specific scalp advice
+        - time_window: optimal scalp window
+    """
+    abs_delta = abs(delta) if delta else 0.3
+    abs_theta = abs(theta) if theta else 0
+    
+    # Calculate index moves needed for premium targets
+    # Premium Change = Delta × Index Move
+    # Index Move = Premium Target / Delta
+    index_move_5 = round(5 / abs_delta) if abs_delta > 0.1 else 999
+    index_move_10 = round(10 / abs_delta) if abs_delta > 0.1 else 999
+    index_move_15 = round(15 / abs_delta) if abs_delta > 0.1 else 999
+    
+    # Target prices
+    target_5 = round(entry_price + 5, 2)
+    target_10 = round(entry_price + 10, 2)
+    target_15 = round(entry_price + 15, 2)
+    stop_loss = round(entry_price - 5, 2)
+    
+    # Risk Level Assessment
+    risk_factors = []
+    risk_score = 0
+    
+    # 1. Theta decay risk (higher theta = faster decay)
+    theta_per_hour = abs_theta / 6.5  # Trading hours per day
+    if theta_per_hour > 3:
+        risk_score += 30
+        risk_factors.append(f"High theta decay: ₹{theta_per_hour:.1f}/hour")
+    elif theta_per_hour > 1.5:
+        risk_score += 15
+        risk_factors.append(f"Moderate theta: ₹{theta_per_hour:.1f}/hour")
+    
+    # 2. DTE risk
+    if dte <= 1:
+        risk_score += 40
+        risk_factors.append("Expiry day - extreme theta")
+    elif dte <= 2:
+        risk_score += 25
+        risk_factors.append(f"{dte} days to expiry - high theta")
+    elif dte <= 3:
+        risk_score += 10
+        risk_factors.append(f"{dte} days to expiry")
+    
+    # 3. Index move feasibility
+    avg_hourly_move = 20  # Average NIFTY hourly move
+    if index_move_10 > avg_hourly_move * 2:
+        risk_score += 20
+        risk_factors.append(f"Needs {index_move_10} pts move - ambitious")
+    elif index_move_10 > avg_hourly_move:
+        risk_score += 10
+        risk_factors.append(f"Needs {index_move_10} pts move - achievable")
+    
+    # 4. Delta quality
+    if abs_delta < 0.25:
+        risk_score += 25
+        risk_factors.append(f"Low delta ({abs_delta:.2f}) - slow movement")
+    elif abs_delta > 0.7:
+        risk_score += 15
+        risk_factors.append(f"High delta ({abs_delta:.2f}) - already ITM")
+    
+    # 5. Session timing
+    high_movement_sessions = ["OPENING_VOLATILITY", "AFTERNOON_TREND", "CLOSING_SESSION"]
+    if session not in high_movement_sessions:
+        risk_score += 10
+        risk_factors.append(f"{session} - lower volatility period")
+    
+    # Determine risk level
+    if risk_score >= 60:
+        risk_level = "EXTREME"
+        feasible = False
+    elif risk_score >= 40:
+        risk_level = "HIGH"
+        feasible = dte > 1  # Only feasible if not expiry day
+    elif risk_score >= 20:
+        risk_level = "MEDIUM"
+        feasible = True
+    else:
+        risk_level = "LOW"
+        feasible = True
+    
+    # Boost feasibility if LTF momentum confirms
+    if ltf_momentum and risk_level != "EXTREME":
+        risk_factors.append("✅ LTF momentum confirmed - better odds")
+        if risk_level == "HIGH":
+            risk_level = "MEDIUM"
+            feasible = True
+    
+    # Generate recommendation
+    if not feasible:
+        recommendation = "⛔ AVOID SCALPING - Risk too high"
+        time_window = "Not recommended"
+    elif risk_level == "HIGH":
+        recommendation = "⚠️ QUICK SCALP ONLY - Exit within 15-30 mins"
+        time_window = "15-30 minutes max"
+    elif risk_level == "MEDIUM":
+        recommendation = "✅ SCALP VIABLE - Target 5-10 pts within 1 hour"
+        time_window = "30-60 minutes"
+    else:
+        recommendation = "✅ GOOD SCALP SETUP - Target 10-15 pts"
+        time_window = "1-2 hours"
+    
+    # Calculate per-lot values (assuming NIFTY lot size of 65)
+    lot_size = 65
+    profit_5_per_lot = 5 * lot_size
+    profit_10_per_lot = 10 * lot_size
+    profit_15_per_lot = 15 * lot_size
+    loss_5_per_lot = 5 * lot_size
+    
+    return {
+        "feasible": feasible,
+        "risk_level": risk_level,
+        "risk_score": risk_score,
+        "recommendation": recommendation,
+        "time_window": time_window,
+        "targets": {
+            "entry": entry_price,
+            "target_5": target_5,
+            "target_10": target_10,
+            "target_15": target_15,
+            "stop_loss": stop_loss
+        },
+        "index_moves_needed": {
+            "for_5_pts": index_move_5,
+            "for_10_pts": index_move_10,
+            "for_15_pts": index_move_15
+        },
+        "per_lot_pnl": {
+            "profit_5": profit_5_per_lot,
+            "profit_10": profit_10_per_lot,
+            "profit_15": profit_15_per_lot,
+            "max_loss": loss_5_per_lot,
+            "lot_size": lot_size
+        },
+        "theta_impact": {
+            "per_hour": round(theta_per_hour, 2),
+            "per_30_min": round(theta_per_hour / 2, 2),
+            "warning": "High decay" if theta_per_hour > 2 else "Moderate" if theta_per_hour > 1 else "Low"
+        },
+        "risk_factors": risk_factors,
+        "momentum_boost": ltf_momentum
+    }
+
 
 def _generate_actionable_signal_topdown(mtf_result, session_info, chain_data, historical_prices=None, probability_analysis=None, use_new_flow=True, index="NIFTY"):
     """
@@ -4283,7 +4448,19 @@ def _generate_actionable_signal_topdown(mtf_result, session_info, chain_data, hi
             "dte": dte,
             "description": f"{'INTRADAY (Quick trades only)' if dte <= 3 else 'INTRADAY' if dte <= 7 else 'SWING/POSITIONAL'}",
             "timeframe_focus": "4H/1H/15min" if dte <= 7 else "D/4H/1H"
-        }
+        },
+        # NEW: Scalp Feasibility Analysis for short-term targets (5/10/15 points)
+        "scalp_feasibility": _calculate_scalp_feasibility(
+            entry_price=current_ltp,
+            delta=greeks.get('delta', 0),
+            theta=greeks.get('theta', 0),
+            gamma=greeks.get('gamma', 0),
+            spot_price=spot_price,
+            dte=dte,
+            trade_direction=trade_direction,
+            ltf_momentum=ltf_entry.momentum_confirmed if ltf_entry else False,
+            session=session
+        )
     }
 def _generate_actionable_signal(mtf_result, session_info, chain_data, historical_prices=None, probability_analysis=None):
     """Generate clear trading signal from MTF analysis with full Greeks integration, ML predictions, and constituent stock analysis"""
