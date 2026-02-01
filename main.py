@@ -3584,13 +3584,6 @@ async def get_actionable_trading_signal(
                         signal["signal_id"] = save_result.get("signal_id")
                     else:
                         logger.warning(f"⚠️ Could not save option scanner result: {save_result.get('error')}")
-                    
-                    # Also save simplified version to screener_results for backward compatibility
-                    legacy_save = await screener_service.save_options_signal(
-                        user_id=str(user.id),
-                        signal_data=signal,
-                        index=index_name
-                    )
         except Exception as save_error:
             logger.warning(f"⚠️ Error saving options signal (non-fatal): {save_error}")
         
@@ -6999,11 +6992,10 @@ async def get_recent_screener_scans(
             time_threshold = (datetime.now(timezone.utc) - timedelta(hours=hours)).isoformat()
             time_end = None
         
-        # Fetch from screener_results table - only STOCK signals
+        # Fetch from screener_results table (only contains STOCK signals now)
         query = screener_service.supabase_admin.table("screener_results")\
             .select("*")\
             .eq("user_id", user.id)\
-            .eq("signal_type", "STOCK")\
             .gte("scanned_at", time_threshold)
         
         # Add end time filter if specific date was provided
@@ -7041,20 +7033,18 @@ async def get_available_scan_dates(
         from datetime import datetime, timedelta, timezone
         time_threshold = (datetime.now(timezone.utc) - timedelta(days=days_back)).isoformat()
         
-        # Get distinct dates for stock screener
+        # Get distinct dates for stock screener (screener_results table)
         stock_response = screener_service.supabase_admin.table("screener_results")\
             .select("scanned_at")\
             .eq("user_id", user.id)\
-            .eq("signal_type", "STOCK")\
             .gte("scanned_at", time_threshold)\
             .execute()
         
-        # Get distinct dates for options scanner
-        options_response = screener_service.supabase_admin.table("screener_results")\
-            .select("scanned_at")\
+        # Get distinct dates for options scanner (option_scanner_results table)
+        options_response = screener_service.supabase_admin.table("option_scanner_results")\
+            .select("timestamp")\
             .eq("user_id", user.id)\
-            .eq("signal_type", "OPTIONS")\
-            .gte("scanned_at", time_threshold)\
+            .gte("timestamp", time_threshold)\
             .execute()
         
         # Extract unique dates
@@ -7068,8 +7058,8 @@ async def get_available_scan_dates(
         for item in options_response.data:
             if item.get('scanned_at') or item.get('timestamp'):
                 date_str = (item.get('scanned_at') or item.get('timestamp')).split('T')[0]
-                option_dates.add(date_str)
-        
+                option_datimestamp'):  # option_scanner_results uses 'timestamp'
+                date_str = item['timestamp']
         return {
             "status": "success",
             "stock_dates": sorted(list(stock_dates), reverse=True),
