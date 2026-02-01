@@ -3054,10 +3054,15 @@
         // ==================== QUICK SCALP TARGETS CALCULATOR ====================
         // Uses backend scalp_feasibility data when available, otherwise calculates from delta
         function updateScalpTargets(signal) {
+            console.log('🎯 updateScalpTargets called with signal:', signal);
+            
             const scalpContainer = document.getElementById('quick-scalp-targets');
             const beginnerScalpContainer = document.getElementById('beginner-scalp-targets');
             
-            if (!scalpContainer) return;
+            if (!scalpContainer) {
+                console.log('❌ scalp container not found');
+                return;
+            }
 
             // Get scalp feasibility from backend if available
             const scalp = signal.scalp_feasibility;
@@ -3065,8 +3070,11 @@
             const entryPrice = signal.pricing?.ltp || signal.entry?.price || 0;
             const lotSize = scalp?.per_lot_pnl?.lot_size || 65;
 
+            console.log('📊 Scalp data:', { delta, entryPrice, scalpExists: !!scalp });
+
             // If no delta or entry price, hide the section
             if (!delta || !entryPrice) {
+                console.log('⚠️ No delta or entry price, hiding scalp targets');
                 scalpContainer.style.display = 'none';
                 if (beginnerScalpContainer) beginnerScalpContainer.style.display = 'none';
                 return;
@@ -3074,6 +3082,7 @@
 
             scalpContainer.style.display = 'block';
             if (beginnerScalpContainer) beginnerScalpContainer.style.display = 'block';
+            console.log('✅ Showing scalp targets container');
 
             // Update delta display
             const deltaEl = document.getElementById('scalp-delta');
@@ -3085,6 +3094,7 @@
             let target5, target10, target15, stopLoss, indexMove5, indexMove10, indexMove15;
             
             if (scalp && scalp.targets) {
+                console.log('🎯 Using backend scalp data');
                 target5 = scalp.targets.target_5;
                 target10 = scalp.targets.target_10;
                 target15 = scalp.targets.target_15;
@@ -3093,6 +3103,7 @@
                 indexMove10 = scalp.index_moves_needed?.for_10_pts || Math.round(10 / Math.abs(delta));
                 indexMove15 = scalp.index_moves_needed?.for_15_pts || Math.round(15 / Math.abs(delta));
             } else {
+                console.log('🧮 Calculating scalp targets from delta');
                 const absDelta = Math.abs(delta);
                 target5 = entryPrice + 5;
                 target10 = entryPrice + 10;
@@ -3102,6 +3113,8 @@
                 indexMove10 = Math.round(10 / absDelta);
                 indexMove15 = Math.round(15 / absDelta);
             }
+            
+            console.log('📈 Scalp targets calculated:', { target5, target10, target15, stopLoss });
             
             // Update target displays
             document.getElementById('scalp-target-5').textContent = `₹${target5.toFixed(1)}`;
