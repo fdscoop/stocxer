@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/badge'
 import { StatCard, StatsGrid } from '@/components/trading/stat-card'
 import { SignalGrid, Signal } from '@/components/trading/signal-card'
 import { LoadingModal } from '@/components/trading/loading-modal'
+import { BulkScanConfirmationDialog } from '@/components/trading/bulk-scan-confirmation-dialog'
 import {
   Select,
   SelectContent,
@@ -49,6 +50,11 @@ export default function ScreenerPage() {
   const [scanMode, setScanMode] = React.useState<'random' | 'custom'>('random')
   const [scanStatus, setScanStatus] = React.useState<string>('')
   const [scanError, setScanError] = React.useState<string | null>(null)
+  
+  // Confirmation dialog state
+  const [showConfirmDialog, setShowConfirmDialog] = React.useState(false)
+  const [confirmDialogData, setConfirmDialogData] = React.useState<any>(null)
+  const [pendingScanRequest, setPendingScanRequest] = React.useState<any>(null)
 
   React.useEffect(() => {
     const token = localStorage.getItem('auth_token') || localStorage.getItem('token')
@@ -178,52 +184,44 @@ export default function ScreenerPage() {
       const costData = await costResponse.json()
       console.log('[Screener] Cost calculation:', costData)
 
-      // Show confirmation dialog
-      let message = ''
-      if (costData.will_use_subscription) {
-        message = `You are about to scan ${costData.stock_count} stock${costData.stock_count !== 1 ? 's' : ''}.\n\n`
-        message += `✅ This scan will use your ${costData.subscription_info.plan_type} subscription.\n`
-        message += `📊 Scans remaining today: ${costData.subscription_info.scans_remaining} of ${costData.subscription_info.daily_limit}\n\n`
-        
-        // Add note about individual scanning for custom selections
-        if (scanMode === 'custom' && costData.stock_count > 1) {
-          message += `💡 Tip: You can also scan these stocks individually from the "Options Scanner" tab if you prefer to analyze one at a time.\n\n`
-        }
-        
-        message += 'Click OK to proceed with bulk scan.'
-      } else {
-        message = `You are about to scan ${costData.stock_count} stock${costData.stock_count !== 1 ? 's' : ''}.\n\n`
-        message += `💰 Total cost: ₹${costData.total_cost.toFixed(2)} (₹${costData.per_stock_cost} per stock)\n`
-        message += `💳 Your wallet balance: ₹${costData.wallet_balance.toFixed(2)}\n\n`
-        
-        if (!costData.sufficient_balance) {
-          message += '❌ Insufficient balance. Please add credits to your wallet or subscribe to a plan.'
-          alert(message)
-          return
-        }
-        
-        message += '✅ Amount will be deducted from your wallet.\n\n'
-        
-        // Add note about individual scanning for custom selections
-        if (scanMode === 'custom' && costData.stock_count > 1) {
-          message += `💡 Alternative: You can scan these ${costData.stock_count} stocks individually from the "Options Scanner" tab.\n`
-          message += `   • Bulk scan: ₹${costData.total_cost.toFixed(2)} now\n`
-          message += `   • Individual scans: ₹${costData.per_stock_cost} per stock (pay as you go)\n\n`
-        }
-        
-        message += 'Click OK to proceed with bulk scan.'
-      }
-
-      if (!confirm(message)) {
+      // Check for insufficient balance
+      if (!costData.sufficient_balance) {
+        setConfirmDialogData({
+          stockCount: costData.stock_count,
+          totalCost: costData.total_cost,
+          perStockCost: costData.per_stock_cost,
+          walletBalance: costData.wallet_balance,
+          sufficientBalance: false,
+          willUseSubscription: false,
+        })
+        setPendingScanRequest(requestBody)
+        setShowConfirmDialog(true)
         return
       }
 
-      // User confirmed, proceed with scan
-      await performScan(requestBody)
+      // Show confirmation dialog instead of browser confirm
+      setConfirmDialogData({
+        stockCount: costData.stock_count,
+        totalCost: costData.total_cost,
+        perStockCost: costData.per_stock_cost,
+        walletBalance: costData.wallet_balance,
+        sufficientBalance: costData.sufficient_balance,
+        willUseSubscription: costData.will_use_subscription,
+        subscriptionInfo: costData.subscription_info,
+      })
+      setPendingScanRequest(requestBody)
+      setShowConfirmDialog(true)
 
     } catch (error) {
       console.error('[Screener] Cost calculation error:', error)
       setScanError('Failed to calculate scan cost. Please try again.')
+    }
+  }
+
+  const handleConfirmScan = async () => {
+    if (pendingScanRequest) {
+      await performScan(pendingScanRequest)
+      setPendingScanRequest(null)
     }
   }
 
@@ -797,6 +795,22 @@ export default function ScreenerPage() {
           },
         ]}
       />
+
+      {/* Bulk Scan Confirmation Dialog */}
+      {confirmDialogData && (
+        <BulkScanConfirmationDialog
+          open={showConfirmDialog}
+          onOpenChange={setShowConfirmDialog}
+          stockCount={confirmDialogData.stockCount}
+          totalCost={confirmDialogData.totalCost}
+          perStockCost={confirmDialogData.perStockCost}
+          walletBalance={confirmDialogData.walletBalance}
+          sufficientBalance={confirmDialogData.sufficientBalance}
+          willUseSubscription={confirmDialogData.willUseSubscription}
+          subscriptionInfo={confirmDialogData.subscriptionInfo}
+          onConfirm={handleConfirmScan}
+        />
+      )}
     </DashboardLayout>
   )
 }
