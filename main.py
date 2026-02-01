@@ -6993,10 +6993,10 @@ async def get_recent_screener_scans(
             time_end = None
         
         # Fetch from screener_results table (only contains STOCK signals now)
+        # Note: Not filtering by signal_type to include older records without this field
         query = screener_service.supabase_admin.table("screener_results")\
             .select("*")\
             .eq("user_id", str(user.id))\
-            .eq("signal_type", "STOCK")\
             .gte("scanned_at", time_threshold)
         
         # Add end time filter if specific date was provided
@@ -7041,16 +7041,18 @@ async def get_available_scan_dates(
         # Get distinct dates for stock screener (screener_results table)
         stock_response = screener_service.supabase_admin.table("screener_results")\
             .select("scanned_at")\
-            .eq("user_id", user.id)\
+            .eq("user_id", str(user.id))\
             .gte("scanned_at", time_threshold)\
             .execute()
         
         # Get distinct dates for options scanner (option_scanner_results table)
         options_response = screener_service.supabase_admin.table("option_scanner_results")\
             .select("timestamp")\
-            .eq("user_id", user.id)\
+            .eq("user_id", str(user.id))\
             .gte("timestamp", time_threshold)\
             .execute()
+        
+        logger.info(f"Available dates for user {user.email}: {len(stock_response.data)} stock records, {len(options_response.data)} option records")
         
         # Extract unique dates
         stock_dates = set()
@@ -7065,15 +7067,64 @@ async def get_available_scan_dates(
                 date_str = (item.get('scanned_at') or item.get('timestamp')).split('T')[0]
                 option_dates.add(date_str)
         
+        all_dates_list = sorted(list(stock_dates.union(option_dates)), reverse=True)
+        logger.info(f"Returning {len(all_dates_list)} unique dates. Stock: {len(stock_dates)}, Options: {len(option_dates)}")
+        
         return {
             "status": "success",
             "stock_dates": sorted(list(stock_dates), reverse=True),
             "option_dates": sorted(list(option_dates), reverse=True),
-            "all_dates": sorted(list(stock_dates.union(option_dates)), reverse=True)
+            "all_dates": all_dates_list,
+            "debug": {
+                "total_stock_records": len(stock_response.data),
+                "total_option_records": len(options_response.data),
+                "unique_stock_dates": len(stock_dates),
+                "unique_option_dates": len(option_dates)
+            }
         }
         
     except Exception as e:
         logger.error(f"Error getting available scan dates: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/screener/debug-data")
+async def debug_screener_data(
+    authorization: str = Header(None, description="Bearer token")
+):
+    """Debug endpoint to check what data exists in screener_results table"""
+    try:
+        if not authorization:
+            raise HTTPException(status_code=401, detail="Authorization header required")
+        
+        token = authorization.replace("Bearer ", "")
+        user = await auth_service.get_current_user(token)
+        
+        # Get last 10 records from screener_results
+        stock_check = screener_service.supabase_admin.table("screener_results")\
+            .select("id, user_id, symbol, scanned_at, signal_type")\
+            .eq("user_id", str(user.id))\
+            .order("scanned_at", desc=True)\
+            .limit(10)\
+            .execute()
+        
+        # Get count
+        count_response = screener_service.supabase_admin.table("screener_results")\
+            .select("id", count="exact")\
+            .eq("user_id", str(user.id))\
+            .execute()
+        
+        return {
+            "status": "success",
+            "user_id": str(user.id),
+            "user_email": user.email,
+            "total_records": count_response.count,
+            "last_10_records": stock_check.data,
+            "message": "Check if records exist and scanned_at field is populated"
+        }
+        
+    except Exception as e:
+        logger.error(f"Debug endpoint error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
