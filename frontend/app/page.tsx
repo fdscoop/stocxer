@@ -685,7 +685,7 @@ export default function DashboardPage() {
         } else if (statusData.status === 'expired') {
           console.warn('⏰ Fyers token expired:', statusData.message)
           setToast({
-            message: `Token expired. Please re-authenticate on production (stocxer.in)`,
+            message: `Token expired. Please reconnect your Fyers account.`,
             type: 'error'
           })
           setTimeout(() => setToast(null), 8000)
@@ -1012,7 +1012,7 @@ export default function DashboardPage() {
 
         if (detail.error === 'FYERS_DATA_UNAVAILABLE') {
           setToast({
-            message: '⚠️ ' + (detail.message || 'No live market data available. Please connect your Fyers account.'),
+            message: '⚠️ ' + (detail.message || 'Market data unavailable. Please connect your Fyers account.'),
             type: 'error'
           })
           // Show the auth popup to reconnect Fyers

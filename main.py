@@ -7447,8 +7447,8 @@ async def scan_options(
                     status_code=503,
                     detail={
                         "error": "MARKET_DATA_UNAVAILABLE",
-                        "message": "Could not fetch live option chain data. Markets may be closed (9:15 AM - 3:30 PM IST) or there's a connection issue.",
-                        "action_required": "Try again during market hours or check your Fyers connection."
+                        "message": "Market data is currently unavailable. Markets operate from 9:15 AM to 3:30 PM IST.",
+                        "action_required": "Please try again during market hours."
                     }
                 )
                 
@@ -7463,7 +7463,7 @@ async def scan_options(
                     status_code=503,
                     detail={
                         "error": "MARKET_CLOSED",
-                        "message": "Markets are closed. Indian markets operate from 9:15 AM to 3:30 PM IST.",
+                        "message": "Markets are closed. Trading hours: 9:15 AM - 3:30 PM IST.",
                         "action_required": "Please try again during market hours."
                     }
                 )
