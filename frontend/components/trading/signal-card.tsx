@@ -16,6 +16,45 @@ export interface Signal {
   confidence: number
   timestamp?: string
   reasons?: string[]
+  scalp_feasibility?: {
+    feasible: boolean
+    risk_level: string
+    risk_score: number
+    recommendation: string
+    time_window: string
+    targets: {
+      entry: number
+      target_5: number
+      target_10: number
+      target_15: number
+      stop_loss: number
+    }
+    index_moves_needed: {
+      for_5_pts: number
+      for_10_pts: number
+      for_15_pts: number
+    }
+    per_lot_pnl: {
+      profit_5: number
+      profit_10: number
+      profit_15: number
+      max_loss: number
+      lot_size: number
+    }
+    theta_impact?: {
+      per_hour: number
+      per_30_min: number
+      warning: string
+    }
+    risk_factors: string[]
+    momentum_boost: boolean
+  }
+  greeks?: {
+    delta: number
+    gamma?: number
+    theta?: number
+    vega?: number
+  }
 }
 
 interface SignalCardProps {
@@ -101,6 +140,109 @@ export function SignalCard({ signal, className, compact = false }: SignalCardPro
             </div>
           )}
         </div>
+
+        {/* ⚡ Quick Scalp Targets - 5/10/15 Point Zones */}
+        {signal.scalp_feasibility && signal.greeks?.delta && (
+          <div className="mt-3 pt-3 border-t">
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-semibold text-cyan-400">⚡ Quick Scalp Targets</span>
+                <span className="text-xs bg-cyan-600/50 px-1.5 py-0.5 rounded">INTRADAY</span>
+              </div>
+              <div className="text-xs text-gray-500">
+                Delta: <span className="text-cyan-300 font-mono">{signal.greeks.delta.toFixed(3)}</span>
+              </div>
+            </div>
+            
+            {/* Risk Level Badge */}
+            <div className="mb-2">
+              <Badge
+                variant={
+                  !signal.scalp_feasibility.feasible || signal.scalp_feasibility.risk_level === 'EXTREME'
+                    ? 'destructive'
+                    : signal.scalp_feasibility.risk_level === 'HIGH'
+                    ? 'secondary'
+                    : 'default'
+                }
+                className={cn(
+                  'text-xs',
+                  !signal.scalp_feasibility.feasible || signal.scalp_feasibility.risk_level === 'EXTREME'
+                    ? 'bg-red-600/80'
+                    : signal.scalp_feasibility.risk_level === 'HIGH'
+                    ? 'bg-yellow-600/80'
+                    : 'bg-green-600/80'
+                )}
+              >
+                {!signal.scalp_feasibility.feasible || signal.scalp_feasibility.risk_level === 'EXTREME'
+                  ? '⛔ HIGH RISK'
+                  : signal.scalp_feasibility.risk_level === 'HIGH'
+                  ? '⚠️ RISKY'
+                  : '✅ VIABLE'
+                }
+              </Badge>
+            </div>
+
+            {/* Scalp Target Grid */}
+            <div className="grid grid-cols-3 gap-2 mb-2">
+              {/* 5 Points Target */}
+              <div className="bg-green-900/40 rounded-lg p-2 border border-green-500/30 text-center">
+                <div className="text-xs text-green-400/70">+5 Points</div>
+                <div className="text-sm font-bold text-green-400">
+                  ₹{signal.scalp_feasibility.targets.target_5.toFixed(1)}
+                </div>
+                <div className="text-xs text-gray-400">
+                  ~{signal.scalp_feasibility.index_moves_needed.for_5_pts} idx pts
+                </div>
+              </div>
+
+              {/* 10 Points Target */}
+              <div className="bg-green-900/50 rounded-lg p-2 border border-green-500/40 text-center">
+                <div className="text-xs text-green-400/70">+10 Points</div>
+                <div className="text-sm font-bold text-green-400">
+                  ₹{signal.scalp_feasibility.targets.target_10.toFixed(1)}
+                </div>
+                <div className="text-xs text-gray-400">
+                  ~{signal.scalp_feasibility.index_moves_needed.for_10_pts} idx pts
+                </div>
+              </div>
+
+              {/* 15 Points Target */}
+              <div className="bg-green-900/60 rounded-lg p-2 border border-green-500/50 text-center">
+                <div className="text-xs text-green-400/70">+15 Points</div>
+                <div className="text-sm font-bold text-green-400">
+                  ₹{signal.scalp_feasibility.targets.target_15.toFixed(1)}
+                </div>
+                <div className="text-xs text-gray-400">
+                  ~{signal.scalp_feasibility.index_moves_needed.for_15_pts} idx pts
+                </div>
+              </div>
+            </div>
+
+            {/* Stop Loss and Per Lot Info */}
+            <div className="flex justify-between items-center text-xs">
+              <span>
+                SL: <span className="text-red-400">₹{signal.scalp_feasibility.targets.stop_loss.toFixed(1)}</span>
+              </span>
+              <span>
+                Per Lot: <span className="text-cyan-300">
+                  ₹{signal.scalp_feasibility.per_lot_pnl.profit_5} to ₹{signal.scalp_feasibility.per_lot_pnl.profit_15}
+                </span>
+                {signal.scalp_feasibility.theta_impact && signal.scalp_feasibility.theta_impact.per_hour > 1.5 && (
+                  <span className="text-red-400 ml-2">
+                    ⏱️ θ: -₹{signal.scalp_feasibility.theta_impact.per_hour.toFixed(1)}/hr
+                  </span>
+                )}
+              </span>
+            </div>
+
+            {/* Recommendation */}
+            {signal.scalp_feasibility.recommendation && (
+              <div className="mt-1 text-xs text-gray-400">
+                {signal.scalp_feasibility.recommendation}
+              </div>
+            )}
+          </div>
+        )}
 
         {!compact && signal.reasons && signal.reasons.length > 0 && (
           <div className="mt-3 pt-3 border-t">

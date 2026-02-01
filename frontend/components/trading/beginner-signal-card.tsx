@@ -94,6 +94,88 @@ export function BeginnerSignalCard({ signal }: BeginnerSignalCardProps) {
                 </CardContent>
             </Card>
 
+            {/* Quick Scalp Targets (Beginner View) */}
+            {signal?.scalp_feasibility && signal?.greeks?.delta && (
+                <Card className="border-cyan-700/50">
+                    <CardHeader className="pb-3">
+                        <CardTitle className="text-sm font-medium text-cyan-400">
+                            ⚡ Quick Scalp Targets (Intraday)
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                        {/* Risk Warning */}
+                        <div className="flex items-center gap-2">
+                            <Badge
+                                variant={
+                                    !signal.scalp_feasibility.feasible || signal.scalp_feasibility.risk_level === 'EXTREME'
+                                        ? 'destructive'
+                                        : signal.scalp_feasibility.risk_level === 'HIGH'
+                                        ? 'secondary'
+                                        : 'default'
+                                }
+                                className="text-xs"
+                            >
+                                {!signal.scalp_feasibility.feasible || signal.scalp_feasibility.risk_level === 'EXTREME'
+                                    ? '⛔ HIGH RISK - AVOID'
+                                    : signal.scalp_feasibility.risk_level === 'HIGH'
+                                    ? '⚠️ RISKY - BE CAREFUL'
+                                    : '✅ VIABLE FOR SCALPING'
+                                }
+                            </Badge>
+                        </div>
+
+                        {/* Simple Target Display */}
+                        <div className="bg-black/30 p-3 rounded-lg">
+                            <div className="grid grid-cols-2 gap-3 text-sm">
+                                <div>
+                                    <span className="text-green-400">🎯 Quick Targets:</span>
+                                    <div className="ml-4 space-y-1 text-xs text-gray-300">
+                                        <div>+5 pts: ₹{signal.scalp_feasibility.targets.target_5.toFixed(1)}</div>
+                                        <div>+10 pts: ₹{signal.scalp_feasibility.targets.target_10.toFixed(1)}</div>
+                                        <div>+15 pts: ₹{signal.scalp_feasibility.targets.target_15.toFixed(1)}</div>
+                                    </div>
+                                </div>
+                                <div>
+                                    <span className="text-red-400">🛑 Stop Loss:</span>
+                                    <div className="ml-4 text-xs text-red-300">
+                                        ₹{signal.scalp_feasibility.targets.stop_loss.toFixed(1)}
+                                    </div>
+                                    <div className="mt-2">
+                                        <span className="text-cyan-400">💰 Per Lot:</span>
+                                        <div className="ml-4 text-xs text-cyan-300">
+                                            ₹{signal.scalp_feasibility.per_lot_pnl.profit_5} - ₹{signal.scalp_feasibility.per_lot_pnl.profit_15}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Beginner Explanation */}
+                        <div className="bg-blue-900/20 p-3 rounded-lg border border-blue-500/30">
+                            <div className="text-xs text-blue-300 font-medium mb-1">
+                                📚 What are Scalp Targets?
+                            </div>
+                            <div className="text-xs text-gray-300">
+                                These are quick profit targets for very short-term trades (5-30 minutes). 
+                                They require constant monitoring and are for experienced traders only.
+                            </div>
+                            {signal.scalp_feasibility.theta_impact?.per_hour > 1.5 && (
+                                <div className="text-xs text-yellow-300 mt-1">
+                                    ⚠️ Time decay: -₹{signal.scalp_feasibility.theta_impact.per_hour.toFixed(1)}/hour
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Risk Recommendation */}
+                        {signal.scalp_feasibility.recommendation && (
+                            <div className="text-xs text-gray-400 italic border-l-2 border-gray-600 pl-3">
+                                {signal.scalp_feasibility.recommendation}
+                            </div>
+                        )}
+                    </CardContent>
+                </Card>
+            )}
+
             {/* Signal Strength */}
             <Card className="border-gray-700">
                 <CardHeader className="pb-3">
