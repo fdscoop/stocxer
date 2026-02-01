@@ -623,25 +623,146 @@ def determine_htf_bias(
     )
 
 
+def _detect_ltf_momentum(candles_by_timeframe: Optional[Dict[str, pd.DataFrame]]) -> Optional[Dict]:
+    """
+    Detect strong momentum on lower timeframes to allow momentum-based entries
+    even when HTF is neutral or conflicting.
+    
+    This addresses the issue of missing 100+ point moves!
+    
+    Args:
+        candles_by_timeframe: Dict mapping timeframe to OHLC DataFrame
+        
+    Returns:
+        Dict with direction, strength, and timeframe if momentum detected, None otherwise
+    """
+    if not candles_by_timeframe:
+        return None
+    
+    # Check LTF for momentum (prefer 15m, then 5m, then 1H)
+    ltf_priority = ['15', '5', '60', '3']
+    
+    for tf in ltf_priority:
+        if tf not in candles_by_timeframe:
+            continue
+            
+        df = candles_by_timeframe[tf]
+        if df is None or len(df) < 10:
+            continue
+        
+        try:
+            # Calculate recent price change using multiple windows
+            close_prices = df['close']
+            high_prices = df['high']
+            low_prices = df['low']
+            
+            # Get current and historical prices
+            current_close = close_prices.iloc[-1]
+            
+            # Check multiple lookback windows for momentum
+            lookbacks = [5, 10, 3]  # Check 5, 10, and 3 candle windows
+            
+            best_momentum = None
+            
+            for lookback in lookbacks:
+                if len(close_prices) < lookback + 1:
+                    continue
+                    
+                past_close = close_prices.iloc[-lookback - 1]
+                price_change = current_close - past_close
+                price_change_pct = abs(price_change) / past_close * 100
+                
+                # Calculate ATR over the same period
+                recent_highs = high_prices.tail(lookback)
+                recent_lows = low_prices.tail(lookback)
+                atr = (recent_highs - recent_lows).mean()
+                atr_pct = atr / current_close * 100 if current_close > 0 else 0
+                
+                # Momentum strength calculation:
+                # Compare actual move to expected move (ATR-based)
+                expected_move = atr * lookback * 0.3  # Expect ~30% of ATR per candle on average
+                if expected_move > 0:
+                    move_strength = abs(price_change) / expected_move
+                else:
+                    move_strength = 0
+                
+                # Alternative strength: based on percentage move
+                # For NIFTY at 25000: 100 pts = 0.4%, 50 pts = 0.2%
+                pct_strength = price_change_pct / 0.4  # Normalize to 100-point move
+                
+                # Use the better of the two strength measures
+                strength = max(move_strength, pct_strength)
+                strength = min(strength, 1.0)  # Cap at 1.0
+                
+                # Thresholds for different timeframes
+                # Lower thresholds = more sensitive to momentum
+                if tf == '15':
+                    min_pct = 0.15  # 0.15% = ~37 pts on NIFTY 25000
+                    min_strength = 0.3
+                elif tf == '5':
+                    min_pct = 0.10  # 0.10% = ~25 pts
+                    min_strength = 0.25
+                elif tf == '60':
+                    min_pct = 0.25  # 0.25% = ~62 pts
+                    min_strength = 0.35
+                else:  # 3m
+                    min_pct = 0.08
+                    min_strength = 0.2
+                
+                # Check if momentum is strong enough
+                if price_change_pct >= min_pct and strength >= min_strength:
+                    if best_momentum is None or strength > best_momentum['strength']:
+                        direction = 'bullish' if price_change > 0 else 'bearish'
+                        best_momentum = {
+                            'direction': direction,
+                            'strength': strength,
+                            'timeframe': tf,
+                            'price_change_pct': price_change_pct,
+                            'price_change': price_change,
+                            'lookback': lookback
+                        }
+            
+            if best_momentum:
+                logger.info(f"🔥 LTF MOMENTUM DETECTED on {tf}m (lookback={best_momentum['lookback']}):")
+                logger.info(f"   Direction: {best_momentum['direction'].upper()}")
+                logger.info(f"   Change: {best_momentum['price_change_pct']:.2f}% ({best_momentum['price_change']:.1f} pts)")
+                logger.info(f"   Strength: {best_momentum['strength']:.2f}")
+                return best_momentum
+                
+        except Exception as e:
+            logger.warning(f"Momentum detection failed for {tf}: {e}")
+            import traceback
+            traceback.print_exc()
+            continue
+    
+    return None
+
+
 def identify_ltf_entry_model(
     htf_bias: HTFBias,
     ltf_analyses: Dict[str, Dict],
-    current_price: float
+    current_price: float,
+    candles_by_timeframe: Optional[Dict[str, pd.DataFrame]] = None
 ) -> Optional[LTFEntryModel]:
     """
-    Find entry triggers on lower timeframes that align with HTF bias
-    Only looks for setups that AGREE with HTF direction
+    Find entry triggers on lower timeframes - IMPROVED VERSION
+    
+    Now includes:
+    1. FVG/OB setups aligned with HTF (original)
+    2. FVG/OB setups during strong LTF momentum (even if HTF is neutral/opposite)
+    3. Pure momentum signals when price moves significantly
     
     Args:
         htf_bias: HTF bias analysis
         ltf_analyses: Dict mapping LTF ('60', '15', '5', '3') to analysis
         current_price: Current market price
+        candles_by_timeframe: Optional candle data for momentum calculation
         
     Returns:
         LTFEntryModel if valid setup found, None otherwise
     """
     logger.info("=" * 60)
-    logger.info("🔎 SEARCHING FOR LTF ENTRY MODEL")
+    logger.info("🔎 SEARCHING FOR LTF ENTRY MODEL (ENHANCED)")
     logger.info(f"   HTF Bias: {htf_bias.overall_direction.upper()}")
     logger.info("=" * 60)
     
@@ -650,6 +771,9 @@ def identify_ltf_entry_model(
     
     best_entry = None
     best_score = 0
+    
+    # ENHANCEMENT 1: Detect strong LTF momentum even if HTF conflicts
+    ltf_momentum = _detect_ltf_momentum(candles_by_timeframe) if candles_by_timeframe else None
     
     for tf in ltf_order:
         if tf not in ltf_analyses:
@@ -660,62 +784,129 @@ def identify_ltf_entry_model(
         order_blocks = analysis.get('order_blocks', [])
         structure_breaks = analysis.get('structure_breaks', [])
         
-        # Look for FVG tests (highest priority)
+        # ENHANCED: Look for FVG tests with relaxed alignment
         for i, fvg in enumerate(fvgs[-5:]):  # Check last 5 FVGs
-            # Must align with HTF direction
-            if fvg.gap_type != htf_bias.overall_direction:
+            # IMPROVEMENT: Allow opposite direction if momentum is strong
+            htf_aligned = fvg.gap_type == htf_bias.overall_direction
+            momentum_override = False
+            
+            if not htf_aligned and ltf_momentum:
+                # Allow entry if LTF momentum agrees with FVG direction
+                if ltf_momentum['direction'] == fvg.gap_type and ltf_momentum['strength'] > 0.6:
+                    momentum_override = True
+                    logger.info(f"   🔥 MOMENTUM OVERRIDE: Strong {fvg.gap_type} momentum on LTF")
+            
+            if not htf_aligned and not momentum_override:
                 continue
             
-            # Check if price is near FVG
+            # IMPROVEMENT: Relaxed distance threshold (was 2.0, now 3.5)
             distance_pct = abs((fvg.gap_low + fvg.gap_high) / 2 - current_price) / current_price * 100
-            if distance_pct > 2.0:  # More than 2% away
+            if distance_pct > 3.5:  # Increased from 2.0% to 3.5%
                 continue
             
             # Determine if second test (higher probability)
             entry_type = 'FVG_TEST_2ND' if i > 0 else 'FVG_TEST'
             
-            # Calculate alignment score
-            alignment = 100 if fvg.gap_type == htf_bias.overall_direction else 0
+            # IMPROVED: Calculate alignment score (partial credit for momentum override)
+            if htf_aligned:
+                alignment = 100
+            elif momentum_override:
+                alignment = 70  # Good score for momentum-confirmed entries
+            else:
+                alignment = 0
             
             # Calculate overall score
             score = alignment * (1.5 if entry_type == 'FVG_TEST_2ND' else 1.0)
             score *= (1.2 if tf == '60' else 1.0)  # Bonus for 1H timeframe
+            if momentum_override:
+                score *= 1.1  # Bonus for momentum confirmation
             
             if score > best_score:
                 best_score = score
                 best_entry = LTFEntryModel(
-                    entry_type=entry_type,
+                    entry_type=entry_type + ('_MOMENTUM' if momentum_override else ''),
                     timeframe=tf,
                     trigger_price=(fvg.gap_low + fvg.gap_high) / 2,
                     entry_zone=(fvg.gap_low, fvg.gap_high),
-                    momentum_confirmed=True,  # Assume confirmed if FVG exists
+                    momentum_confirmed=True,
                     alignment_score=alignment,
-                    confidence=0.75 if entry_type == 'FVG_TEST_2ND' else 0.60
+                    confidence=0.75 if entry_type == 'FVG_TEST_2ND' else (0.65 if momentum_override else 0.60)
                 )
         
-        # Look for Order Block tests
-        for ob in order_blocks[-3:]:
-            if ob.block_type != htf_bias.overall_direction:
+        # ENHANCED: Order Block tests with relaxed alignment
+        for ob in order_blocks[-5:]:  # Check last 5 OBs (was 3)
+            htf_aligned = ob.block_type == htf_bias.overall_direction
+            momentum_override = False
+            momentum_aligned = False
+            
+            # NEW: Check if OB aligns with momentum direction (even if HTF is neutral)
+            if ltf_momentum:
+                momentum_aligned = ob.block_type == ltf_momentum['direction']
+                # Allow momentum override if:
+                # 1. HTF is neutral and OB aligns with momentum, OR
+                # 2. HTF conflicts but momentum is strong
+                if htf_bias.overall_direction == 'neutral' and momentum_aligned and ltf_momentum['strength'] > 0.3:
+                    momentum_override = True
+                    logger.info(f"   🔥 NEUTRAL HTF + MOMENTUM: Using {ob.block_type} OB aligned with {ltf_momentum['direction']} momentum")
+                elif not htf_aligned and momentum_aligned and ltf_momentum['strength'] > 0.6:
+                    momentum_override = True
+                    logger.info(f"   🔥 MOMENTUM OVERRIDE: Strong {ob.block_type} momentum overrides HTF")
+            
+            if not htf_aligned and not momentum_override:
                 continue
             
+            # IMPROVEMENT: Relaxed distance threshold (was 1.5, now 2.5)
             distance_pct = abs((ob.low + ob.high) / 2 - current_price) / current_price * 100
-            if distance_pct > 1.5:
+            if distance_pct > 2.5:  # Increased from 1.5% to 2.5%
                 continue
             
-            alignment = 100 if ob.block_type == htf_bias.overall_direction else 0
+            if htf_aligned:
+                alignment = 100
+            elif momentum_override:
+                alignment = 70 if ltf_momentum['strength'] > 0.5 else 50
+            else:
+                alignment = 0
+                
             score = alignment * ob.strength
+            if momentum_override:
+                score *= 1.1
             
             if score > best_score:
                 best_score = score
                 best_entry = LTFEntryModel(
-                    entry_type='OB_TEST',
+                    entry_type='OB_TEST' + ('_MOMENTUM' if momentum_override else ''),
                     timeframe=tf,
                     trigger_price=(ob.low + ob.high) / 2,
                     entry_zone=(ob.low, ob.high),
-                    momentum_confirmed=ob.strength > 0.7,
+                    momentum_confirmed=ob.strength > 0.7 or momentum_override,
                     alignment_score=alignment,
-                    confidence=0.65
+                    confidence=0.70 if momentum_override else 0.65
                 )
+    
+    # ENHANCEMENT 2: Pure momentum signal if no FVG/OB found but strong move detected
+    if not best_entry and ltf_momentum and ltf_momentum['strength'] >= 0.5:  # Lowered from 0.7
+        logger.info(f"   💨 PURE MOMENTUM SIGNAL: {ltf_momentum['direction'].upper()} strength={ltf_momentum['strength']:.2f}")
+        
+        # Create momentum-based entry
+        entry_direction = ltf_momentum['direction']
+        if entry_direction in ['bullish', 'bearish']:
+            # Calculate a reasonable entry zone based on recent price action
+            range_size = current_price * 0.003  # 0.3% range
+            if entry_direction == 'bullish':
+                entry_zone = (current_price - range_size, current_price)
+            else:
+                entry_zone = (current_price, current_price + range_size)
+            
+            best_entry = LTFEntryModel(
+                entry_type='MOMENTUM_ENTRY',
+                timeframe=ltf_momentum.get('timeframe', '15'),
+                trigger_price=current_price,
+                entry_zone=entry_zone,
+                momentum_confirmed=True,
+                alignment_score=50 if entry_direction == htf_bias.overall_direction else 35,
+                confidence=0.55  # Moderate confidence for pure momentum
+            )
+            best_score = 50
     
     if best_entry:
         logger.info(f"✅ Found {best_entry.entry_type} on {best_entry.timeframe}")
@@ -822,8 +1013,13 @@ def analyze_multi_timeframe_ict_topdown(
         except Exception as e:
             logger.warning(f"LTF analysis failed for {tf}: {e}")
     
-    # Find LTF entry model
-    ltf_entry = identify_ltf_entry_model(htf_bias, ltf_analyses, current_price)
+    # Find LTF entry model - ENHANCED: Pass candles for momentum detection
+    ltf_entry = identify_ltf_entry_model(
+        htf_bias, 
+        ltf_analyses, 
+        current_price,
+        candles_by_timeframe=candles_by_timeframe  # NEW: Enable momentum detection
+    )
     
     logger.info("=" * 60)
     logger.info("✅ TOP-DOWN ANALYSIS COMPLETE")

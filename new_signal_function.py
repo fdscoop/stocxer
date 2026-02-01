@@ -178,8 +178,30 @@ def _generate_actionable_signal_topdown(mtf_result, session_info, chain_data, hi
     # ==================== PHASE 4: TRADE DECISION LOGIC ====================
     logger.info("\n🎯 Phase 4: Trade Decision Logic")
     
-    # Determine trade direction (ICT first!)
+    # Determine trade direction (ICT first, but can be overridden by strong LTF momentum!)
     trade_direction = htf_bias.overall_direction
+    momentum_override_active = False
+    
+    # ENHANCEMENT: If HTF is neutral but LTF has a momentum entry, use LTF direction
+    if trade_direction == 'neutral' and ltf_entry:
+        entry_type = ltf_entry.entry_type if ltf_entry else ''
+        if 'MOMENTUM' in entry_type or ltf_entry.alignment_score >= 50:
+            # Determine direction from entry type or zone
+            if ltf_entry.entry_zone:
+                # If trigger price is below current price, expecting up move (bullish)
+                # If trigger price is above current price, expecting down move (bearish)
+                if 'bullish' in entry_type.lower() or ltf_entry.trigger_price < spot_price:
+                    trade_direction = 'bullish'
+                elif 'bearish' in entry_type.lower() or ltf_entry.trigger_price > spot_price:
+                    trade_direction = 'bearish'
+                else:
+                    # Infer from FVG/OB direction if available
+                    trade_direction = 'bullish'  # Default to bullish on momentum
+            
+            momentum_override_active = True
+            logger.info(f"   🔥 MOMENTUM OVERRIDE: HTF neutral → Using LTF {trade_direction.upper()}")
+            logger.info(f"      Entry Type: {entry_type}")
+            logger.info(f"      Alignment Score: {ltf_entry.alignment_score}")
     
     # Check for liquidity reversal opportunity
     is_reversal_play = False
@@ -209,6 +231,8 @@ def _generate_actionable_signal_topdown(mtf_result, session_info, chain_data, hi
             target_delta = 0.50  # ATM for strong setups
         elif htf_bias.bias_strength > 60:
             target_delta = 0.45  # Slightly OTM for strong HTF
+        elif momentum_override_active:
+            target_delta = 0.45  # Slightly OTM for momentum plays
         else:
             target_delta = 0.40  # OTM for weaker setups
             
@@ -220,10 +244,12 @@ def _generate_actionable_signal_topdown(mtf_result, session_info, chain_data, hi
             target_delta = 0.50
         elif htf_bias.bias_strength > 60:
             target_delta = 0.45
+        elif momentum_override_active:
+            target_delta = 0.45
         else:
             target_delta = 0.40
             
-    else:  # neutral
+    else:  # Still neutral after all checks
         option_type = 'call'  # Default to call in neutral
         action = "WAIT"
         target_delta = 0.40
@@ -231,6 +257,8 @@ def _generate_actionable_signal_topdown(mtf_result, session_info, chain_data, hi
     logger.info(f"   Direction: {trade_direction.upper()}")
     logger.info(f"   Option Type: {option_type.upper()}")
     logger.info(f"   Target Delta: {target_delta}")
+    if momentum_override_active:
+        logger.info(f"   ⚡ Momentum Override: ACTIVE")
     
     # Delta-based strike selection
     def select_strike_by_delta(target_delta: float, opt_type: str) -> int:

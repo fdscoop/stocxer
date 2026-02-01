@@ -153,9 +153,11 @@ class ConfidenceCalculator:
         """
         Score LTF entry quality (0-25 points)
         
+        ENHANCED: Now recognizes momentum-based entries!
+        
         Args:
             ltf_entry: Dict with LTF entry model
-                - entry_type: 'FVG_TEST_2ND'/'FVG_TEST'/'OB_TEST'/'CHOCH'
+                - entry_type: 'FVG_TEST_2ND'/'FVG_TEST'/'OB_TEST'/'CHOCH'/'MOMENTUM_ENTRY'
                 - timeframe: '15m'/'5m'/'3m'
                 - momentum_confirmed: Boolean
                 - alignment_score: 0-100
@@ -166,15 +168,24 @@ class ConfidenceCalculator:
             Score (0-25)
         """
         score = 0.0
+        entry_type = ltf_entry.get('entry_type', '')
+        
+        # Check if this is a momentum-based entry (new feature)
+        is_momentum_entry = 'MOMENTUM' in entry_type
         
         # Factor 1: Entry model type (0-12 points)
-        entry_type = ltf_entry.get('entry_type', '')
         if 'FVG_TEST_2ND' in entry_type or 'SECOND_TEST' in entry_type:
             score += 12  # Second test = highest probability
         elif 'FVG_TEST' in entry_type or 'OB_TEST' in entry_type:
             score += 8   # First test = good
+            if is_momentum_entry:
+                score += 2  # BONUS: Momentum confirmation on ICT setup
+        elif entry_type == 'MOMENTUM_ENTRY':
+            score += 7   # Pure momentum = moderate-good (better than CHOCH)
         elif 'CHOCH' in entry_type or 'BOS' in entry_type:
             score += 6   # Structure break = moderate
+        elif entry_type == 'NO_SETUP':
+            score += 0   # No setup found
         else:
             score += 3   # Other setups
         
@@ -185,10 +196,12 @@ class ConfidenceCalculator:
         # Factor 3: Momentum confirmation (0-5 points)
         if ltf_entry.get('momentum_confirmed', False):
             score += 5
+        elif is_momentum_entry:
+            score += 4  # Momentum entries inherently have momentum
         else:
             score += 1
         
-        logger.info(f"🔢 LTF Confirmation Score: {score:.1f}/25 (entry={entry_type})")
+        logger.info(f"🔢 LTF Confirmation Score: {score:.1f}/25 (entry={entry_type}, momentum={is_momentum_entry})")
         return min(score, 25.0)
     
     def calculate_ml_alignment_score(
