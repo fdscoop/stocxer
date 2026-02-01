@@ -6345,7 +6345,7 @@ async def scan_stocks(
             scan_info = await screener_service.save_scan_results(
                 user_id=user.id,
                 scan_data=result,
-                signals=result["signals"]
+                signals=result["signals_by_type"]  # Pass dict with buy/sell, not flat array
             )
             
             result["saved"] = True
