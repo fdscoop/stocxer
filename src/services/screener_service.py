@@ -68,7 +68,12 @@ class ScreenerService:
             
             # Batch insert signals using admin client to bypass RLS
             if all_signals:
-                self.supabase_admin.table("screener_results").insert(all_signals).execute()
+                insert_response = self.supabase_admin.table("screener_results").insert(all_signals).execute()
+                logger.info(f"✅ Inserted {len(all_signals)} signals to screener_results table")
+                logger.info(f"   User ID: {user_id}, Scan ID: {scan_id}")
+                logger.info(f"   First signal: {all_signals[0]['symbol']} - {all_signals[0]['action']}")
+            else:
+                logger.warning(f"⚠️ No signals to save for scan {scan_id}")
             
             logger.info(f"Saved scan {scan_id}: {len(all_signals)} signals for user {user_id}")
             
@@ -105,6 +110,7 @@ class ScreenerService:
             "volume": signal.get("volume"),
             "reasons": signal.get("reasons", []),
             "scan_params": {},
+            "signal_type": "STOCK",  # Mark as stock screener result
             "scanned_at": ist_timestamp()  # Use IST for signal timestamps
         }
     

@@ -6343,7 +6343,7 @@ async def scan_stocks(
         # Save to database (user is already authenticated)
         try:
             scan_info = await screener_service.save_scan_results(
-                user_id=user.id,
+                user_id=str(user.id),  # Ensure string type for UUID
                 scan_data=result,
                 signals=result["signals_by_type"]  # Pass dict with buy/sell, not flat array
             )
@@ -6351,9 +6351,9 @@ async def scan_stocks(
             result["saved"] = True
             result["scan_id"] = scan_info["scan_id"]
             result["user_email"] = user.email
-            logger.info(f"Saved scan results for user {user.email}")
+            logger.info(f"✅ Saved {scan_info['signals_saved']} stock signals for user {user.email} (ID: {user.id})")
         except Exception as e:
-            logger.warning(f"Failed to save scan results: {e}")
+            logger.error(f"❌ Failed to save scan results for {user.email}: {e}")
             result["saved"] = False
         
         return result
@@ -6995,7 +6995,8 @@ async def get_recent_screener_scans(
         # Fetch from screener_results table (only contains STOCK signals now)
         query = screener_service.supabase_admin.table("screener_results")\
             .select("*")\
-            .eq("user_id", user.id)\
+            .eq("user_id", str(user.id))\
+            .eq("signal_type", "STOCK")\
             .gte("scanned_at", time_threshold)
         
         # Add end time filter if specific date was provided
@@ -7005,6 +7006,10 @@ async def get_recent_screener_scans(
         response = query.order("scanned_at", desc=True)\
             .limit(limit)\
             .execute()
+        
+        logger.info(f"Stock screener query for user {user.email} (ID: {user.id}): found {len(response.data)} results")
+        if len(response.data) == 0:
+            logger.warning(f"No stock results found. Time threshold: {time_threshold}, User ID: {user.id}")
         
         return {
             "status": "success",
