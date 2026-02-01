@@ -7706,9 +7706,24 @@ async def scan_options(
         # Sanitize numpy types for JSON serialization
         return sanitize_for_json(result)
         
+    except HTTPException:
+        # Re-raise HTTP exceptions as-is (already have proper status codes)
+        raise
     except Exception as e:
-        logger.error(f"Error in options scanner: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"❌ Critical error in options scanner: {str(e)}")
+        logger.exception(e)  # This logs full traceback
+        raise HTTPException(
+            status_code=500, 
+            detail={
+                "error": "SCANNER_FAILED",
+                "message": str(e),
+                "scan_parameters": {
+                    "index": index,
+                    "expiry": expiry,
+                    "quick_scan": quick_scan
+                }
+            }
+        )
 
 
 def generate_mock_options_scan_data(index: str, expiry: str, min_volume: int, min_oi: int, strategy: str):
