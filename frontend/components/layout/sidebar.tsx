@@ -233,7 +233,7 @@ export function MobileNavigation() {
   const mobileNav = [
     { name: 'Home', href: '/', icon: LayoutDashboard },
     { name: 'Screener', href: '/screener', icon: Search },
-    { name: 'Options', href: '/options', icon: Target },
+    { name: 'Scan Results', href: '/scans', icon: Target },
     { name: 'Billing', href: '/billing', icon: CreditCard },
   ]
 

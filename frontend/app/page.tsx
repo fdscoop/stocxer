@@ -1470,10 +1470,10 @@ export default function DashboardPage() {
               <span className="text-sm font-medium">Stock Screener</span>
             </Button>
           </Link>
-          <Link href="/options" className="block">
+          <Link href="/scans" className="block">
             <Button variant="outline" className="w-full h-auto py-3 px-4 flex items-center justify-start gap-3 hover:bg-accent">
               <Target className="w-5 h-5" />
-              <span className="text-sm font-medium">Options Scanner</span>
+              <span className="text-sm font-medium">Scan Results</span>
             </Button>
           </Link>
           <Button
@@ -2699,9 +2699,9 @@ export default function DashboardPage() {
               </ScrollArea>
               {scanResults.options.length > 20 && (
                 <div className="mt-4 text-center">
-                  <Link href={`/options?index=${selectedIndex}`}>
+                  <Link href="/scans">
                     <Button variant="outline" size="sm" className="text-sm">
-                      View All {scanResults.options.length} Options
+                      View All {scanResults.options.length} Results
                     </Button>
                   </Link>
                 </div>

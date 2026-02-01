@@ -117,6 +117,13 @@ export default function ScansPage() {
     })
   }
 
+  const formatNumber = (value: any, decimals: number = 2): string => {
+    if (value === null || value === undefined) return '--'
+    const num = typeof value === 'string' ? parseFloat(value) : value
+    if (isNaN(num)) return '--'
+    return num.toFixed(decimals)
+  }
+
   return (
     <DashboardLayout
       user={user}
@@ -221,28 +228,28 @@ export default function ScansPage() {
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
                         <div>
                           <div className="text-xs text-muted-foreground">Entry</div>
-                          <div className="font-semibold">₹{result.entry_price?.toFixed(2)}</div>
+                          <div className="font-semibold">₹{formatNumber(result.entry_price)}</div>
                         </div>
                         <div>
                           <div className="text-xs text-muted-foreground">Target 1</div>
-                          <div className="font-semibold text-green-600">₹{result.target_1?.toFixed(2)}</div>
+                          <div className="font-semibold text-green-600">₹{formatNumber(result.target_1)}</div>
                         </div>
                         <div>
                           <div className="text-xs text-muted-foreground">Target 2</div>
-                          <div className="font-semibold text-green-600">₹{result.target_2?.toFixed(2)}</div>
+                          <div className="font-semibold text-green-600">₹{formatNumber(result.target_2)}</div>
                         </div>
                         <div>
                           <div className="text-xs text-muted-foreground">Stop Loss</div>
-                          <div className="font-semibold text-red-600">₹{result.stop_loss?.toFixed(2)}</div>
+                          <div className="font-semibold text-red-600">₹{formatNumber(result.stop_loss)}</div>
                         </div>
                       </div>
 
                       <div className="mt-3 pt-3 border-t flex items-center justify-between text-xs">
                         <span className="text-muted-foreground">
-                          Spot: ₹{result.spot_price?.toFixed(2)} • VIX: {result.vix?.toFixed(2)}
+                          Spot: ₹{formatNumber(result.spot_price)} • VIX: {formatNumber(result.vix)}
                         </span>
                         <span className="text-muted-foreground">
-                          R:R {result.risk_reward_ratio_1?.toFixed(1)}:1
+                          R:R {result.risk_reward_ratio_1 || '--'}
                         </span>
                       </div>
                     </CardContent>
@@ -288,7 +295,7 @@ export default function ScansPage() {
                           <p className="text-xs text-muted-foreground">{result.name}</p>
                         </div>
                         <div className="text-right">
-                          <div className="text-lg font-semibold">₹{result.current_price?.toFixed(2)}</div>
+                          <div className="text-lg font-semibold">₹{formatNumber(result.current_price)}</div>
                           <div className="text-xs text-muted-foreground">{formatDate(result.scanned_at)}</div>
                         </div>
                       </div>
@@ -296,21 +303,21 @@ export default function ScansPage() {
                       <div className="grid grid-cols-3 gap-3 text-sm">
                         <div>
                           <div className="text-xs text-muted-foreground">Target 1</div>
-                          <div className="font-semibold text-green-600">₹{result.target_1?.toFixed(2)}</div>
+                          <div className="font-semibold text-green-600">₹{formatNumber(result.target_1)}</div>
                         </div>
                         <div>
                           <div className="text-xs text-muted-foreground">Target 2</div>
-                          <div className="font-semibold text-green-600">₹{result.target_2?.toFixed(2)}</div>
+                          <div className="font-semibold text-green-600">₹{formatNumber(result.target_2)}</div>
                         </div>
                         <div>
                           <div className="text-xs text-muted-foreground">Stop Loss</div>
-                          <div className="font-semibold text-red-600">₹{result.stop_loss?.toFixed(2)}</div>
+                          <div className="font-semibold text-red-600">₹{formatNumber(result.stop_loss)}</div>
                         </div>
                       </div>
 
                       {result.rsi && (
                         <div className="mt-3 pt-3 border-t text-xs text-muted-foreground">
-                          RSI: {result.rsi?.toFixed(1)}
+                          RSI: {formatNumber(result.rsi, 1)}
                         </div>
                       )}
                       
