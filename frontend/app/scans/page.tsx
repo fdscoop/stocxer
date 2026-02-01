@@ -62,7 +62,6 @@ export default function ScansPage() {
   const [screenerResults, setScreenerResults] = React.useState<ScreenerResult[]>([])
   const [dateFilter, setDateFilter] = React.useState<'today' | 'yesterday' | 'week'>('today')
   const [actionFilter, setActionFilter] = React.useState<'all' | 'BUY' | 'SELL'>('all')
-  const [actionFilter, setActionFilter] = React.useState<'all' | 'BUY' | 'SELL'>('all')
 
   React.useEffect(() => {
     const token = localStorage.getItem('auth_token') || localStorage.getItem('token')
