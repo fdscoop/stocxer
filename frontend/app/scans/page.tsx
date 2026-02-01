@@ -384,25 +384,48 @@ export default function ScansPage() {
                         </div>
                       </div>
 
-                      <div className="grid grid-cols-4 gap-2 text-xs text-muted-foreground pt-2 border-t">
-                        {result.rsi && (
+                      <div className="grid grid-cols-3 gap-3 text-xs pt-2 border-t">
+                        {result.rsi !== null && result.rsi !== undefined && (
                           <div>
-                            <span className="font-medium">RSI:</span> {formatNumber(result.rsi, 1)}
+                            <div className="text-muted-foreground">RSI</div>
+                            <div className="font-semibold">{formatNumber(result.rsi, 1)}</div>
                           </div>
                         )}
-                        {result.momentum_5d && (
-                          <div className={result.momentum_5d > 0 ? 'text-green-600' : 'text-red-600'}>
-                            <span className="font-medium">5D:</span> {formatNumber(result.momentum_5d, 2)}%
-                          </div>
-                        )}
-                        {result.volume && (
+                        {result.sma_5 !== null && result.sma_5 !== undefined && (
                           <div>
-                            <span className="font-medium">Vol:</span> {(result.volume / 1000).toFixed(0)}K
+                            <div className="text-muted-foreground">SMA 5</div>
+                            <div className="font-semibold">₹{formatNumber(result.sma_5)}</div>
                           </div>
                         )}
-                        {result.change_pct && (
-                          <div className={result.change_pct > 0 ? 'text-green-600' : 'text-red-600'}>
-                            <span className="font-medium">Chg:</span> {formatNumber(result.change_pct, 2)}%
+                        {result.sma_15 !== null && result.sma_15 !== undefined && (
+                          <div>
+                            <div className="text-muted-foreground">SMA 15</div>
+                            <div className="font-semibold">₹{formatNumber(result.sma_15)}</div>
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="grid grid-cols-3 gap-3 text-xs pt-2">
+                        {result.momentum_5d !== null && result.momentum_5d !== undefined && (
+                          <div>
+                            <div className="text-muted-foreground">5D Momentum</div>
+                            <div className={`font-semibold ${result.momentum_5d > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                              {formatNumber(result.momentum_5d, 2)}%
+                            </div>
+                          </div>
+                        )}
+                        {result.volume !== null && result.volume !== undefined && (
+                          <div>
+                            <div className="text-muted-foreground">Volume</div>
+                            <div className="font-semibold">{(result.volume / 1000000).toFixed(2)}M</div>
+                          </div>
+                        )}
+                        {result.change_pct !== null && result.change_pct !== undefined && (
+                          <div>
+                            <div className="text-muted-foreground">Change</div>
+                            <div className={`font-semibold ${result.change_pct > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                              {formatNumber(result.change_pct, 2)}%
+                            </div>
                           </div>
                         )}
                       </div>
