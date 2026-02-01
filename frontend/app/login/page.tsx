@@ -27,6 +27,23 @@ export default function LoginPage() {
   const [registerPassword, setRegisterPassword] = React.useState('')
   const [confirmPassword, setConfirmPassword] = React.useState('')
 
+  // Check for URL parameters on mount
+  React.useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const confirmed = params.get('confirmed')
+    const error = params.get('error')
+    const msg = params.get('message')
+
+    if (confirmed === 'true') {
+      setMessage({ 
+        text: msg || 'Email confirmed successfully! You can now login.', 
+        isError: false 
+      })
+    } else if (error) {
+      setMessage({ text: error, isError: true })
+    }
+  }, [])
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
