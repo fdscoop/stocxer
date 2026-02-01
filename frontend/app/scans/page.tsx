@@ -45,6 +45,12 @@ interface ScreenerResult {
   target_2: number
   stop_loss: number
   rsi: number
+  sma_5: number
+  sma_15: number
+  momentum_5d: number
+  volume: number
+  volume_surge: boolean
+  change_pct: number
   scanned_at: string
   reasons?: string[]
 }
@@ -55,6 +61,8 @@ export default function ScansPage() {
   const [optionResults, setOptionResults] = React.useState<OptionScanResult[]>([])
   const [screenerResults, setScreenerResults] = React.useState<ScreenerResult[]>([])
   const [dateFilter, setDateFilter] = React.useState<'today' | 'yesterday' | 'week'>('today')
+  const [actionFilter, setActionFilter] = React.useState<'all' | 'BUY' | 'SELL'>('all')
+  const [actionFilter, setActionFilter] = React.useState<'all' | 'BUY' | 'SELL'>('all')
 
   React.useEffect(() => {
     const token = localStorage.getItem('auth_token') || localStorage.getItem('token')
@@ -169,6 +177,62 @@ export default function ScansPage() {
           </Button>
         </div>
 
+        {/* Action Filters */}
+        <div className="flex gap-2 overflow-x-auto pb-2">
+          <span className="text-sm text-muted-foreground flex items-center mr-2">Filter:</span>
+          <Button
+            variant={actionFilter === 'all' ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => setActionFilter('all')}
+          >
+            All
+          </Button>
+          <Button
+            variant={actionFilter === 'BUY' ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => setActionFilter('BUY')}
+          >
+            <TrendingUp className="w-4 h-4 mr-1" />
+            BUY Only
+          </Button>
+          <Button
+            variant={actionFilter === 'SELL' ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => setActionFilter('SELL')}
+          >
+            <TrendingDown className="w-4 h-4 mr-1" />
+            SELL Only
+          </Button>
+        </div>
+
+        {/* Action Filters */}
+        <div className="flex gap-2 overflow-x-auto pb-2">
+          <span className="text-sm text-muted-foreground flex items-center mr-2">Filter:</span>
+          <Button
+            variant={actionFilter === 'all' ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => setActionFilter('all')}
+          >
+            All
+          </Button>
+          <Button
+            variant={actionFilter === 'BUY' ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => setActionFilter('BUY')}
+          >
+            <TrendingUp className="w-4 h-4 mr-1" />
+            BUY Only
+          </Button>
+          <Button
+            variant={actionFilter === 'SELL' ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => setActionFilter('SELL')}
+          >
+            <TrendingDown className="w-4 h-4 mr-1" />
+            SELL Only
+          </Button>
+        </div>
+
         {/* Results Tabs */}
         <Tabs defaultValue="options" className="w-full">
           <TabsList className="w-full md:w-auto">
@@ -277,7 +341,9 @@ export default function ScansPage() {
               </Card>
             ) : (
               <div className="grid gap-4">
-                {screenerResults.map((result) => (
+                {screenerResults
+                  .filter(result => actionFilter === 'all' || result.action === actionFilter)
+                  .map((result) => (
                   <Card key={result.id}>
                     <CardContent className="p-4">
                       <div className="flex items-start justify-between mb-3">
@@ -290,6 +356,9 @@ export default function ScansPage() {
                               {result.action}
                             </Badge>
                             <Badge variant="secondary">{result.confidence}%</Badge>
+                            {result.volume_surge && (
+                              <Badge variant="outline" className="text-xs">🔥 Volume Surge</Badge>
+                            )}
                           </div>
                           <h3 className="font-semibold text-lg">{result.symbol}</h3>
                           <p className="text-xs text-muted-foreground">{result.name}</p>
@@ -300,7 +369,7 @@ export default function ScansPage() {
                         </div>
                       </div>
 
-                      <div className="grid grid-cols-3 gap-3 text-sm">
+                      <div className="grid grid-cols-3 gap-3 text-sm mb-3">
                         <div>
                           <div className="text-xs text-muted-foreground">Target 1</div>
                           <div className="font-semibold text-green-600">₹{formatNumber(result.target_1)}</div>
@@ -315,17 +384,34 @@ export default function ScansPage() {
                         </div>
                       </div>
 
-                      {result.rsi && (
-                        <div className="mt-3 pt-3 border-t text-xs text-muted-foreground">
-                          RSI: {formatNumber(result.rsi, 1)}
-                        </div>
-                      )}
+                      <div className="grid grid-cols-4 gap-2 text-xs text-muted-foreground pt-2 border-t">
+                        {result.rsi && (
+                          <div>
+                            <span className="font-medium">RSI:</span> {formatNumber(result.rsi, 1)}
+                          </div>
+                        )}
+                        {result.momentum_5d && (
+                          <div className={result.momentum_5d > 0 ? 'text-green-600' : 'text-red-600'}>
+                            <span className="font-medium">5D:</span> {formatNumber(result.momentum_5d, 2)}%
+                          </div>
+                        )}
+                        {result.volume && (
+                          <div>
+                            <span className="font-medium">Vol:</span> {(result.volume / 1000).toFixed(0)}K
+                          </div>
+                        )}
+                        {result.change_pct && (
+                          <div className={result.change_pct > 0 ? 'text-green-600' : 'text-red-600'}>
+                            <span className="font-medium">Chg:</span> {formatNumber(result.change_pct, 2)}%
+                          </div>
+                        )}
+                      </div>
                       
                       {result.reasons && result.reasons.length > 0 && (
                         <div className="mt-3 pt-3 border-t">
-                          <div className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-2">Reasons:</div>
+                          <div className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-2">Analysis:</div>
                           <ul className="text-xs text-gray-600 dark:text-gray-400 space-y-1">
-                            {result.reasons.slice(0, 3).map((reason, idx) => (
+                            {result.reasons.map((reason, idx) => (
                               <li key={idx}>{reason}</li>
                             ))}
                           </ul>

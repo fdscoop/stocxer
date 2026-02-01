@@ -7002,10 +7002,11 @@ async def get_recent_screener_scans(
         from datetime import datetime, timedelta, timezone
         time_threshold = (datetime.now(timezone.utc) - timedelta(hours=hours)).isoformat()
         
-        # Fetch from screener_results table
+        # Fetch from screener_results table - only STOCK signals
         response = screener_service.supabase_admin.table("screener_results")\
             .select("*")\
             .eq("user_id", user.id)\
+            .eq("signal_type", "STOCK")\
             .gte("scanned_at", time_threshold)\
             .order("scanned_at", desc=True)\
             .limit(limit)\
