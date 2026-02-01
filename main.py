@@ -507,32 +507,16 @@ class OrderRequest(BaseModel):
 # Dashboard route (protected - requires authentication)
 @app.get("/")
 async def root():
-    """Serve the frontend index.html locally"""
-    return FileResponse(os.path.join(static_dir, "index.html"))
-
-
-@app.get("/login.html")
-async def login_page():
-    """Serve the local login page"""
-    return FileResponse(os.path.join(static_dir, "login.html"))
-
-
-@app.get("/screener.html")
-async def screener_page():
-    """Serve the local screener page"""
-    return FileResponse(os.path.join(static_dir, "screener.html"))
-
-
-@app.get("/index-analyzer.html")
-async def index_analyzer_page():
-    """Serve the local analyzer page"""
-    return FileResponse(os.path.join(static_dir, "index-analyzer.html"))
-
-
-@app.get("/fyers-callback.html")
-async def fyers_callback_page():
-    """Serve the Fyers OAuth callback page"""
-    return FileResponse(os.path.join(static_dir, "fyers-callback.html"))
+    """API root endpoint - returns API information"""
+    return {
+        "service": "TradeWise API",
+        "version": "1.0.0",
+        "status": "online",
+        "frontend": "https://stocxer.in",
+        "docs": "/docs",
+        "health": "/health",
+        "timestamp": datetime.now().isoformat()
+    }
 
 
 # Health check
