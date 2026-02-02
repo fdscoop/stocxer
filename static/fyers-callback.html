@@ -18,7 +18,14 @@
 
     <script src="config.js"></script>
     <script>
-        const API_BASE = window.APP_CONFIG?.API_URL || window.location.origin;
+        // Get API URL with fallback for old deployments
+        let API_BASE = window.APP_CONFIG?.API_URL || window.location.origin;
+        
+        // TEMPORARY FIX: If config.js hasn't deployed yet and we're getting old Render URL
+        if (API_BASE.includes('stocxer-ai.onrender.com') || API_BASE === window.location.origin) {
+            API_BASE = 'https://stocxer-484044910258.europe-west1.run.app';
+            console.log('🔧 Using Google Cloud Run fallback URL:', API_BASE);
+        }
 
         async function handleCallback() {
             const message = document.getElementById('message');
