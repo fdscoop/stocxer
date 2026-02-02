@@ -3878,84 +3878,32 @@ def _generate_actionable_signal_topdown(mtf_result, session_info, chain_data, hi
     logger.info(f"   DTE: {dte} days")
     logger.info(f"   IV: {atm_iv * 100:.1f}%")
     
-    # ==================== EXPIRY DAY PROTECTION ====================
-    # CRITICAL FIX: On expiry day (DTE <= 1), return AVOID signal
+    # ==================== EXPIRY DAY WARNING (NOT BLOCKING) ====================
+    # Changed: Allow scan to proceed but add strong warnings for expiry day
     is_expiry_day = dte <= 1
     is_last_3_days = dte <= 3
     
+    # Build expiry warnings - these will be included in the final signal
+    expiry_warnings = []
+    
     if is_expiry_day:
-        logger.warning("🚨 EXPIRY DAY DETECTED! Returning AVOID signal.")
+        logger.warning("🚨 EXPIRY DAY DETECTED! Proceeding with scan but adding strong warnings.")
         logger.warning("   Reason: Extreme theta decay (30%+ value loss possible)")
         logger.warning("   Recommendation: Avoid buying options on expiry day")
-        
-        # Return a special AVOID signal for expiry day
-        return {
-            "signal": "EXPIRY_DAY_AVOID",
-            "action": "🚨 AVOID - EXPIRY DAY",
-            "option": {
-                "strike": atm_strike,
-                "type": "N/A",
-                "symbol": "AVOID",
-                "trading_symbol": "AVOID",
-                "expiry_date": expiry_date,
-                "expiry_info": {
-                    "days_to_expiry": dte,
-                    "is_weekly": True,
-                    "is_expiry_day": True,
-                    "time_to_expiry_years": time_to_expiry
-                }
-            },
-            "pricing": {
-                "ltp": 0,
-                "entry_price": 0,
-                "entry_reasoning": "DO NOT TRADE - Expiry day extreme theta decay"
-            },
-            "targets": {
-                "stop_loss": 0,
-                "target_1": 0,
-                "target_2": 0
-            },
-            "confidence": {
-                "score": 0,
-                "level": "AVOID",
-                "breakdown": {
-                    "htf_structure": 0,
-                    "ltf_confirmation": 0,
-                    "ml_alignment": 0,
-                    "candlestick": 0,
-                    "futures_basis": 0,
-                    "constituents": 0
-                }
-            },
-            "warnings": [
-                "🚨 EXPIRY DAY: Do NOT buy options today",
-                "⚠️ Theta decay: 30%+ of remaining value can be lost",
-                "⚠️ Only gamma scalping professionals should trade",
-                "✅ Wait for next week's expiry for safer trades"
-            ],
-            "expiry_analysis": {
-                "days_to_expiry": dte,
-                "is_expiry_day": True,
-                "theta_decay_rate": "EXTREME",
-                "recommendation": "AVOID ALL OPTIONS TRADING"
-            },
-            "htf_analysis": {
-                "direction": "N/A - Expiry Day",
-                "strength": 0,
-                "note": "HTF analysis irrelevant on expiry day due to extreme time decay"
-            },
-            "ltf_entry_model": {
-                "found": False,
-                "note": "Expiry day - no valid entry models"
-            }
-        }
-    
-    # For DTE <= 3: Add warning but allow trading with caution
-    expiry_warnings = []
-    if is_last_3_days:
-        expiry_warnings.append(f"⚠️ Only {dte} day(s) to expiry - High theta decay")
-        expiry_warnings.append("⚡ Quick in/out trades only - Set tight stop losses")
-        expiry_warnings.append("📉 Expect 15%+ daily premium decay")
+        expiry_warnings.extend([
+            "🚨 EXPIRY DAY: Extreme risk - Consider avoiding options today",
+            "⚠️ Theta decay: 30%+ of remaining value can be lost in hours",
+            "⚠️ Only gamma scalping professionals should trade expiry day",
+            "✅ Suggestion: Select next week's expiry from dropdown for safer trades",
+            "📉 Premium decay accelerates dramatically on expiry day"
+        ])
+    elif is_last_3_days:
+        logger.warning(f"⚠️ Only {dte} day(s) to expiry - Adding theta decay warnings.")
+        expiry_warnings.extend([
+            f"⚠️ Only {dte} day(s) to expiry - High theta decay risk",
+            "⚡ Quick in/out trades only - Set tight stop losses",
+            "📉 Expect 15%+ daily premium decay"
+        ])
     
     # ==================== PHASE 2: ICT TOP-DOWN ANALYSIS ====================
     logger.info("\n📈 Phase 2: ICT Top-Down Analysis (HTF → LTF)")
@@ -4502,6 +4450,7 @@ def _generate_actionable_signal_topdown(mtf_result, session_info, chain_data, hi
             "level": confidence_level
         },
         "is_reversal_play": is_reversal_play,
+        "is_expiry_day": is_expiry_day,
         "spot_price": spot_price,
         "timestamp": datetime.now().isoformat(),
         # CRITICAL: Include expiry warnings for short DTE trades
