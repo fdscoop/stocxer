@@ -16,16 +16,11 @@
         </div>
     </div>
 
-    <script src="config.js"></script>
     <script>
-        // Get API URL with fallback for old deployments
-        let API_BASE = window.APP_CONFIG?.API_URL || window.location.origin;
-        
-        // TEMPORARY FIX: If config.js hasn't deployed yet and we're getting old Render URL
-        if (API_BASE.includes('stocxer-ai.onrender.com') || API_BASE === window.location.origin) {
-            API_BASE = 'https://stocxer-484044910258.europe-west1.run.app';
-            console.log('🔧 Using Google Cloud Run fallback URL:', API_BASE);
-        }
+        // HARDCODED API URL - Don't rely on config.js due to CDN caching issues
+        // Backend is on Google Cloud Run
+        const API_BASE = 'https://stocxer-484044910258.europe-west1.run.app';
+        console.log('🔧 Using Google Cloud Run URL:', API_BASE);
 
         async function handleCallback() {
             const message = document.getElementById('message');
