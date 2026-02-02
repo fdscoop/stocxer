@@ -81,7 +81,9 @@ class AIToolExecutor:
             elif tool_name == "get_fyers_funds":
                 return await self._get_fyers_funds(authorization)
             elif tool_name == "get_latest_scan":
-                return await self._get_latest_scan(authorization)
+                # Pass index parameter if provided
+                index = parameters.get("index") if parameters else None
+                return await self._get_latest_scan(authorization, index=index)
             else:
                 return {"error": f"Unknown tool: {tool_name}"}
         except Exception as e:
@@ -171,16 +173,41 @@ class AIToolExecutor:
                     "details": response.text
                 }
     
-    async def _get_latest_scan(self, auth: str) -> Dict[str, Any]:
-        """Get latest scan from database."""
-        logger.info("📂 Getting latest scan from database")
+    async def _get_latest_scan(self, auth: str, index: str = None) -> Dict[str, Any]:
+        """Get latest scan from database, optionally filtered by index."""
+        logger.info(f"📂 Getting latest scan from database{' for ' + index if index else ''}")
         
-        # This would query the database for the latest scan
-        # For now, return a placeholder
-        return {
-            "success": False,
-            "message": "Please run a fresh scan using 'scan nifty'"
-        }
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            # Build URL with optional index parameter
+            url = f"{self.base_url}/screener/latest"
+            if index:
+                url += f"?index={index.upper()}"
+            headers = {"Authorization": auth}
+            
+            response = await client.get(url, headers=headers)
+            
+            if response.status_code == 200:
+                data = response.json()
+                if data.get("status") == "success":
+                    return {
+                        "success": True,
+                        "data": data,
+                        "index": data.get("index", index or "NIFTY"),
+                        "message": f"Successfully fetched latest scan for {data.get('index', index or 'NIFTY')}"
+                    }
+                else:
+                    return {
+                        "success": False,
+                        "message": data.get("message", "No scan data available"),
+                        "suggestion": "Please run a fresh scan using 'scan nifty' or 'scan banknifty'"
+                    }
+            else:
+                return {
+                    "success": False,
+                    "error": "Could not fetch scan data",
+                    "details": response.text,
+                    "suggestion": "Please run a fresh scan using 'scan nifty'"
+                }
 
 
 def format_tool_result_for_ai(tool_name: str, result: Dict[str, Any]) -> str:

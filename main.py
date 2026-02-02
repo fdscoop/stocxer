@@ -1257,10 +1257,35 @@ async def ai_chat(
                 from config.supabase_config import get_supabase_admin_client
                 supabase = get_supabase_admin_client()
                 
-                # Try to get latest scan results - use option_scanner_results table
-                latest_response = supabase.table("option_scanner_results").select(
+                # Try to detect index from query or use explicit index parameter
+                target_index = None
+                if request.index:
+                    target_index = request.index.upper()
+                else:
+                    # Try to detect from query
+                    query_lower = request.query.lower()
+                    if "banknifty" in query_lower:
+                        target_index = "BANKNIFTY"
+                    elif "finnifty" in query_lower:
+                        target_index = "FINNIFTY"
+                    elif "midcpnifty" in query_lower:
+                        target_index = "MIDCPNIFTY"
+                    elif "sensex" in query_lower:
+                        target_index = "SENSEX"
+                    elif "nifty" in query_lower:
+                        target_index = "NIFTY"
+                
+                # Build query with optional index filter
+                query_builder = supabase.table("option_scanner_results").select(
                     "*"
-                ).eq("user_id", str(user.id)).order(
+                ).eq("user_id", str(user.id))
+                
+                # Apply index filter if specified or detected
+                if target_index:
+                    query_builder = query_builder.eq("index", target_index)
+                    logger.info(f"📊 Filtering scan results by index: {target_index}")
+                
+                latest_response = query_builder.order(
                     "timestamp", desc=True
                 ).limit(1).execute()
                 
@@ -1271,7 +1296,8 @@ async def ai_chat(
                     index_name = latest_record.get("index", "NIFTY")
                     logger.info(f"✅ Using latest scan from database: {index_name} {latest_record.get('action')} signal (confidence: {latest_record.get('confidence')}%)")
                 else:
-                    logger.warning(f"⚠️ No scans found in database for user {user.id}")
+                    index_msg = f" for {target_index}" if target_index else ""
+                    logger.warning(f"⚠️ No scans found in database{index_msg} for user {user.id}")
             except Exception as e:
                 logger.warning(f"Could not load latest scan data: {e}")
                 import traceback
@@ -3481,7 +3507,8 @@ async def get_actionable_trading_signal(
                 session_info=session_info,
                 chain_data=chain_data,
                 historical_prices=historical_prices,
-                probability_analysis=probability_analysis
+                probability_analysis=probability_analysis,
+                index=index_name  # Pass the index name for database saving
             )
             logger.info("✅ OLD flow completed as fallback")
         
@@ -3823,7 +3850,7 @@ def _generate_actionable_signal_topdown(mtf_result, session_info, chain_data, hi
     
     if not use_new_flow:
         # Feature flag: Fall back to old flow
-        return _generate_actionable_signal(mtf_result, session_info, chain_data, historical_prices, probability_analysis)
+        return _generate_actionable_signal(mtf_result, session_info, chain_data, historical_prices, probability_analysis, index=index)
     
     spot_price = mtf_result.current_price
     session = session_info.current_session
@@ -4352,6 +4379,7 @@ def _generate_actionable_signal_topdown(mtf_result, session_info, chain_data, hi
     )
     
     return {
+        "index": index,  # Include index for proper saving to database
         "signal": signal_type,
         "action": action,
         "option": {
@@ -4493,7 +4521,7 @@ def _generate_actionable_signal_topdown(mtf_result, session_info, chain_data, hi
             session=session
         )
     }
-def _generate_actionable_signal(mtf_result, session_info, chain_data, historical_prices=None, probability_analysis=None):
+def _generate_actionable_signal(mtf_result, session_info, chain_data, historical_prices=None, probability_analysis=None, index="NIFTY"):
     """Generate clear trading signal from MTF analysis with full Greeks integration, ML predictions, and constituent stock analysis"""
     
     spot_price = mtf_result.current_price
@@ -5362,6 +5390,7 @@ def _generate_actionable_signal(mtf_result, session_info, chain_data, historical
     # ================================================================
     
     return {
+        "index": index,  # Include index for proper saving to database
         "signal": signal_type,
         "action": action,
         "option": {
@@ -7135,6 +7164,126 @@ async def get_option_scanner_results(
         raise HTTPException(status_code=500, detail=str(e))
 
 
+# ============================================================
+# SCAN OPPORTUNITIES ENDPOINTS
+# ============================================================
+
+@app.get("/options/scan-opportunities/latest")
+async def get_latest_scan_opportunities(
+    authorization: str = Header(None, description="Bearer token"),
+    index: Optional[str] = Query(None, description="Filter by index")
+):
+    """
+    Get the most recent scan's option opportunities.
+    Returns all evaluated options from the latest scan with scores, grades, and recommendations.
+    """
+    try:
+        if not authorization:
+            raise HTTPException(status_code=401, detail="Authorization header required")
+        
+        token = authorization.replace("Bearer ", "")
+        user = await auth_service.get_current_user(token)
+        
+        opportunities = await screener_service.get_latest_scan_opportunities(
+            user_id=str(user.id),
+            index=index
+        )
+        
+        return {
+            "status": "success",
+            "count": len(opportunities),
+            "index_filter": index.upper() if index else "ALL",
+            "opportunities": opportunities
+        }
+        
+    except Exception as e:
+        logger.error(f"Error getting latest scan opportunities: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/options/scan-opportunities/{scan_id}")
+async def get_scan_opportunities_by_id(
+    scan_id: str,
+    authorization: str = Header(None, description="Bearer token"),
+    min_score: float = Query(0, description="Minimum score filter")
+):
+    """
+    Get option opportunities for a specific scan.
+    Use the scan_id from the scan result to retrieve all evaluated options.
+    """
+    try:
+        if not authorization:
+            raise HTTPException(status_code=401, detail="Authorization header required")
+        
+        token = authorization.replace("Bearer ", "")
+        user = await auth_service.get_current_user(token)
+        
+        opportunities = await screener_service.get_scan_opportunities(
+            user_id=str(user.id),
+            scan_id=scan_id,
+            min_score=min_score
+        )
+        
+        # Group by option type for easier display
+        calls = [o for o in opportunities if o.get("option_type") in ["CE", "CALL"]]
+        puts = [o for o in opportunities if o.get("option_type") in ["PE", "PUT"]]
+        
+        return {
+            "status": "success",
+            "scan_id": scan_id,
+            "total_count": len(opportunities),
+            "calls_count": len(calls),
+            "puts_count": len(puts),
+            "opportunities": opportunities,
+            "by_type": {
+                "calls": calls,
+                "puts": puts
+            }
+        }
+        
+    except Exception as e:
+        logger.error(f"Error getting scan opportunities: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/options/scan-opportunities")
+async def get_all_scan_opportunities(
+    authorization: str = Header(None, description="Bearer token"),
+    index: Optional[str] = Query(None, description="Filter by index"),
+    limit: int = Query(50, description="Max results"),
+    min_score: float = Query(0, description="Minimum score filter")
+):
+    """
+    Get all recent scan opportunities for the user.
+    Useful for reviewing historical scans and comparing options.
+    """
+    try:
+        if not authorization:
+            raise HTTPException(status_code=401, detail="Authorization header required")
+        
+        token = authorization.replace("Bearer ", "")
+        user = await auth_service.get_current_user(token)
+        
+        opportunities = await screener_service.get_scan_opportunities(
+            user_id=str(user.id),
+            index=index,
+            limit=limit,
+            min_score=min_score
+        )
+        
+        return {
+            "status": "success",
+            "count": len(opportunities),
+            "index_filter": index.upper() if index else "ALL",
+            "min_score": min_score,
+            "opportunities": opportunities
+        }
+        
+    except Exception as e:
+        logger.error(f"Error getting scan opportunities: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @app.get("/ai/chat-history")
 async def get_ai_chat_history(
     authorization: str = Header(None, description="Bearer token"),
@@ -7752,7 +7901,9 @@ async def scan_options(
         # 1. Charging users for failed scans
         # 2. Showing misleading demo signals
         try:
+            logger.info(f"🎯 Getting index analyzer for {index}...")
             analyzer = get_index_analyzer(fyers_client)
+            logger.info(f"🎯 Calling analyze_option_chain for {index}/{expiry}...")
             chain = analyzer.analyze_option_chain(index.upper(), expiry)
             
             if not chain:
@@ -7941,9 +8092,13 @@ async def scan_options(
         # Update metadata with data source for tracking
         scan_metadata["data_source"] = data_source
         
+        # Generate a scan_id for linking opportunities to this scan
+        scan_id = str(uuid.uuid4())
+        
         result = {
             "status": "success",
             "scan_time": datetime.now().isoformat(),
+            "scan_id": scan_id,  # Include scan_id for tracking
             "index": index.upper(),
             "expiry": expiry,
             "filters": {
@@ -7963,7 +8118,9 @@ async def scan_options(
                 "atm_strike": chain.atm_strike,
                 "vix": getattr(chain, 'vix', None),
                 "expiry_date": chain.expiry_date,
-                "days_to_expiry": chain.days_to_expiry
+                "days_to_expiry": chain.days_to_expiry,
+                "future_price": chain.future_price,
+                "pcr_oi": chain.pcr_oi
             },
             "probability_analysis": probability_analysis,
             "mtf_ict_analysis": mtf_analysis_result,  # NEW: MTF/ICT analysis on index chart
@@ -7974,6 +8131,34 @@ async def scan_options(
             "user_email": user.email,
             "data_source": data_source
         }
+        
+        # 🆕 Save scan opportunities to database
+        try:
+            save_opps_result = await screener_service.save_scan_opportunities(
+                user_id=str(user.id),
+                scan_id=scan_id,
+                index=index.upper(),
+                expiry_date=chain.expiry_date,
+                scan_mode="quick" if quick_scan else "full",
+                options=scanned_options,
+                market_data={
+                    "spot_price": chain.spot_price,
+                    "future_price": chain.future_price,
+                    "pcr_oi": chain.pcr_oi,
+                    "vix": getattr(chain, 'vix', None)
+                },
+                recommended_strike=scanned_options[0].get("strike") if scanned_options else None,
+                recommended_type=recommended_option_type,
+                max_options=20  # Save top 20 options
+            )
+            
+            if save_opps_result.get("saved"):
+                logger.info(f"✅ Saved {save_opps_result.get('count')} scan opportunities")
+                result["opportunities_saved"] = save_opps_result.get("count")
+            else:
+                logger.warning(f"⚠️ Could not save scan opportunities: {save_opps_result.get('error')}")
+        except Exception as save_err:
+            logger.warning(f"⚠️ Error saving scan opportunities (non-fatal): {save_err}")
         
         # Sanitize numpy types for JSON serialization
         return sanitize_for_json(result)

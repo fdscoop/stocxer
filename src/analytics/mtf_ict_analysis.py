@@ -50,14 +50,15 @@ NEEDS_AGGREGATION = {
 # - 1D resolution: max 366 days (1 year)
 # - Intraday (1-240 min): max 100 days per request
 # - Data available from July 3, 2017
+# Note: Using 99 days for intraday to avoid edge cases with Fyers 100-day limit
 LOOKBACK_DAYS = {
     Timeframe.MONTHLY: 366,   # 366 days = ~12 months (Fyers max for 1D)
     Timeframe.WEEKLY: 366,    # 366 days = ~52 weeks
     Timeframe.DAILY: 366,     # 366 days = 1 full year (maximum allowed)
-    Timeframe.FOUR_HOUR: 100, # 100 days (Fyers max for intraday)
-    Timeframe.ONE_HOUR: 100,  # 100 days (maximum for better structure)
-    Timeframe.FIFTEEN_MIN: 100, # 100 days (maximum allowed)
-    Timeframe.FIVE_MIN: 100,  # 100 days (maximum for LTF precision)
+    Timeframe.FOUR_HOUR: 99,  # 99 days (Fyers max is 100, use 99 to be safe)
+    Timeframe.ONE_HOUR: 99,   # 99 days (maximum for better structure)
+    Timeframe.FIFTEEN_MIN: 99, # 99 days (maximum allowed)
+    Timeframe.FIVE_MIN: 99,   # 99 days (maximum for LTF precision)
 }
 
 

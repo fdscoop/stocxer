@@ -27,6 +27,7 @@ import { BeginnerSignalCard } from '@/components/trading/beginner-signal-card'
 import { TokenBalanceWidget } from '@/components/billing/token-balance-widget'
 import { ScanConfirmationDialog } from '@/components/trading/scan-confirmation-dialog'
 import { OptionScannerResultsWidget } from '@/components/trading/option-scanner-results-widget'
+import { ScanOpportunitiesWidget } from '@/components/trading/scan-opportunities-widget'
 
 // Types for scan results
 interface ProbabilityAnalysis {
@@ -2521,6 +2522,19 @@ export default function DashboardPage() {
               )}
             </CardContent>
           </Card>
+        )}
+
+        {/* ============ SCAN OPPORTUNITIES WIDGET - All Scanned Options ============ */}
+        {tradingSignal && (
+          <ScanOpportunitiesWidget
+            index={selectedIndex}
+            apiUrl={getApiUrl()}
+            token={localStorage.getItem('auth_token') || localStorage.getItem('token') || ''}
+            onSelectOption={(option) => {
+              console.log('Selected alternative option:', option)
+              // TODO: Handle option selection to update the signal
+            }}
+          />
         )}
 
         {/* Multi-Timeframe Analysis Summary */}

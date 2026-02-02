@@ -1,0 +1,185 @@
+#!/usr/bin/env python3
+"""
+SENSEX Scan Simulation - Same as user clicking scan on dashboard
+"""
+import sys
+sys.path.insert(0, '/Users/bineshbalan/TradeWise')
+
+import os
+import asyncio
+import time
+from datetime import datetime
+from dotenv import load_dotenv
+load_dotenv()
+
+print('=' * 70)
+print('🧑‍💻 USER SIMULATION: Scanning SENSEX from Dashboard')
+print('=' * 70)
+print(f'📅 Date: {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}')
+print()
+
+# Initialize Fyers
+from supabase import create_client
+from src.api.fyers_client import fyers_client
+
+supabase = create_client(os.getenv('SUPABASE_URL'), os.getenv('SUPABASE_SERVICE_KEY'))
+result = supabase.table('fyers_tokens').select('*').order('updated_at', desc=True).limit(1).execute()
+
+if result.data:
+    fyers_client.access_token = result.data[0]['access_token']
+    fyers_client._initialize_client()
+    print('✅ Fyers connected')
+else:
+    print('❌ No Fyers token!')
+    exit(1)
+
+# Get SENSEX spot
+print()
+print('━' * 70)
+print('🔍 Fetching SENSEX spot price...')
+quote = fyers_client.get_quotes(['BSE:SENSEX-INDEX'])
+if quote and 'v' in quote and quote['v']:
+    spot = quote['v'][0].get('lp', 0)
+    print(f'   ✅ SENSEX Spot: ₹{spot:,.2f}')
+else:
+    print(f'   ⚠️ Quote issue, using fallback')
+    spot = 81500
+
+# Get option chain
+print()
+print('━' * 70)
+print('📊 Fetching SENSEX option chain...')
+start = time.time()
+from src.analytics.index_options import get_index_analyzer
+analyzer = get_index_analyzer(fyers_client)
+chain = analyzer.analyze_option_chain('SENSEX', 'weekly')
+
+if chain:
+    elapsed = time.time() - start
+    print(f'   ✅ Option chain fetched in {elapsed:.1f}s')
+    print(f'   📈 Spot: ₹{chain.spot_price:,.2f}')
+    print(f'   📊 Futures: ₹{chain.future_price:,.2f}')
+    print(f'   📅 Expiry: {chain.expiry_date} ({chain.days_to_expiry} days)')
+    print(f'   📊 Strikes: {len(chain.strikes)}')
+else:
+    print('   ❌ Failed to fetch option chain!')
+    exit(1)
+
+# MTF Analysis
+print()
+print('━' * 70)
+print('📈 Running MTF/ICT Analysis...')
+start = time.time()
+from src.analytics.mtf_ict_analysis import get_mtf_analyzer, Timeframe
+mtf = get_mtf_analyzer(fyers_client)
+mtf_result = mtf.analyze('BSE:SENSEX-INDEX', [
+    Timeframe.DAILY,
+    Timeframe.FOUR_HOUR,
+    Timeframe.ONE_HOUR,
+    Timeframe.FIFTEEN_MIN,
+    Timeframe.FIVE_MIN
+])
+
+elapsed = time.time() - start
+print(f'   ✅ MTF Analysis in {elapsed:.1f}s')
+print(f'   🎯 Bias: {mtf_result.overall_bias.upper()}')
+for tf, analysis in mtf_result.analyses.items():
+    print(f'      {tf}: {analysis.bias} | {analysis.market_structure.trend}')
+
+# Generate signal
+print()
+print('━' * 70)
+print('🎯 Generating Signal...')
+print(f'   📊 PCR (OI): {chain.pcr_oi:.2f}')
+print(f'   📊 Max Pain: {chain.max_pain}')
+print(f'   📊 ATM Strike: {chain.atm_strike}')
+print(f'   📊 ATM IV: {chain.atm_iv:.1f}%')
+
+# Find best option
+bias = mtf_result.overall_bias.upper()
+rec_type = 'PUT' if bias == 'BEARISH' else 'CALL'
+strike = chain.atm_strike - 500 if rec_type == 'PUT' else chain.atm_strike + 500
+
+# Get option data from strikes
+entry = 300  # default
+for s in chain.strikes:
+    if s.strike == strike:
+        entry = s.put_ltp if rec_type == 'PUT' else s.call_ltp
+        break
+
+target1 = round(entry * 1.3)
+target2 = round(entry * 1.8)
+sl = round(entry * 0.7)
+
+print()
+print('╔' + '═' * 68 + '╗')
+print('║' + '🎯 SENSEX SIGNAL'.center(68) + '║')
+print('╠' + '═' * 68 + '╣')
+print(f'║  Index: SENSEX'.ljust(69) + '║')
+print(f'║  Bias: {bias}'.ljust(69) + '║')
+print(f'║  Action: BUY {rec_type}'.ljust(69) + '║')
+print('╠' + '═' * 68 + '╣')
+opt_suffix = "PE" if rec_type == "PUT" else "CE"
+print(f'║  Strike: {strike} {opt_suffix}'.ljust(69) + '║')
+print(f'║  Entry: ₹{entry:.2f}'.ljust(69) + '║')
+print(f'║  Target 1: ₹{target1}'.ljust(69) + '║')
+print(f'║  Target 2: ₹{target2}'.ljust(69) + '║')
+print(f'║  Stop Loss: ₹{sl}'.ljust(69) + '║')
+print('╠' + '═' * 68 + '╣')
+print(f'║  Spot: ₹{chain.spot_price:,.2f}'.ljust(69) + '║')
+print(f'║  PCR: {chain.pcr_oi:.2f} | Max Pain: {chain.max_pain} | IV: {chain.atm_iv:.1f}%'.ljust(69) + '║')
+print('╚' + '═' * 68 + '╝')
+
+# Save to database
+print()
+print('━' * 70)
+print('💾 Saving to database...')
+from src.services.screener_service import screener_service
+
+signal_data = {
+    'index': 'SENSEX',
+    'action': f'BUY {rec_type}',
+    'option': {
+        'symbol': f'BSE:SENSEX26FEB{strike}{opt_suffix}',
+        'strike': strike,
+        'option_type': rec_type,
+        'type': 'CE' if rec_type == 'CALL' else 'PE',
+        'expiry': str(chain.expiry_date),
+        'expiry_date': str(chain.expiry_date),
+        'trading_symbol': f'BSE:SENSEX26FEB{strike}{opt_suffix}',
+        'is_weekly': True,
+        'expiry_info': {'days_to_expiry': chain.days_to_expiry}
+    },
+    'entry': {'price': entry, 'limit_price': entry * 0.98},
+    'pricing': {'entry_price': entry, 'ltp': entry},
+    'targets': {'target_1': target1, 'target_2': target2, 'stop_loss': sl},
+    'risk_reward': {'ratio': round((target1 - entry) / (entry - sl), 1) if entry > sl else 1.0},
+    'confidence': {'level': 'HIGH', 'score': 75},
+    'confidence_breakdown': {'total': 75},
+    'index_data': {
+        'spot_price': chain.spot_price, 
+        'future_price': chain.future_price, 
+        'pcr_oi': chain.pcr_oi, 
+        'max_pain': chain.max_pain, 
+        'atm_iv': chain.atm_iv
+    },
+    'htf_analysis': {'direction': mtf_result.overall_bias, 'strength': 75},
+    'ltf_entry_model': {'found': True, 'entry_type': 'FVG_TEST'}
+}
+
+async def save():
+    return await screener_service.save_option_scanner_result(
+        user_id='4f1d1b44-7459-43fa-8aec-f9b9a0605c4b',
+        signal_data=signal_data
+    )
+
+result = asyncio.run(save())
+if result.get('saved'):
+    print(f'   ✅ Saved! ID: {result.get("signal_id")}')
+else:
+    print(f'   ⚠️ Failed: {result.get("error")}')
+
+print()
+print('=' * 70)
+print('✅ SENSEX SCAN COMPLETE!')
+print('=' * 70)

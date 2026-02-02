@@ -155,6 +155,15 @@ class FyersClient:
             # Set from to 30 days before to
             date_from = date_to - timedelta(days=30)
         
+        # Fyers API limits: Intraday resolutions (1-240 min) can only fetch 100 days max
+        intraday_resolutions = ["1", "2", "3", "5", "10", "15", "20", "30", "45", "60", "120", "180", "240"]
+        if resolution in intraday_resolutions:
+            max_range = timedelta(days=99)  # Use 99 to be safe with Fyers 100-day limit
+            actual_range = date_to - date_from
+            if actual_range > max_range:
+                logger.warning(f"⚠️ Reducing date range from {actual_range.days} to 99 days for intraday resolution {resolution}")
+                date_from = date_to - max_range
+        
         # Fyers API v3 requires date_format=0 for epoch timestamps
         # or date_format=1 for YYYY-MM-DD strings
         data = {

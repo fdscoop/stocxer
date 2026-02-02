@@ -72,6 +72,14 @@ INDEX_CONFIG = {
         "strike_gap": 25,
         "option_prefix": "MIDCPNIFTY",
         "exchange": "NSE"
+    },
+    "NIFTYNXT50": {
+        "symbol": "NSE:NIFTYNXT50-INDEX",
+        "lot_size": 25,
+        "tick_size": 0.05,
+        "strike_gap": 100,
+        "option_prefix": "NIFTYNXT50",
+        "exchange": "NSE"
     }
 }
 
@@ -692,6 +700,9 @@ class IndexOptionsAnalyzer:
             expiry_type: "weekly" or "monthly"
         """
         try:
+            logger.info(f"🔍 Starting option chain analysis for {index}, expiry: {expiry_type}")
+            logger.info(f"🔧 Fyers client: fyers_wrapper={self.fyers is not None}, inner_fyers={self.fyers.fyers is not None if self.fyers else 'N/A'}, has_token={bool(self.fyers.access_token) if self.fyers else 'N/A'}")
+            
             config = INDEX_CONFIG.get(index)
             if not config:
                 logger.error(f"Unknown index: {index}")
@@ -771,8 +782,52 @@ class IndexOptionsAnalyzer:
             strike_gap = config["strike_gap"]
             atm_strike = round(spot_price / strike_gap) * strike_gap
             
+            # Get valid expiry timestamps from Fyers API first
+            # Fyers requires the exact timestamp they provide, not a calculated one
+            fyers_expiry_timestamp = None
+            try:
+                # First, get the list of valid expiries from Fyers
+                # Call option chain without timestamp to get expiry list
+                expiry_check_response = self.fyers.get_option_chain(config["symbol"], strike_count=1)
+                if expiry_check_response and expiry_check_response.get("data", {}).get("expiryData"):
+                    expiry_list = expiry_check_response.get("data", {}).get("expiryData", [])
+                    logger.info(f"📅 Available expiries from Fyers: {[e.get('date') for e in expiry_list[:5]]}...")
+                    
+                    # Find matching expiry by date
+                    target_date = datetime.strptime(expiry_date, "%Y-%m-%d")
+                    target_date_str = target_date.strftime("%d-%m-%Y")  # Fyers format: DD-MM-YYYY
+                    
+                    for exp in expiry_list:
+                        if exp.get("date") == target_date_str:
+                            fyers_expiry_timestamp = exp.get("expiry")
+                            logger.info(f"✅ Matched expiry: {expiry_date} → Fyers timestamp: {fyers_expiry_timestamp}")
+                            break
+                    
+                    # If no exact match, use nearest expiry
+                    if not fyers_expiry_timestamp and expiry_list:
+                        # Find the nearest future expiry
+                        for exp in expiry_list:
+                            try:
+                                exp_date = datetime.strptime(exp.get("date", ""), "%d-%m-%Y")
+                                if exp_date >= target_date:
+                                    fyers_expiry_timestamp = exp.get("expiry")
+                                    logger.info(f"📅 Using nearest expiry: {exp.get('date')} → {fyers_expiry_timestamp}")
+                                    break
+                            except ValueError:
+                                continue
+                        
+                        # If still no match, use first available
+                        if not fyers_expiry_timestamp:
+                            fyers_expiry_timestamp = expiry_list[0].get("expiry")
+                            logger.info(f"📅 Using first available expiry: {expiry_list[0].get('date')} → {fyers_expiry_timestamp}")
+                else:
+                    logger.warning(f"⚠️ No expiry data from Fyers, proceeding without timestamp")
+            except Exception as date_err:
+                logger.warning(f"⚠️ Could not fetch expiry list from Fyers: {date_err}")
+            
             # Fetch REAL option chain data from Fyers
-            logger.info(f"📡 Fetching actual option chain from Fyers for {index}")
+            logger.info(f"📡 Fetching actual option chain from Fyers for {index} with expiry {fyers_expiry_timestamp or 'default'}")
+            logger.info(f"🔧 Fyers client status: fyers={self.fyers is not None}, fyers.fyers={self.fyers.fyers is not None if self.fyers else 'N/A'}, has_token={bool(self.fyers.access_token) if self.fyers else 'N/A'}")
             
             strikes_data = []
             total_call_oi = 0
@@ -782,7 +837,9 @@ class IndexOptionsAnalyzer:
             
             chain_response = None
             try:
-                chain_response = self.fyers.get_option_chain(config["symbol"], strike_count=15)
+                # Pass expiry timestamp to Fyers API to get the correct expiry options
+                chain_response = self.fyers.get_option_chain(config["symbol"], strike_count=15, expiry_date=fyers_expiry_timestamp)
+                logger.info(f"📡 Option chain response code: {chain_response.get('code') if chain_response else 'None'}")
             except Exception as e:
                 logger.warning(f"⚠️ Fyers API error: {e}. Using fallback estimation.")
             

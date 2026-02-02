@@ -367,22 +367,51 @@ class ScreenerService:
             confidence_breakdown = signal_data.get("confidence_breakdown", {})
             confidence_obj = signal_data.get("confidence", {})
             
-            # Extract index name from symbol
-            symbol = signal_data.get("spot_price", 0)  # Will use index_data.spot_price instead
-            index_name = "NIFTY"  # Default
-            if "BANKNIFTY" in str(signal_data):
-                index_name = "BANKNIFTY"
-            elif "FINNIFTY" in str(signal_data):
-                index_name = "FINNIFTY"
+            # Extract index name - prefer explicit 'index' field, fallback to detection
+            index_name = signal_data.get("index", "").upper()
+            
+            # If index is not explicitly set, try to detect from trading_symbol or other fields
+            if not index_name:
+                trading_symbol = option.get("trading_symbol", "")
+                if "BANKNIFTY" in trading_symbol.upper():
+                    index_name = "BANKNIFTY"
+                elif "FINNIFTY" in trading_symbol.upper():
+                    index_name = "FINNIFTY"
+                elif "MIDCPNIFTY" in trading_symbol.upper():
+                    index_name = "MIDCPNIFTY"
+                elif "SENSEX" in trading_symbol.upper():
+                    index_name = "SENSEX"
+                elif "BANKEX" in trading_symbol.upper():
+                    index_name = "BANKEX"
+                elif "NIFTY" in trading_symbol.upper():
+                    index_name = "NIFTY"
+                else:
+                    index_name = "NIFTY"  # Default
+                    
+            logger.info(f"📝 Saving scanner result for index: {index_name}")
             
             # Build database record
+            # Normalize action to database-compatible value
+            raw_action = signal_data.get("action", "WAIT")
+            # Map full actions to simple ones for DB constraint compatibility
+            action_mapping = {
+                "BUY CALL": "BUY",
+                "BUY PUT": "BUY", 
+                "SELL CALL": "SELL",
+                "SELL PUT": "SELL",
+                "BUY CALL (OVERRIDE)": "BUY",
+                "BUY PUT (OVERRIDE)": "BUY",
+                "🚨 AVOID - EXPIRY DAY": "AVOID"
+            }
+            normalized_action = action_mapping.get(raw_action, raw_action)
+            
             record = {
                 "id": signal_id,
                 "user_id": user_id,
                 "index": index_name,
                 "symbol": f"NSE:{index_name}50-INDEX" if index_name == "NIFTY" else f"NSE:{index_name}-INDEX",
                 "signal": signal_data.get("signal", "ICT_NEUTRAL_BIAS"),
-                "action": signal_data.get("action", "WAIT"),
+                "action": normalized_action,
                 "confidence": confidence_breakdown.get("total", 50),
                 "confidence_level": confidence_obj.get("level", "MEDIUM"),
                 "strike": option.get("strike", 0),
@@ -502,6 +531,223 @@ class ScreenerService:
             
         except Exception as e:
             logger.error(f"Get recent option scanner results error: {str(e)}")
+            return []
+
+    async def save_scan_opportunities(
+        self,
+        user_id: str,
+        scan_id: str,
+        index: str,
+        expiry_date: str,
+        scan_mode: str,
+        options: list,
+        market_data: dict,
+        recommended_strike: int = None,
+        recommended_type: str = None,
+        max_options: int = 20
+    ) -> dict:
+        """
+        Save scanned option opportunities to database.
+        
+        Args:
+            user_id: User's UUID
+            scan_id: UUID linking to the main signal (from save_option_scanner_result)
+            index: Index name (NIFTY, BANKNIFTY, etc)
+            expiry_date: Option expiry date
+            scan_mode: 'quick' or 'full'
+            options: List of scanned options from /options/scan
+            market_data: Market context (spot_price, pcr, vix, etc)
+            recommended_strike: The strike that was recommended
+            recommended_type: CE or PE
+            max_options: Max number of options to save (default 20)
+        
+        Returns:
+            dict with saved count and scan_id
+        """
+        try:
+            saved_count = 0
+            records = []
+            
+            # Take top N options by score
+            top_options = options[:max_options] if len(options) > max_options else options
+            
+            for rank, opt in enumerate(top_options, 1):
+                # Determine if this is the recommended option
+                is_recommended = (
+                    opt.get("strike") == recommended_strike and 
+                    opt.get("type") == recommended_type
+                )
+                
+                # Get entry analysis if available
+                entry_analysis = opt.get("entry_analysis", {})
+                discount_zone = opt.get("discount_zone", {})
+                
+                record = {
+                    "id": str(uuid.uuid4()),
+                    "scan_id": scan_id,
+                    "user_id": user_id,
+                    "index": index.upper(),
+                    "expiry_date": expiry_date,
+                    "scan_mode": scan_mode,
+                    
+                    # Option details
+                    "strike": opt.get("strike"),
+                    "option_type": opt.get("type"),
+                    "trading_symbol": opt.get("fyers_symbol") or opt.get("trading_symbol", ""),
+                    
+                    # Pricing
+                    "ltp": opt.get("ltp"),
+                    "bid": opt.get("bid"),
+                    "ask": opt.get("ask"),
+                    
+                    # Volume & OI
+                    "volume": opt.get("volume"),
+                    "oi": opt.get("oi"),
+                    "oi_change": opt.get("oi_change"),
+                    "oi_change_pct": opt.get("oi_change_pct"),
+                    
+                    # Greeks
+                    "iv": opt.get("iv"),
+                    "delta": opt.get("delta"),
+                    "gamma": opt.get("gamma"),
+                    "theta": opt.get("theta"),
+                    "vega": opt.get("vega"),
+                    
+                    # Scoring
+                    "score": opt.get("score", 0),
+                    "strategy_match": opt.get("strategy_match"),
+                    "recommendation": opt.get("recommendation"),
+                    "probability_boost": opt.get("probability_boost", False),
+                    "sentiment_boost": opt.get("sentiment_boost", False),
+                    "sentiment_conflict": opt.get("sentiment_conflict", False),
+                    
+                    # Entry Analysis
+                    "entry_grade": entry_analysis.get("entry_grade"),
+                    "entry_recommendation": entry_analysis.get("entry_recommendation"),
+                    "limit_order_price": entry_analysis.get("limit_order_price"),
+                    "max_acceptable_price": entry_analysis.get("max_acceptable_price"),
+                    "wait_for_pullback": entry_analysis.get("wait_for_pullback"),
+                    "pullback_probability": entry_analysis.get("pullback_probability"),
+                    
+                    # Targets
+                    "target_1": entry_analysis.get("option_target_1"),
+                    "target_2": entry_analysis.get("option_target_2"),
+                    "stop_loss": entry_analysis.get("option_stop_loss"),
+                    
+                    # Discount Zone
+                    "discount_zone_type": discount_zone.get("zone_type"),
+                    "is_in_discount": discount_zone.get("is_in_discount"),
+                    "discount_pct": discount_zone.get("discount_pct"),
+                    
+                    # Rank
+                    "rank": rank,
+                    
+                    # Market context
+                    "spot_price": market_data.get("spot_price"),
+                    "future_price": market_data.get("future_price"),
+                    "pcr_oi": market_data.get("pcr_oi"),
+                    "vix": market_data.get("vix"),
+                    
+                    # Recommended flag
+                    "is_recommended": is_recommended,
+                    
+                    "scanned_at": ist_timestamp()
+                }
+                
+                records.append(record)
+            
+            # Batch insert all records
+            if records:
+                self.supabase_admin.table("option_scan_opportunities").insert(records).execute()
+                saved_count = len(records)
+            
+            logger.info(f"✅ Saved {saved_count} scan opportunities for {index} (scan_id: {scan_id[:8]}...)")
+            
+            return {
+                "saved": True,
+                "count": saved_count,
+                "scan_id": scan_id
+            }
+            
+        except Exception as e:
+            logger.error(f"Save scan opportunities error: {str(e)}")
+            import traceback
+            traceback.print_exc()
+            return {"saved": False, "error": str(e), "count": 0}
+    
+    async def get_scan_opportunities(
+        self,
+        user_id: str,
+        scan_id: str = None,
+        index: str = None,
+        limit: int = 20,
+        min_score: float = 0
+    ) -> list:
+        """
+        Get scan opportunities for a user.
+        
+        Args:
+            user_id: User's UUID
+            scan_id: Specific scan ID to retrieve
+            index: Filter by index
+            limit: Max results
+            min_score: Minimum score threshold
+        
+        Returns:
+            List of scan opportunities
+        """
+        try:
+            query = self.supabase_admin.table("option_scan_opportunities")\
+                .select("*")\
+                .eq("user_id", user_id)
+            
+            if scan_id:
+                query = query.eq("scan_id", scan_id)
+            
+            if index:
+                query = query.eq("index", index.upper())
+            
+            if min_score > 0:
+                query = query.gte("score", min_score)
+            
+            response = query.order("scanned_at", desc=True).order("rank", desc=False).limit(limit).execute()
+            
+            return response.data if response.data else []
+            
+        except Exception as e:
+            logger.error(f"Get scan opportunities error: {str(e)}")
+            return []
+    
+    async def get_latest_scan_opportunities(
+        self,
+        user_id: str,
+        index: str = None
+    ) -> list:
+        """Get the most recent scan's opportunities"""
+        try:
+            # First get the latest scan_id
+            query = self.supabase_admin.table("option_scan_opportunities")\
+                .select("scan_id")\
+                .eq("user_id", user_id)
+            
+            if index:
+                query = query.eq("index", index.upper())
+            
+            response = query.order("scanned_at", desc=True).limit(1).execute()
+            
+            if not response.data:
+                return []
+            
+            latest_scan_id = response.data[0]["scan_id"]
+            
+            # Now get all opportunities for that scan
+            return await self.get_scan_opportunities(
+                user_id=user_id,
+                scan_id=latest_scan_id
+            )
+            
+        except Exception as e:
+            logger.error(f"Get latest scan opportunities error: {str(e)}")
             return []
 
 
