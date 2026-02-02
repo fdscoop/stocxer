@@ -15,9 +15,10 @@ async def test_real_order():
     # Step 1: Authenticate
     print(f"\n🔐 Step 1: Authenticating...")
     try:
+        import os
         auth_response = supabase_admin.auth.sign_in_with_password({
-            "email": "bineshch@gmail.com",
-            "password": "Tra@2026"
+            "email": os.getenv("TEST_USER_EMAIL", "test@example.com"),
+            "password": os.getenv("TEST_USER_PASSWORD", "test_password")
         })
         user_id = auth_response.user.id
         print(f"✅ Authenticated as: {auth_response.user.email}")

@@ -21,8 +21,8 @@ supabase: Client = create_client(SUPABASE_URL, SUPABASE_ANON_KEY)
 # Authenticate user
 print("🔑 Authenticating user...")
 auth_response = supabase.auth.sign_in_with_password({
-    "email": "bineshch@gmail.com",
-    "password": "Tra@2026"
+    "email": os.getenv("TEST_USER_EMAIL", "test@example.com"),
+    "password": os.getenv("TEST_USER_PASSWORD", "test_password")
 })
 
 if not auth_response.user:

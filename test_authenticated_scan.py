@@ -13,8 +13,8 @@ def login_and_scan():
     
     # Login
     login_data = {
-        "email": "bineshch@gmail.com",
-        "password": "Tra@2026"
+        "email": os.getenv("TEST_USER_EMAIL", "test@example.com"),
+        "password": os.getenv("TEST_USER_PASSWORD", "test_password")
     }
     
     response = requests.post(f"{BASE_URL}/api/auth/login", json=login_data)

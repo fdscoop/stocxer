@@ -6,8 +6,8 @@ import requests
 import json
 
 BASE_URL = "http://localhost:8000"
-EMAIL = "bineshch@gmail.com"
-PASSWORD = "Tra@2026"
+EMAIL = os.getenv("TEST_USER_EMAIL", "test@example.com")
+PASSWORD = os.getenv("TEST_USER_PASSWORD", "test_password")
 
 # Login
 print("🔐 Logging in...")

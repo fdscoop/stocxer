@@ -8,9 +8,10 @@ import json
 from datetime import datetime
 
 # Configuration
+import os
 BASE_URL = "http://127.0.0.1:8000"
-EMAIL = "bineshch@gmail.com"
-PASSWORD = "Tra@2026"
+EMAIL = os.getenv("TEST_USER_EMAIL", "test@example.com")
+PASSWORD = os.getenv("TEST_USER_PASSWORD", "test_password")
 
 def test_option_aware_signal():
     """Test the option-aware signal endpoint with authentication"""
