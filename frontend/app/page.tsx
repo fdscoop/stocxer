@@ -377,6 +377,28 @@ interface TradingSignal {
         percentile: number
       }
     }
+    theta_scenarios?: {
+      greeks?: {
+        delta: number
+        gamma: number
+        theta: number
+        vega: number
+        theta_per_hour: number
+      }
+      scenarios?: Array<{
+        time_label: string
+        time_mins: number
+        theta_decay: number
+        break_even_move_pct: number
+        expected_premium: number
+        pnl_if_right: number
+        pnl_if_wrong: number
+        recommendation: string
+      }>
+      optimal_hold_time?: string
+      max_recommended_hold_mins?: number
+      theta_warning?: string
+    }
     simulation?: {
       grade: string
       expected_pnl: number
@@ -396,6 +418,8 @@ interface TradingSignal {
       reasoning: string[]
       warnings: string[]
     }
+    available_modules?: string[]
+    timestamp?: string
   }
 }
 
