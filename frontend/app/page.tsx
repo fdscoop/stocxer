@@ -305,6 +305,34 @@ interface TradingSignal {
     risk_factors: string[]
     momentum_boost: boolean
   }
+  // Expiry Day Gamma Analysis - NEW
+  expiry_gamma_analysis?: {
+    gamma_score: number
+    is_gamma_opportunity: boolean
+    risk_reward: number
+    potential_gain_50pt: number
+    potential_gain_100pt: number
+    gamma_multiplier: number
+    delta: number
+    moneyness_pct: number
+    risk_level: string
+    entry_reasons: string[]
+    market_phase: string
+    is_gamma_window: boolean
+    time_remaining_minutes: number
+    theta_decay_schedule: Array<{
+      time: string
+      premium: number
+      decay: number
+      rate: string
+    }>
+    trading_advice: {
+      gamma_play_viable: boolean
+      ideal_premium_range: string
+      best_time: string
+      key_insight: string
+    }
+  }
 }
 
 interface NewsArticle {
@@ -1351,6 +1379,25 @@ export default function DashboardPage() {
             momentum_boost: backendSignal.scalp_feasibility.momentum_boost
           } : undefined,
 
+          // Expiry Day Gamma Analysis - NEW
+          expiry_gamma_analysis: backendSignal.expiry_gamma_analysis ? {
+            gamma_score: backendSignal.expiry_gamma_analysis.gamma_score,
+            is_gamma_opportunity: backendSignal.expiry_gamma_analysis.is_gamma_opportunity,
+            risk_reward: backendSignal.expiry_gamma_analysis.risk_reward,
+            potential_gain_50pt: backendSignal.expiry_gamma_analysis.potential_gain_50pt,
+            potential_gain_100pt: backendSignal.expiry_gamma_analysis.potential_gain_100pt,
+            gamma_multiplier: backendSignal.expiry_gamma_analysis.gamma_multiplier,
+            delta: backendSignal.expiry_gamma_analysis.delta,
+            moneyness_pct: backendSignal.expiry_gamma_analysis.moneyness_pct,
+            risk_level: backendSignal.expiry_gamma_analysis.risk_level,
+            entry_reasons: backendSignal.expiry_gamma_analysis.entry_reasons,
+            market_phase: backendSignal.expiry_gamma_analysis.market_phase,
+            is_gamma_window: backendSignal.expiry_gamma_analysis.is_gamma_window,
+            time_remaining_minutes: backendSignal.expiry_gamma_analysis.time_remaining_minutes,
+            theta_decay_schedule: backendSignal.expiry_gamma_analysis.theta_decay_schedule,
+            trading_advice: backendSignal.expiry_gamma_analysis.trading_advice
+          } : undefined,
+
           // Keep legacy for backward compatibility
           confidence_adjustments: backendSignal.confidence_adjustments
         }
@@ -1897,6 +1944,118 @@ export default function DashboardPage() {
                       {tradingSignal.scalp_feasibility.recommendation}
                     </div>
                   )}
+                </div>
+              )}
+
+              {/* 🎯 Expiry Day Gamma Analysis - Shows only on expiry day */}
+              {tradingSignal.expiry_gamma_analysis && (
+                <div className={`p-3 rounded-lg border ${
+                  tradingSignal.expiry_gamma_analysis.is_gamma_opportunity
+                    ? 'bg-green-500/10 border-green-500/30'
+                    : tradingSignal.expiry_gamma_analysis.gamma_score >= 50
+                    ? 'bg-yellow-500/10 border-yellow-500/30'
+                    : 'bg-orange-500/10 border-orange-500/30'
+                }`}>
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-2">
+                      <span className="text-orange-400 text-xs font-semibold">🎯 Expiry Day Gamma Analysis</span>
+                      <Badge variant="outline" className={`text-[10px] ${
+                        tradingSignal.expiry_gamma_analysis.is_gamma_window
+                          ? 'border-green-500 text-green-400 bg-green-500/20'
+                          : 'border-gray-500 text-gray-400'
+                      }`}>
+                        {tradingSignal.expiry_gamma_analysis.market_phase.toUpperCase()}
+                      </Badge>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] text-muted-foreground">
+                        Gamma Score: <span className={`font-mono font-bold ${
+                          tradingSignal.expiry_gamma_analysis.gamma_score >= 70 ? 'text-green-400' :
+                          tradingSignal.expiry_gamma_analysis.gamma_score >= 50 ? 'text-yellow-400' :
+                          'text-orange-400'
+                        }`}>{tradingSignal.expiry_gamma_analysis.gamma_score}/100</span>
+                      </span>
+                      <Badge
+                        variant="outline"
+                        className={`text-[10px] ${
+                          tradingSignal.expiry_gamma_analysis.is_gamma_opportunity
+                            ? 'border-green-500 text-green-400 bg-green-500/20'
+                            : 'border-orange-500 text-orange-400 bg-orange-500/20'
+                        }`}
+                      >
+                        {tradingSignal.expiry_gamma_analysis.is_gamma_opportunity ? '🚀 GAMMA PLAY' : '⚠️ NOT IDEAL'}
+                      </Badge>
+                    </div>
+                  </div>
+
+                  {/* Gamma Metrics Grid */}
+                  <div className="grid grid-cols-4 gap-2 mb-3">
+                    <div className="p-2 bg-purple-900/40 rounded-lg border border-purple-500/30 text-center">
+                      <div className="text-[10px] text-purple-400/70">R:R Ratio</div>
+                      <div className="text-sm font-bold text-purple-400">
+                        {tradingSignal.expiry_gamma_analysis.risk_reward.toFixed(1)}:1
+                      </div>
+                    </div>
+                    <div className="p-2 bg-cyan-900/40 rounded-lg border border-cyan-500/30 text-center">
+                      <div className="text-[10px] text-cyan-400/70">Gamma 🔥</div>
+                      <div className="text-sm font-bold text-cyan-400">
+                        {tradingSignal.expiry_gamma_analysis.gamma_multiplier.toFixed(1)}x
+                      </div>
+                    </div>
+                    <div className="p-2 bg-green-900/40 rounded-lg border border-green-500/30 text-center">
+                      <div className="text-[10px] text-green-400/70">+50pt Move</div>
+                      <div className="text-sm font-bold text-green-400">
+                        ₹{tradingSignal.expiry_gamma_analysis.potential_gain_50pt.toFixed(0)}
+                      </div>
+                    </div>
+                    <div className="p-2 bg-green-900/50 rounded-lg border border-green-500/40 text-center">
+                      <div className="text-[10px] text-green-400/70">+100pt Move</div>
+                      <div className="text-sm font-bold text-green-400">
+                        ₹{tradingSignal.expiry_gamma_analysis.potential_gain_100pt.toFixed(0)}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Theta Decay Schedule */}
+                  {tradingSignal.expiry_gamma_analysis.theta_decay_schedule.length > 0 && (
+                    <div className="mb-3">
+                      <div className="text-[10px] text-gray-400 mb-2">📉 Theta Decay Schedule (15-min intervals)</div>
+                      <div className="grid grid-cols-4 gap-1">
+                        {tradingSignal.expiry_gamma_analysis.theta_decay_schedule.map((interval, idx) => (
+                          <div key={idx} className={`p-1.5 rounded text-center ${
+                            interval.rate === 'EXTREME' ? 'bg-red-900/40 border border-red-500/30' :
+                            interval.rate === 'VERY_HIGH' ? 'bg-orange-900/40 border border-orange-500/30' :
+                            'bg-yellow-900/40 border border-yellow-500/30'
+                          }`}>
+                            <div className="text-[9px] text-gray-400">{interval.time}</div>
+                            <div className="text-[10px] font-bold text-white">₹{interval.premium.toFixed(0)}</div>
+                            <div className={`text-[9px] ${
+                              interval.rate === 'EXTREME' ? 'text-red-400' :
+                              interval.rate === 'VERY_HIGH' ? 'text-orange-400' :
+                              'text-yellow-400'
+                            }`}>-₹{interval.decay.toFixed(1)}</div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Trading Advice */}
+                  <div className="border-t border-gray-700 pt-2">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-gray-400">
+                        {tradingSignal.expiry_gamma_analysis.trading_advice.gamma_play_viable 
+                          ? '✅ Gamma play viable' 
+                          : '⚠️ Premium too high for gamma play'}
+                      </span>
+                      <span className="text-cyan-400">
+                        {tradingSignal.expiry_gamma_analysis.trading_advice.ideal_premium_range}
+                      </span>
+                    </div>
+                    <div className="text-[10px] text-gray-500 mt-1">
+                      💡 {tradingSignal.expiry_gamma_analysis.trading_advice.key_insight}
+                    </div>
+                  </div>
                 </div>
               )}
 

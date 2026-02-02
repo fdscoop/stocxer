@@ -2368,6 +2368,187 @@ async def get_expiry_dates(index: str):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@app.get("/index/{index}/gamma-scanner")
+async def scan_gamma_opportunities(
+    index: str,
+    authorization: str = Header(None, description="Bearer token for authenticated access")
+):
+    """
+    Expiry Day Gamma Scanner - Find gamma scalping opportunities
+    
+    Best used on expiry day between 1:30 PM - 3:00 PM IST.
+    Identifies options in the "gamma zone" (₹10-25 premium) that can
+    surge 300-1000% on small underlying moves.
+    
+    Returns:
+        - Market phase (opening/decay/lunch/gamma_window/final_hour)
+        - Time remaining until close
+        - Top gamma opportunities with scores
+        - Trading advice for current phase
+    """
+    try:
+        from src.analytics.expiry_gamma_scanner import expiry_gamma_scanner
+        
+        # Load user's Fyers token if provided
+        if authorization:
+            try:
+                token = authorization.replace("Bearer ", "")
+                user = await auth_service.get_current_user(token)
+                fyers_token = await auth_service.get_fyers_token(user.id)
+                
+                if fyers_token and fyers_token.access_token:
+                    fyers_client.access_token = fyers_token.access_token
+                    fyers_client._initialize_client()
+                    logger.info(f"✅ Gamma scanner using Fyers token for user {user.email}")
+            except Exception as auth_error:
+                logger.debug(f"Auth check skipped: {auth_error}")
+        
+        # Get option chain for nearest expiry
+        analyzer = get_index_analyzer(fyers_client)
+        chain = analyzer.analyze_option_chain(index.upper(), "weekly")
+        
+        if not chain or not hasattr(chain, 'strikes') or not chain.strikes:
+            # Return basic status without opportunities
+            return {
+                "index": index.upper(),
+                "error": "Could not fetch option chain data",
+                "market_phase": expiry_gamma_scanner.get_market_phase().value,
+                "time_remaining_minutes": round(expiry_gamma_scanner.get_time_remaining_minutes(), 0),
+                "trading_advice": expiry_gamma_scanner._get_trading_advice(
+                    expiry_gamma_scanner.get_market_phase(),
+                    expiry_gamma_scanner.get_time_remaining_minutes(),
+                    0
+                )
+            }
+        
+        spot_price = getattr(chain, 'spot_price', None) or getattr(chain, 'future_price', 25000)
+        
+        # Convert strikes to dict format for scanner
+        strikes_data = []
+        for strike in chain.strikes:
+            strikes_data.append({
+                "strike": strike.strike,
+                "ce_ltp": strike.call_ltp,
+                "pe_ltp": strike.put_ltp,
+                "ce_oi": strike.call_oi,
+                "pe_oi": strike.put_oi,
+                "ce_volume": strike.call_volume,
+                "pe_volume": strike.put_volume,
+                "ce_iv": strike.call_iv,
+                "pe_iv": strike.put_iv,
+            })
+        
+        # Scan for opportunities
+        result = expiry_gamma_scanner.scan_for_gamma_opportunities(
+            index=index.upper(),
+            spot_price=spot_price,
+            option_chain=strikes_data
+        )
+        
+        # Add chain context
+        result["spot_price"] = spot_price
+        result["atm_strike"] = getattr(chain, 'atm_strike', None)
+        result["expiry_date"] = getattr(chain, 'expiry_date', None)
+        result["days_to_expiry"] = getattr(chain, 'days_to_expiry', 0)
+        
+        return result
+        
+    except Exception as e:
+        logger.error(f"Gamma scanner error: {e}")
+        import traceback
+        logger.error(traceback.format_exc())
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/index/{index}/gamma-analyze")
+async def analyze_single_option_gamma(
+    index: str,
+    strike: int = Query(..., description="Strike price"),
+    option_type: str = Query(..., description="CE or PE"),
+    premium: float = Query(..., description="Current premium"),
+    spot_price: float = Query(None, description="Current index price (optional)")
+):
+    """
+    Analyze a single option for expiry day gamma play potential.
+    
+    Example:
+        /index/NIFTY/gamma-analyze?strike=25100&option_type=CE&premium=15&spot_price=25080
+    
+    Returns detailed gamma/theta analysis with:
+        - Gamma score (0-100)
+        - Risk/reward ratio
+        - Potential gain on 50/100 point moves
+        - Theta decay per 15 minutes
+        - Entry recommendation
+    """
+    try:
+        from src.analytics.expiry_gamma_scanner import analyze_expiry_day_option, expiry_gamma_scanner
+        
+        # Get spot price if not provided
+        if spot_price is None:
+            try:
+                analyzer = get_index_analyzer(fyers_client)
+                chain = analyzer.analyze_option_chain(index.upper(), "weekly")
+                spot_price = chain.get("spot_price", chain.get("future_price", 25000))
+            except:
+                spot_price = 25000  # Fallback
+        
+        result = analyze_expiry_day_option(
+            strike=strike,
+            option_type=option_type.upper(),
+            premium=premium,
+            spot_price=spot_price,
+            index=index.upper()
+        )
+        
+        return result
+        
+    except Exception as e:
+        logger.error(f"Gamma analysis error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/index/{index}/theta-schedule")
+async def get_theta_decay_schedule(
+    index: str,
+    premium: float = Query(..., description="Current option premium"),
+    time_remaining: float = Query(None, description="Minutes until close (auto-calculated if not provided)")
+):
+    """
+    Get expected theta decay schedule at 15-minute intervals.
+    
+    Shows how premium is expected to decay until market close,
+    accounting for Indian market hours only.
+    
+    Example:
+        /index/NIFTY/theta-schedule?premium=50
+    
+    Returns:
+        List of expected premiums at each 15-minute interval
+    """
+    try:
+        from src.analytics.expiry_gamma_scanner import get_theta_decay_schedule, expiry_gamma_scanner
+        
+        if time_remaining is None:
+            time_remaining = expiry_gamma_scanner.get_time_remaining_minutes()
+        
+        schedule = get_theta_decay_schedule(premium, time_remaining)
+        
+        return {
+            "index": index.upper(),
+            "initial_premium": premium,
+            "time_remaining_minutes": round(time_remaining, 0),
+            "market_phase": expiry_gamma_scanner.get_market_phase().value,
+            "intervals": len(schedule),
+            "schedule": schedule,
+            "note": "Decay accelerates as expiry approaches. OTM options decay faster."
+        }
+        
+    except Exception as e:
+        logger.error(f"Theta schedule error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @app.get("/index/{index}/chain")
 async def get_option_chain_analysis(
     index: str,
@@ -3712,6 +3893,103 @@ def _estimate_option_price(spot_price: float, strike: float, action: str, chain_
             return max(spot_price * 0.005, 10)
 
 
+def _get_expiry_gamma_analysis(
+    strike: int,
+    option_type: str,
+    premium: float,
+    spot_price: float,
+    is_expiry_day: bool,
+    index: str = "NIFTY"
+) -> dict:
+    """
+    Get gamma analysis for expiry day trading.
+    
+    On expiry day, options can surge 300-1000% on small index moves due to
+    gamma explosion phenomenon. This analysis helps identify such opportunities.
+    
+    Returns:
+        Dictionary with:
+        - gamma_score: 0-100 rating for gamma opportunity
+        - is_gamma_opportunity: True if premium is in sweet spot
+        - market_phase: Current trading phase
+        - potential_gains: Expected gains for 50/100pt index moves
+        - theta_decay_schedule: Expected decay in 15-min intervals
+        - trading_advice: Specific recommendations
+    """
+    try:
+        from src.analytics.expiry_gamma_scanner import (
+            analyze_expiry_day_option, 
+            get_theta_decay_schedule,
+            expiry_gamma_scanner
+        )
+        
+        # Get gamma analysis for this option
+        gamma_result = analyze_expiry_day_option(
+            strike=strike,
+            option_type=option_type,
+            premium=premium,
+            spot_price=spot_price,
+            index=index
+        )
+        
+        analysis = gamma_result.get("analysis", {})
+        
+        # Get theta decay for next 2 hours
+        time_remaining = expiry_gamma_scanner.get_time_remaining_minutes()
+        if time_remaining < 15:
+            time_remaining = 120  # Default to 2 hours for display purposes
+        
+        decay_schedule = get_theta_decay_schedule(premium, min(time_remaining, 120))
+        
+        # Summarize decay schedule (first 4 intervals)
+        decay_summary = []
+        for interval in decay_schedule[:4]:
+            decay_summary.append({
+                "time": interval.get("time_to_close", ""),
+                "premium": interval.get("expected_premium", 0),
+                "decay": interval.get("theta_this_interval", 0),
+                "rate": interval.get("decay_rate", "")
+            })
+        
+        market_phase = expiry_gamma_scanner.get_market_phase()
+        is_gamma_window = market_phase.value in ["gamma_window", "final_hour"]
+        
+        return {
+            "gamma_score": analysis.get("gamma_score", 0),
+            "is_gamma_opportunity": analysis.get("is_opportunity", False),
+            "risk_reward": analysis.get("risk_reward", 0),
+            "potential_gain_50pt": analysis.get("potential_gain_50pt", 0),
+            "potential_gain_100pt": analysis.get("potential_gain_100pt", 0),
+            "gamma_multiplier": analysis.get("gamma_multiplier", 1),
+            "delta": analysis.get("delta", 0),
+            "moneyness_pct": analysis.get("moneyness_pct", 0),
+            "risk_level": analysis.get("risk_level", "HIGH"),
+            "entry_reasons": analysis.get("entry_reasons", []),
+            "market_phase": market_phase.value,
+            "is_gamma_window": is_gamma_window,
+            "time_remaining_minutes": round(time_remaining, 0),
+            "theta_decay_schedule": decay_summary,
+            "trading_advice": {
+                "gamma_play_viable": premium <= 30 and analysis.get("gamma_score", 0) >= 50,
+                "ideal_premium_range": "₹10-25 for best gamma plays",
+                "best_time": "1:30 PM - 3:00 PM IST (Gamma Window)",
+                "key_insight": "Options can surge 300-1000% on 50-100pt moves when premium is low"
+            }
+        }
+        
+    except Exception as e:
+        logger.warning(f"Expiry gamma analysis failed: {e}")
+        return {
+            "error": str(e),
+            "gamma_score": 0,
+            "is_gamma_opportunity": False,
+            "trading_advice": {
+                "gamma_play_viable": False,
+                "note": "Gamma analysis unavailable"
+            }
+        }
+
+
 def _calculate_scalp_feasibility(
     entry_price: float,
     delta: float,
@@ -4516,7 +4794,16 @@ def _generate_actionable_signal_topdown(mtf_result, session_info, chain_data, hi
             trade_direction=trade_direction,
             ltf_momentum=ltf_entry.momentum_confirmed if ltf_entry else False,
             session=session
-        )
+        ),
+        # NEW: Expiry Day Gamma Analysis (when DTE <= 1)
+        "expiry_gamma_analysis": _get_expiry_gamma_analysis(
+            strike=atm_strike,
+            option_type=option_type,
+            premium=current_ltp,
+            spot_price=spot_price,
+            is_expiry_day=is_expiry_day,
+            index=index
+        ) if is_expiry_day else None
     }
 def _generate_actionable_signal(mtf_result, session_info, chain_data, historical_prices=None, probability_analysis=None, index="NIFTY"):
     """Generate clear trading signal from MTF analysis with full Greeks integration, ML predictions, and constituent stock analysis"""
