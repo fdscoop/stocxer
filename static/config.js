@@ -12,9 +12,9 @@
     } else if (hostname.includes('onrender.com')) {
         // Render deployment - API is on same origin
         apiUrl = window.location.origin;
-    } else if (hostname === 'stocxer.in' || hostname.includes('stocxer')) {
-        // Custom domain - API is on Render
-        apiUrl = 'https://stocxer-ai.onrender.com';
+    } else if (hostname === 'stocxer.in' || hostname === 'www.stocxer.in' || hostname.includes('stocxer')) {
+        // Custom domain - API is on Google Cloud Run
+        apiUrl = 'https://stocxer-484044910258.europe-west1.run.app';
     } else {
         // Fallback - assume same origin
         apiUrl = window.location.origin;
