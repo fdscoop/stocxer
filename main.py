@@ -91,16 +91,40 @@ logger = logging.getLogger(__name__)
 
 # ============== PERFORMANCE OPTIMIZATION: CACHING LAYER ==============
 # In-memory cache for candle data to reduce API calls and improve scan speed
-# Target: Reduce 180s full scan to ~90s (50% improvement)
+# Optimized for Fyers API rate limits: 10/s, 200/min, 100k/day
 
 CANDLE_CACHE = {}  # {cache_key: (dataframe, timestamp)}
 ANALYSIS_CACHE = {}  # Reserved for future ML result caching
-CACHE_TTL = 180  # 3 minutes time-to-live
+OPTION_CHAIN_CACHE = {}  # Cache for option chain data
+
+# Cache TTL based on resolution (longer for daily data, shorter for intraday)
+CACHE_TTL_BY_RESOLUTION = {
+    "1": 60,      # 1 minute - cache for 60 seconds
+    "5": 120,     # 5 minutes - cache for 2 minutes
+    "15": 180,    # 15 minutes - cache for 3 minutes
+    "30": 300,    # 30 minutes - cache for 5 minutes
+    "60": 600,    # 1 hour - cache for 10 minutes
+    "240": 900,   # 4 hour - cache for 15 minutes
+    "D": 1800,    # Daily - cache for 30 minutes
+    "W": 3600,    # Weekly - cache for 1 hour
+    "M": 3600,    # Monthly - cache for 1 hour
+}
+CACHE_TTL = 300  # Default: 5 minutes (was 3 minutes)
+OPTION_CHAIN_TTL = 60  # Option chain cache: 60 seconds (prices change frequently)
+
+# Import rate limiter for cache hit tracking
+try:
+    from src.utils.rate_limiter import fyers_rate_limiter
+    RATE_LIMITER_AVAILABLE = True
+except ImportError:
+    RATE_LIMITER_AVAILABLE = False
+    fyers_rate_limiter = None
 
 
 def get_candles_cached(symbol: str, resolution: str, date_from: datetime, date_to: datetime):
     """
     Cached wrapper around fyers_client.get_historical_data()
+    Uses resolution-specific TTL to balance freshness and API efficiency.
     
     Args:
         symbol: Trading symbol (e.g., 'NSE:NIFTY50-INDEX')
@@ -115,17 +139,23 @@ def get_candles_cached(symbol: str, resolution: str, date_from: datetime, date_t
     cache_key = f"{symbol}_{resolution}_{date_from.date()}_{date_to.date()}"
     now = datetime.now()
     
+    # Get TTL for this resolution
+    ttl = CACHE_TTL_BY_RESOLUTION.get(resolution, CACHE_TTL)
+    
     # Check if we have cached data
     if cache_key in CANDLE_CACHE:
         candles, cached_time = CANDLE_CACHE[cache_key]
         age = (now - cached_time).total_seconds()
         
         # Return cached data if still fresh
-        if age < CACHE_TTL:
-            logger.info(f"✅ Cache HIT: {symbol} {resolution} ({age:.0f}s old)")
+        if age < ttl:
+            logger.info(f"✅ Cache HIT: {symbol} {resolution} ({age:.0f}s old, TTL={ttl}s)")
+            # Track cache hit in rate limiter stats
+            if RATE_LIMITER_AVAILABLE and fyers_rate_limiter:
+                fyers_rate_limiter.record_cache_hit()
             return candles
         else:
-            logger.debug(f"🔄 Cache EXPIRED: {cache_key} ({age:.0f}s old)")
+            logger.debug(f"🔄 Cache EXPIRED: {cache_key} ({age:.0f}s old, TTL={ttl}s)")
     
     # Cache miss - fetch fresh data
     logger.info(f"🔄 Fetching: {symbol} {resolution}")
@@ -141,7 +171,7 @@ def get_candles_cached(symbol: str, resolution: str, date_from: datetime, date_t
         # Cache the result if valid
         if candles is not None and not candles.empty:
             CANDLE_CACHE[cache_key] = (candles, now)
-            logger.debug(f"💾 Cached: {cache_key} ({len(candles)} candles)")
+            logger.debug(f"💾 Cached: {cache_key} ({len(candles)} candles, TTL={ttl}s)")
         
         return candles
         
@@ -544,6 +574,18 @@ async def health_check():
     if NEWS_SERVICE_AVAILABLE and hasattr(news_service, 'get_service_status'):
         news_status.update(news_service.get_service_status())
     
+    # Get rate limiter stats
+    rate_limiter_stats = None
+    if RATE_LIMITER_AVAILABLE and fyers_rate_limiter:
+        rate_limiter_stats = fyers_rate_limiter.get_stats()
+    
+    # Get cache stats
+    cache_stats = {
+        "candle_cache_entries": len(CANDLE_CACHE),
+        "option_chain_cache_entries": len(OPTION_CHAIN_CACHE) if 'OPTION_CHAIN_CACHE' in globals() else 0,
+        "analysis_cache_entries": len(ANALYSIS_CACHE),
+    }
+    
     return {
         "status": "online",
         "service": "TradeWise API",
@@ -553,7 +595,9 @@ async def health_check():
             "status": scheduler_status,
             "jobs": scheduler_jobs
         },
-        "news_service": news_status
+        "news_service": news_status,
+        "rate_limiter": rate_limiter_stats,
+        "cache": cache_stats
     }
 
 

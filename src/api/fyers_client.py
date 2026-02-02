@@ -1,6 +1,11 @@
 """
 Fyers API Integration Module
 Handles authentication, data fetching, and order placement
+
+Rate Limits (Fyers API v3):
+- 10 requests per second
+- 200 requests per minute
+- 100,000 requests per day
 """
 from fyers_apiv3 import fyersModel
 # from fyers_apiv3.FyersWebsocket import data_ws
@@ -9,7 +14,16 @@ from typing import Dict, List, Optional, Any
 import pandas as pd
 from datetime import datetime, timedelta
 import logging
+import time
 from config.settings import settings
+
+# Import rate limiter
+try:
+    from src.utils.rate_limiter import fyers_rate_limiter
+    RATE_LIMITER_AVAILABLE = True
+except ImportError:
+    RATE_LIMITER_AVAILABLE = False
+    fyers_rate_limiter = None
 
 logger = logging.getLogger(__name__)
 
@@ -117,6 +131,11 @@ class FyersClient:
             raise Exception("Client not initialized")
         
         data = {"symbols": ",".join(symbols)}
+        
+        # Apply rate limiting
+        if RATE_LIMITER_AVAILABLE and fyers_rate_limiter:
+            fyers_rate_limiter.wait_if_needed()
+        
         response = self.fyers.quotes(data)
         return response
     
@@ -177,6 +196,12 @@ class FyersClient:
         
         logger.info(f"📊 Fetching historical data: {symbol}, {resolution}, from {date_from} to {date_to}")
         
+        # Apply rate limiting before API call
+        if RATE_LIMITER_AVAILABLE and fyers_rate_limiter:
+            wait_time = fyers_rate_limiter.wait_if_needed()
+            if wait_time > 0:
+                logger.debug(f"   ⏳ Rate limited, waited {wait_time:.2f}s")
+        
         response = self.fyers.history(data)
         
         if response.get("code") == 200 or response.get("s") == "ok":
@@ -219,6 +244,10 @@ class FyersClient:
         
         if expiry_date:
             data["timestamp"] = expiry_date
+        
+        # Apply rate limiting
+        if RATE_LIMITER_AVAILABLE and fyers_rate_limiter:
+            fyers_rate_limiter.wait_if_needed()
         
         response = self.fyers.optionchain(data)
         return response

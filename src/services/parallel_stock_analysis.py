@@ -36,15 +36,19 @@ class FastStockAnalyzer:
     - Use ThreadPoolExecutor for concurrent API calls
     - Lightweight indicators only (RSI, EMA 20/50)
     - Target: <1 second per stock, <15s total for 50 stocks
+    
+    Rate Limit Optimization:
+    - Reduced max_workers from 10 to 5 to stay within 10 req/s limit
+    - Uses cache to avoid redundant API calls
     """
     
-    def __init__(self, fyers_client, candle_cache: dict, cache_ttl: int = 180, max_workers: int = 10):
+    def __init__(self, fyers_client, candle_cache: dict, cache_ttl: int = 300, max_workers: int = 5):
         """
         Args:
             fyers_client: Fyers API client instance
             candle_cache: Reference to global CANDLE_CACHE dictionary
-            cache_ttl: Cache TTL in seconds
-            max_workers: Number of parallel workers
+            cache_ttl: Cache TTL in seconds (increased from 180 to 300)
+            max_workers: Number of parallel workers (reduced from 10 to 5 for rate limits)
         """
         self.fyers_client = fyers_client
         self.candle_cache = candle_cache
