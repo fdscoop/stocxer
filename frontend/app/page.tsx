@@ -333,6 +333,70 @@ interface TradingSignal {
       key_insight: string
     }
   }
+  // Enhanced ML Predictions - NEW Feb 2026
+  enhanced_ml_prediction?: {
+    direction_prediction?: {
+      direction: string
+      confidence: number
+      expected_move_pct: number
+      trade_signal: string
+      signal_strength: string
+      probabilities?: {
+        strong_up: number
+        up: number
+        sideways: number
+        down: number
+        strong_down: number
+      }
+    }
+    speed_prediction?: {
+      category: string  // EXPLOSIVE, FAST, NORMAL, SLOW, CHOPPY
+      confidence: number
+      expected_move_pct: number
+      expected_time_mins: number
+      options_action: string
+      reasoning: string[]
+      factors?: {
+        volume_score: number
+        time_of_day_score: number
+        volatility_squeeze_score: number
+        momentum_score: number
+      }
+    }
+    iv_prediction?: {
+      direction: string  // SPIKE, EXPAND, STABLE, CONTRACT, CRUSH
+      confidence: number
+      expected_change_pct: number
+      current_iv: number
+      predicted_iv: number
+      vega_exposure: string
+      options_strategy: string
+      reasoning: string[]
+      regime?: {
+        current: string
+        percentile: number
+      }
+    }
+    simulation?: {
+      grade: string
+      expected_pnl: number
+      expected_pnl_pct: number
+      win_probability: number
+      should_trade: boolean
+      position_size_pct: number
+      entry_timing: string
+      exit_strategy: string
+      stop_loss: number
+      take_profit: number
+      max_hold_time_mins: number
+    }
+    combined_recommendation?: {
+      action: string
+      confidence: number
+      reasoning: string[]
+      warnings: string[]
+    }
+  }
 }
 
 interface NewsArticle {
@@ -1398,6 +1462,18 @@ export default function DashboardPage() {
             trading_advice: backendSignal.expiry_gamma_analysis.trading_advice
           } : undefined,
 
+          // 🧠 Enhanced ML Prediction - NEW Feb 2026
+          enhanced_ml_prediction: backendSignal.enhanced_ml_prediction ? {
+            direction_prediction: backendSignal.enhanced_ml_prediction.direction_prediction,
+            speed_prediction: backendSignal.enhanced_ml_prediction.speed_prediction,
+            iv_prediction: backendSignal.enhanced_ml_prediction.iv_prediction,
+            theta_scenarios: backendSignal.enhanced_ml_prediction.theta_scenarios,
+            simulation: backendSignal.enhanced_ml_prediction.simulation,
+            combined_recommendation: backendSignal.enhanced_ml_prediction.combined_recommendation,
+            available_modules: backendSignal.enhanced_ml_prediction.available_modules,
+            timestamp: backendSignal.enhanced_ml_prediction.timestamp
+          } : undefined,
+
           // Keep legacy for backward compatibility
           confidence_adjustments: backendSignal.confidence_adjustments
         }
@@ -2056,6 +2132,166 @@ export default function DashboardPage() {
                       💡 {tradingSignal.expiry_gamma_analysis.trading_advice.key_insight}
                     </div>
                   </div>
+                </div>
+              )}
+
+              {/* 🧠 Enhanced ML Prediction Panel - NEW Feb 2026 */}
+              {tradingSignal.enhanced_ml_prediction && (
+                <div className="p-3 rounded-lg border bg-gradient-to-r from-purple-500/10 to-blue-500/10 border-purple-500/30">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-2">
+                      <span className="text-purple-400 text-xs font-semibold">🧠 Enhanced ML Analysis</span>
+                      {tradingSignal.enhanced_ml_prediction.simulation && (
+                        <Badge variant="outline" className={`text-[10px] ${
+                          tradingSignal.enhanced_ml_prediction.simulation.grade === 'A+' || tradingSignal.enhanced_ml_prediction.simulation.grade === 'A'
+                            ? 'border-green-500 text-green-400 bg-green-500/20'
+                            : tradingSignal.enhanced_ml_prediction.simulation.grade === 'B+' || tradingSignal.enhanced_ml_prediction.simulation.grade === 'B'
+                            ? 'border-yellow-500 text-yellow-400 bg-yellow-500/20'
+                            : 'border-red-500 text-red-400 bg-red-500/20'
+                        }`}>
+                          Grade {tradingSignal.enhanced_ml_prediction.simulation.grade}
+                        </Badge>
+                      )}
+                    </div>
+                    {tradingSignal.enhanced_ml_prediction.combined_recommendation && (
+                      <Badge
+                        variant="outline"
+                        className={`text-[10px] ${
+                          tradingSignal.enhanced_ml_prediction.combined_recommendation.action === 'BUY'
+                            ? 'border-green-500 text-green-400 bg-green-500/20'
+                            : tradingSignal.enhanced_ml_prediction.combined_recommendation.action === 'BUY_CAUTIOUS'
+                            ? 'border-yellow-500 text-yellow-400 bg-yellow-500/20'
+                            : 'border-red-500 text-red-400 bg-red-500/20'
+                        }`}
+                      >
+                        {tradingSignal.enhanced_ml_prediction.combined_recommendation.action === 'BUY' ? '✅ BUY' :
+                         tradingSignal.enhanced_ml_prediction.combined_recommendation.action === 'BUY_CAUTIOUS' ? '⚠️ CAUTIOUS' :
+                         '🚫 AVOID'}
+                      </Badge>
+                    )}
+                  </div>
+
+                  {/* ML Prediction Cards */}
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mb-3">
+                    {/* Direction Prediction */}
+                    {tradingSignal.enhanced_ml_prediction.direction_prediction && (
+                      <div className="p-2 bg-blue-900/40 rounded-lg border border-blue-500/30 text-center">
+                        <div className="text-[10px] text-blue-400/70">📈 Direction</div>
+                        <div className={`text-sm font-bold ${
+                          tradingSignal.enhanced_ml_prediction.direction_prediction.direction.includes('UP') ? 'text-green-400' :
+                          tradingSignal.enhanced_ml_prediction.direction_prediction.direction.includes('DOWN') ? 'text-red-400' :
+                          'text-gray-400'
+                        }`}>
+                          {tradingSignal.enhanced_ml_prediction.direction_prediction.direction}
+                        </div>
+                        <div className="text-[9px] text-gray-400">
+                          {(tradingSignal.enhanced_ml_prediction.direction_prediction.confidence * 100).toFixed(0)}% conf
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Speed Prediction */}
+                    {tradingSignal.enhanced_ml_prediction.speed_prediction && (
+                      <div className={`p-2 rounded-lg border text-center ${
+                        tradingSignal.enhanced_ml_prediction.speed_prediction.category === 'EXPLOSIVE' ? 'bg-green-900/40 border-green-500/30' :
+                        tradingSignal.enhanced_ml_prediction.speed_prediction.category === 'FAST' ? 'bg-green-900/30 border-green-500/20' :
+                        tradingSignal.enhanced_ml_prediction.speed_prediction.category === 'SLOW' || tradingSignal.enhanced_ml_prediction.speed_prediction.category === 'CHOPPY' ? 'bg-red-900/40 border-red-500/30' :
+                        'bg-yellow-900/40 border-yellow-500/30'
+                      }`}>
+                        <div className="text-[10px] text-cyan-400/70">⚡ Speed</div>
+                        <div className={`text-sm font-bold ${
+                          tradingSignal.enhanced_ml_prediction.speed_prediction.category === 'EXPLOSIVE' || tradingSignal.enhanced_ml_prediction.speed_prediction.category === 'FAST' ? 'text-green-400' :
+                          tradingSignal.enhanced_ml_prediction.speed_prediction.category === 'SLOW' || tradingSignal.enhanced_ml_prediction.speed_prediction.category === 'CHOPPY' ? 'text-red-400' :
+                          'text-yellow-400'
+                        }`}>
+                          {tradingSignal.enhanced_ml_prediction.speed_prediction.category}
+                        </div>
+                        <div className="text-[9px] text-gray-400">
+                          {tradingSignal.enhanced_ml_prediction.speed_prediction.expected_time_mins}min
+                        </div>
+                      </div>
+                    )}
+
+                    {/* IV Prediction */}
+                    {tradingSignal.enhanced_ml_prediction.iv_prediction && (
+                      <div className={`p-2 rounded-lg border text-center ${
+                        tradingSignal.enhanced_ml_prediction.iv_prediction.direction === 'CRUSH' || tradingSignal.enhanced_ml_prediction.iv_prediction.direction === 'CONTRACT' ? 'bg-red-900/40 border-red-500/30' :
+                        tradingSignal.enhanced_ml_prediction.iv_prediction.direction === 'SPIKE' || tradingSignal.enhanced_ml_prediction.iv_prediction.direction === 'EXPAND' ? 'bg-green-900/40 border-green-500/30' :
+                        'bg-gray-900/40 border-gray-500/30'
+                      }`}>
+                        <div className="text-[10px] text-orange-400/70">📊 IV</div>
+                        <div className={`text-sm font-bold ${
+                          tradingSignal.enhanced_ml_prediction.iv_prediction.direction === 'CRUSH' || tradingSignal.enhanced_ml_prediction.iv_prediction.direction === 'CONTRACT' ? 'text-red-400' :
+                          tradingSignal.enhanced_ml_prediction.iv_prediction.direction === 'SPIKE' || tradingSignal.enhanced_ml_prediction.iv_prediction.direction === 'EXPAND' ? 'text-green-400' :
+                          'text-gray-400'
+                        }`}>
+                          {tradingSignal.enhanced_ml_prediction.iv_prediction.direction}
+                        </div>
+                        <div className="text-[9px] text-gray-400">
+                          {tradingSignal.enhanced_ml_prediction.iv_prediction.expected_change_pct > 0 ? '+' : ''}{tradingSignal.enhanced_ml_prediction.iv_prediction.expected_change_pct.toFixed(0)}%
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Simulation Expected P&L */}
+                    {tradingSignal.enhanced_ml_prediction.simulation && (
+                      <div className={`p-2 rounded-lg border text-center ${
+                        tradingSignal.enhanced_ml_prediction.simulation.expected_pnl_pct > 10 ? 'bg-green-900/40 border-green-500/30' :
+                        tradingSignal.enhanced_ml_prediction.simulation.expected_pnl_pct > 0 ? 'bg-green-900/20 border-green-500/20' :
+                        'bg-red-900/40 border-red-500/30'
+                      }`}>
+                        <div className="text-[10px] text-green-400/70">💰 Expected</div>
+                        <div className={`text-sm font-bold ${
+                          tradingSignal.enhanced_ml_prediction.simulation.expected_pnl_pct > 0 ? 'text-green-400' : 'text-red-400'
+                        }`}>
+                          {tradingSignal.enhanced_ml_prediction.simulation.expected_pnl_pct > 0 ? '+' : ''}{tradingSignal.enhanced_ml_prediction.simulation.expected_pnl_pct.toFixed(1)}%
+                        </div>
+                        <div className="text-[9px] text-gray-400">
+                          {(tradingSignal.enhanced_ml_prediction.simulation.win_probability * 100).toFixed(0)}% win
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Speed Reasoning & Warnings */}
+                  {tradingSignal.enhanced_ml_prediction.speed_prediction?.reasoning && tradingSignal.enhanced_ml_prediction.speed_prediction.reasoning.length > 0 && (
+                    <div className="mb-2 text-[10px] text-gray-400">
+                      <div className="font-semibold mb-1">Speed Analysis:</div>
+                      {tradingSignal.enhanced_ml_prediction.speed_prediction.reasoning.slice(0, 2).map((reason, idx) => (
+                        <div key={idx} className="ml-2">• {reason}</div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Combined Recommendation Warnings */}
+                  {tradingSignal.enhanced_ml_prediction.combined_recommendation?.warnings && tradingSignal.enhanced_ml_prediction.combined_recommendation.warnings.length > 0 && (
+                    <div className="border-t border-purple-500/30 pt-2">
+                      <div className="text-[10px] text-yellow-400">
+                        {tradingSignal.enhanced_ml_prediction.combined_recommendation.warnings.map((warning, idx) => (
+                          <div key={idx}>{warning}</div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Simulation Trade Advice */}
+                  {tradingSignal.enhanced_ml_prediction.simulation && (
+                    <div className="border-t border-purple-500/30 pt-2 mt-2">
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="text-gray-400">
+                          {tradingSignal.enhanced_ml_prediction.simulation.should_trade 
+                            ? '✅ Trade viable' 
+                            : '🚫 Not recommended'}
+                        </span>
+                        <span className="text-purple-400">
+                          SL: ₹{tradingSignal.enhanced_ml_prediction.simulation.stop_loss.toFixed(0)} | TP: ₹{tradingSignal.enhanced_ml_prediction.simulation.take_profit.toFixed(0)}
+                        </span>
+                      </div>
+                      <div className="text-[10px] text-gray-500 mt-1">
+                        ⏱️ Max hold: {tradingSignal.enhanced_ml_prediction.simulation.max_hold_time_mins} mins | 📊 Position: {tradingSignal.enhanced_ml_prediction.simulation.position_size_pct}% of capital
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
 

@@ -2549,6 +2549,463 @@ async def get_theta_decay_schedule(
         raise HTTPException(status_code=500, detail=str(e))
 
 
+# ==================== ENHANCED ML PREDICTION ENDPOINTS ====================
+# NEW: Speed, IV, Theta Scenario, and Full P&L Simulation APIs
+
+@app.get("/ml/enhanced-prediction")
+async def get_enhanced_ml_prediction(
+    index: str = Query("NIFTY", description="Index: NIFTY or BANKNIFTY"),
+    option_type: str = Query("CE", description="Option type: CE or PE"),
+    strike: int = Query(None, description="Strike price (default: ATM)"),
+    premium: float = Query(None, description="Current premium (default: estimated)"),
+    expiry: str = Query("weekly", description="Expiry: weekly, next_weekly, monthly"),
+    authorization: str = Header(None, description="Bearer token for authenticated access")
+):
+    """
+    Enhanced ML Prediction with Speed, IV, and Theta Analysis
+    
+    🚀 NEW ML CAPABILITIES:
+    
+    1. **Direction Prediction** (XGBoost + Rule-Based):
+       - Predicts UP/DOWN/SIDEWAYS with confidence
+       - Uses RSI, MACD, Bollinger Bands, Volume patterns
+    
+    2. **Speed Prediction** (Critical for Options):
+       - EXPLOSIVE: >1% in <15 mins → BUY options
+       - FAST: >0.5% in <30 mins → BUY options
+       - SLOW: <0.2% in 2+ hours → AVOID buying (theta kills you)
+       - CHOPPY: Multiple reversals → WORST for buyers
+    
+    3. **IV Prediction** (Rule-Based):
+       - Pre-event expansion, post-event crush
+       - Regime-based mean reversion
+       - Vega exposure recommendation
+    
+    4. **Theta Scenarios**:
+       - 15min, 30min, 1hour, 2hour, EOD projections
+       - Shows P&L under different price moves
+       - Breakeven move calculation
+    
+    5. **Full P&L Simulation**:
+       - Combines all factors into scenarios
+       - Expected P&L, win probability
+       - Trade grade (A+ to F)
+       - Position sizing recommendation
+    
+    Returns comprehensive prediction with actionable recommendations.
+    """
+    try:
+        from src.services.enhanced_ml_service import get_enhanced_ml_service
+        
+        # Load user's Fyers token if provided
+        if authorization:
+            try:
+                token = authorization.replace("Bearer ", "")
+                user = await auth_service.get_current_user(token)
+                fyers_token = await auth_service.get_fyers_token(user.id)
+                
+                if fyers_token and fyers_token.access_token:
+                    fyers_client.access_token = fyers_token.access_token
+                    fyers_client._initialize_client()
+                    logger.info(f"✅ Enhanced ML using Fyers token for user {user.email}")
+            except Exception as auth_error:
+                logger.debug(f"Auth check skipped: {auth_error}")
+        
+        # Get symbol from index
+        if index.upper() in ['NIFTY', 'NIFTY50']:
+            symbol = 'NSE:NIFTY50-INDEX'
+        elif index.upper() in ['BANKNIFTY', 'NIFTYBANK']:
+            symbol = 'NSE:NIFTYBANK-INDEX'
+        else:
+            symbol = f'NSE:{index.upper()}-INDEX'
+        
+        # Get option chain data
+        analyzer = get_index_analyzer(fyers_client)
+        chain = analyzer.analyze_option_chain(index.upper(), expiry)
+        
+        if not chain:
+            raise HTTPException(status_code=500, detail="Could not fetch option chain")
+        
+        spot_price = getattr(chain, 'spot_price', None) or getattr(chain, 'future_price', 25000)
+        atm_strike = getattr(chain, 'atm_strike', round(spot_price / 50) * 50)
+        current_iv = getattr(chain, 'atm_iv', 15)
+        dte = getattr(chain, 'days_to_expiry', 7)
+        
+        # Use ATM strike if not specified
+        if strike is None:
+            strike = atm_strike
+        
+        # Estimate premium if not provided
+        if premium is None:
+            # Try to get from chain
+            for s in getattr(chain, 'strikes', []):
+                if s.strike == strike:
+                    if option_type.upper() == "CE":
+                        premium = s.call_ltp or s.call_mid_price or 50
+                    else:
+                        premium = s.put_ltp or s.put_mid_price or 50
+                    break
+            if premium is None:
+                premium = 50  # Fallback
+        
+        # Get historical prices for ML
+        from datetime import datetime, timedelta
+        today = datetime.now()
+        safe_end_time = today - timedelta(minutes=1)
+        start_date = safe_end_time - timedelta(days=100)
+        
+        historical_df = get_candles_cached(
+            symbol=symbol,
+            resolution="60",  # Hourly
+            date_from=start_date,
+            date_to=safe_end_time
+        )
+        
+        price_history = []
+        volume_history = []
+        
+        if historical_df is not None and not historical_df.empty:
+            price_history = historical_df['close'].tolist()
+            if 'volume' in historical_df.columns:
+                volume_history = historical_df['volume'].tolist()
+        else:
+            # Fallback: need at least some data
+            raise HTTPException(status_code=500, detail="Insufficient historical data")
+        
+        # Get enhanced ML service
+        ml_service = get_enhanced_ml_service()
+        
+        # Determine if expiry day
+        is_expiry_day = dte <= 1
+        
+        # Get enhanced prediction
+        result = ml_service.get_enhanced_prediction(
+            option_type=option_type.upper(),
+            strike=float(strike),
+            premium=float(premium),
+            spot_price=float(spot_price),
+            current_iv=float(current_iv),
+            days_to_expiry=float(dte),
+            price_history=price_history,
+            volume_history=volume_history if volume_history else None,
+            is_expiry_day=is_expiry_day
+        )
+        
+        # Add context
+        result['context'] = {
+            'index': index.upper(),
+            'symbol': symbol,
+            'option': f"{strike} {option_type.upper()}",
+            'spot_price': spot_price,
+            'atm_strike': atm_strike,
+            'premium': premium,
+            'iv': current_iv,
+            'dte': dte,
+            'is_expiry_day': is_expiry_day,
+            'expiry': expiry
+        }
+        
+        return result
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Enhanced ML prediction error: {e}")
+        import traceback
+        logger.error(traceback.format_exc())
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/ml/speed-prediction")
+async def get_speed_prediction(
+    index: str = Query("NIFTY", description="Index: NIFTY or BANKNIFTY"),
+    authorization: str = Header(None, description="Bearer token for authenticated access")
+):
+    """
+    Speed Prediction Only - Is the market about to move FAST or SLOW?
+    
+    Returns speed category:
+    - EXPLOSIVE: >1% in <15 mins - BUY options aggressively
+    - FAST: >0.5% in <30 mins - Good for option buying
+    - NORMAL: 0.2-0.5% in 1-2 hours - Proceed with caution
+    - SLOW: <0.2% in 2+ hours - Theta will kill you, AVOID buying
+    - CHOPPY: Multiple small reversals - WORST for option buyers
+    
+    Also returns:
+    - Volume surge score
+    - Bollinger squeeze (breakout imminent?)
+    - Momentum score
+    - Time of day factor
+    """
+    try:
+        from src.ml.speed_predictor import SpeedPredictor
+        
+        # Load user's Fyers token
+        if authorization:
+            try:
+                token = authorization.replace("Bearer ", "")
+                user = await auth_service.get_current_user(token)
+                fyers_token = await auth_service.get_fyers_token(user.id)
+                if fyers_token and fyers_token.access_token:
+                    fyers_client.access_token = fyers_token.access_token
+                    fyers_client._initialize_client()
+            except:
+                pass
+        
+        # Get symbol
+        if index.upper() in ['NIFTY', 'NIFTY50']:
+            symbol = 'NSE:NIFTY50-INDEX'
+        elif index.upper() in ['BANKNIFTY', 'NIFTYBANK']:
+            symbol = 'NSE:NIFTYBANK-INDEX'
+        else:
+            symbol = f'NSE:{index.upper()}-INDEX'
+        
+        # Get historical data
+        from datetime import datetime, timedelta
+        today = datetime.now()
+        start_date = today - timedelta(days=30)
+        
+        historical_df = get_candles_cached(
+            symbol=symbol,
+            resolution="15",  # 15-minute candles for speed detection
+            date_from=start_date,
+            date_to=today
+        )
+        
+        if historical_df is None or historical_df.empty:
+            raise HTTPException(status_code=500, detail="Insufficient data")
+        
+        price_history = historical_df['close'].tolist()
+        volume_history = historical_df['volume'].tolist() if 'volume' in historical_df.columns else [1000000] * len(price_history)
+        current_volume = volume_history[-1] if volume_history else 1000000
+        spot_price = price_history[-1]
+        
+        # Get prediction
+        predictor = SpeedPredictor()
+        prediction = predictor.predict_speed(
+            current_price=spot_price,
+            price_history=price_history,
+            volume_history=volume_history,
+            current_volume=current_volume
+        )
+        
+        return {
+            'index': index.upper(),
+            'spot_price': spot_price,
+            'prediction': {
+                'category': prediction.category.value,
+                'confidence': prediction.confidence,
+                'expected_move_pct': prediction.expected_move_pct,
+                'expected_time_mins': prediction.expected_time_mins,
+            },
+            'factors': {
+                'volume_score': prediction.volume_score,
+                'time_of_day_score': prediction.time_of_day_score,
+                'volatility_squeeze_score': prediction.volatility_squeeze_score,
+                'momentum_score': prediction.momentum_score
+            },
+            'recommendation': {
+                'options_action': prediction.options_action,
+                'reasoning': prediction.reasoning,
+                'max_theta_loss_pct': prediction.max_theta_loss_pct,
+                'breakeven_time_mins': prediction.breakeven_time_mins
+            }
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Speed prediction error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/ml/iv-prediction")
+async def get_iv_prediction(
+    index: str = Query("NIFTY", description="Index: NIFTY or BANKNIFTY"),
+    expiry: str = Query("weekly", description="Expiry type"),
+    authorization: str = Header(None, description="Bearer token for authenticated access")
+):
+    """
+    IV (Implied Volatility) Prediction - Will IV go up or down?
+    
+    Returns:
+    - SPIKE: IV expected to jump >20% - BUY options before it happens
+    - EXPAND: IV expected to rise 5-20% - Favorable for buyers
+    - STABLE: IV roughly same - Focus on direction, not vega
+    - CONTRACT: IV expected to drop 5-20% - Caution for buyers
+    - CRUSH: IV expected to crash >20% - DANGER for option buyers
+    
+    Also returns:
+    - Current IV regime (LOW/NORMAL/HIGH/EXTREME)
+    - IV percentile (where current IV sits historically)
+    - Event factor (pre-event expansion, post-event crush)
+    - Vega exposure recommendation
+    """
+    try:
+        from src.ml.iv_predictor import IVPredictor
+        
+        # Load user's Fyers token
+        if authorization:
+            try:
+                token = authorization.replace("Bearer ", "")
+                user = await auth_service.get_current_user(token)
+                fyers_token = await auth_service.get_fyers_token(user.id)
+                if fyers_token and fyers_token.access_token:
+                    fyers_client.access_token = fyers_token.access_token
+                    fyers_client._initialize_client()
+            except:
+                pass
+        
+        # Get symbol
+        if index.upper() in ['NIFTY', 'NIFTY50']:
+            symbol = 'NSE:NIFTY50-INDEX'
+        elif index.upper() in ['BANKNIFTY', 'NIFTYBANK']:
+            symbol = 'NSE:NIFTYBANK-INDEX'
+        else:
+            symbol = f'NSE:{index.upper()}-INDEX'
+        
+        # Get option chain for current IV
+        analyzer = get_index_analyzer(fyers_client)
+        chain = analyzer.analyze_option_chain(index.upper(), expiry)
+        
+        if not chain:
+            raise HTTPException(status_code=500, detail="Could not fetch option chain")
+        
+        spot_price = getattr(chain, 'spot_price', None) or getattr(chain, 'future_price', 25000)
+        current_iv = getattr(chain, 'atm_iv', 15)
+        dte = getattr(chain, 'days_to_expiry', 7)
+        
+        # Get historical prices
+        from datetime import datetime, timedelta
+        today = datetime.now()
+        start_date = today - timedelta(days=100)
+        
+        historical_df = get_candles_cached(
+            symbol=symbol,
+            resolution="D",
+            date_from=start_date,
+            date_to=today
+        )
+        
+        price_history = []
+        if historical_df is not None and not historical_df.empty:
+            price_history = historical_df['close'].tolist()
+        else:
+            price_history = [spot_price] * 30
+        
+        # Synthetic IV history (in production, you'd track actual IV)
+        iv_history = [current_iv * (0.9 + 0.2 * (i / 30)) for i in range(30)]
+        
+        # Get prediction
+        predictor = IVPredictor()
+        prediction = predictor.predict_iv(
+            current_iv=current_iv,
+            spot_price=spot_price,
+            iv_history=iv_history,
+            price_history=price_history,
+            is_expiry_day=dte <= 1,
+            days_to_expiry=int(dte)
+        )
+        
+        return {
+            'index': index.upper(),
+            'spot_price': spot_price,
+            'current_iv': current_iv,
+            'dte': dte,
+            'prediction': {
+                'direction': prediction.direction.value,
+                'confidence': prediction.confidence,
+                'expected_change_pct': prediction.expected_iv_change_pct,
+                'predicted_iv': prediction.predicted_iv
+            },
+            'regime': {
+                'current': prediction.current_regime.value,
+                'percentile': prediction.regime_percentile
+            },
+            'factors': {
+                'event': prediction.event_factor,
+                'time': prediction.time_factor,
+                'trend': prediction.trend_factor,
+                'expiry': prediction.expiry_factor
+            },
+            'recommendation': {
+                'vega_exposure': prediction.vega_exposure,
+                'options_strategy': prediction.options_strategy,
+                'reasoning': prediction.reasoning,
+                'iv_risk_score': prediction.iv_risk_score
+            }
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"IV prediction error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/ml/pnl-calculator")
+async def calculate_option_pnl(
+    option_type: str = Query(..., description="CE or PE"),
+    strike: float = Query(..., description="Strike price"),
+    premium: float = Query(..., description="Entry premium"),
+    current_spot: float = Query(..., description="Current spot price"),
+    target_spot: float = Query(..., description="Target spot price"),
+    time_mins: int = Query(30, description="Time horizon in minutes"),
+    current_iv: float = Query(15, description="Current IV"),
+    days_to_expiry: float = Query(7, description="Days to expiry")
+):
+    """
+    Quick P&L Calculator - "What if NIFTY goes to X in Y minutes?"
+    
+    Calculate expected option P&L for a specific scenario.
+    
+    Example:
+        POST /ml/pnl-calculator?option_type=CE&strike=25100&premium=50&current_spot=25000&target_spot=25100&time_mins=30
+    
+    Returns P&L breakdown:
+    - Delta P&L (from underlying move)
+    - Gamma P&L (second order effect)
+    - Theta cost (time decay)
+    - Total P&L
+    - New expected premium
+    """
+    try:
+        from src.ml.theta_scenario_planner import ThetaScenarioPlanner
+        
+        planner = ThetaScenarioPlanner()
+        
+        result = planner.quick_pnl_estimate(
+            option_type=option_type.upper(),
+            strike=strike,
+            premium=premium,
+            current_spot=current_spot,
+            target_spot=target_spot,
+            time_mins=time_mins,
+            current_iv=current_iv,
+            days_to_expiry=days_to_expiry
+        )
+        
+        return {
+            'input': {
+                'option': f"{int(strike)} {option_type.upper()}",
+                'premium': premium,
+                'current_spot': current_spot,
+                'target_spot': target_spot,
+                'time_mins': time_mins,
+                'iv': current_iv,
+                'dte': days_to_expiry
+            },
+            'result': result
+        }
+        
+    except Exception as e:
+        logger.error(f"P&L calculator error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ==================== END ENHANCED ML ENDPOINTS ====================
+
+
 @app.get("/index/{index}/chain")
 async def get_option_chain_analysis(
     index: str,
@@ -3794,6 +4251,71 @@ async def get_actionable_trading_signal(
         if probability_analysis:
             signal["probability_analysis"] = probability_analysis
             signal["constituent_recommendation"] = constituent_recommendation
+        
+        # ==================== ENHANCED ML PREDICTION ====================
+        # Add enhanced ML prediction with Speed, IV, Theta scenarios
+        try:
+            from src.services.enhanced_ml_service import EnhancedMLService
+            
+            enhanced_ml = EnhancedMLService()
+            
+            # Get option details from signal
+            option_type = signal.get("option", {}).get("type", "CE")
+            strike = signal.get("option", {}).get("strike", chain_data.get("atm_strike", 25000))
+            premium = signal.get("entry", {}).get("price", 50)
+            spot_price = chain_data.get("spot_price") or chain_data.get("future_price") or mtf_result.current_price
+            current_iv = (chain_data.get("atm_iv", 15) or 15)  # Already in percentage
+            days_to_expiry = chain_data.get("days_to_expiry", 7) or 7
+            
+            # Get price history for ML - convert pandas Series to list to avoid ambiguous truth value error
+            import pandas as pd
+            price_history = None
+            if historical_prices is not None:
+                if isinstance(historical_prices, pd.Series):
+                    price_history = historical_prices.tolist() if len(historical_prices) >= 20 else None
+                elif isinstance(historical_prices, list) and len(historical_prices) >= 20:
+                    price_history = historical_prices
+            
+            if price_history is not None and len(price_history) >= 20:
+                enhanced_prediction = enhanced_ml.get_enhanced_prediction(
+                    option_type=option_type,
+                    strike=float(strike),
+                    premium=float(premium),
+                    spot_price=float(spot_price),
+                    current_iv=float(current_iv),
+                    days_to_expiry=float(days_to_expiry),
+                    price_history=price_history,
+                    volume_history=None,  # Volume data not always available
+                    iv_history=None,  # IV history not available
+                    timestamp=None,  # Use current time
+                    is_expiry_day=(days_to_expiry <= 1)
+                )
+                
+                signal["enhanced_ml_prediction"] = enhanced_prediction
+                logger.info(f"🧠 Enhanced ML: Direction={enhanced_prediction.get('direction_prediction', {}).get('direction', 'N/A')}, "
+                           f"Speed={enhanced_prediction.get('speed_prediction', {}).get('category', 'N/A')}, "
+                           f"IV={enhanced_prediction.get('iv_prediction', {}).get('direction', 'N/A')}")
+                
+                # Log grade if simulation ran
+                sim = enhanced_prediction.get('simulation', {})
+                if sim and not sim.get('error'):
+                    logger.info(f"   📊 Trade Grade: {sim.get('grade', 'N/A')}, "
+                               f"Expected P&L: {sim.get('expected_pnl_pct', 0):+.1f}%, "
+                               f"Win Prob: {sim.get('win_probability', 0)*100:.0f}%")
+            else:
+                logger.info("⚠️ Insufficient price history for enhanced ML prediction")
+                signal["enhanced_ml_prediction"] = {
+                    "error": "Insufficient price history (need 20+ candles)",
+                    "available_modules": {"direction": False, "speed": False, "iv": False, "theta": False, "simulator": False}
+                }
+                
+        except Exception as ml_error:
+            logger.warning(f"⚠️ Enhanced ML prediction failed (non-fatal): {ml_error}")
+            signal["enhanced_ml_prediction"] = {
+                "error": str(ml_error),
+                "available_modules": {"direction": False, "speed": False, "iv": False, "theta": False, "simulator": False}
+            }
+        # ================================================================
         
         # Update signal action if trend reversal is detected
         if trend_reversal["is_reversal"] and trend_reversal["confidence"] >= 60:

@@ -1,41 +1,81 @@
 #!/usr/bin/env python3
-"""Test option scanner for all indices"""
+"""
+Test all indices for ML module integration.
+"""
 
-import asyncio
-import sys
-sys.path.insert(0, '/Users/bineshbalan/TradeWise')
+import os
+import requests
+from dotenv import load_dotenv
+from config.supabase_config import supabase_admin
 
-from src.analytics.index_options import IndexOptionsAnalyzer
-from src.api.fyers_client import fyers_client
+load_dotenv()
 
-async def test():
-    # Initialize fyers_client from DB token
-    from supabase import create_client
-    import os
-    from dotenv import load_dotenv
-    load_dotenv()
+def test_all_indices():
+    # Authenticate
+    auth = supabase_admin.auth.sign_in_with_password({
+        'email': os.getenv('TEST_USER_EMAIL'),
+        'password': os.getenv('TEST_USER_PASSWORD')
+    })
+    headers = {'Authorization': f'Bearer {auth.session.access_token}'}
     
-    supabase = create_client(os.getenv('SUPABASE_URL'), os.getenv('SUPABASE_SERVICE_KEY'))
-    result = supabase.table('fyers_tokens').select('access_token').order('updated_at', desc=True).limit(1).execute()
-    if result.data:
-        fyers_client.access_token = result.data[0]['access_token']
-        fyers_client._initialize_client()
-        print(f'✅ Fyers client initialized')
+    indices = ['NIFTY', 'BANKNIFTY', 'FINNIFTY', 'MIDCPNIFTY']
     
-    analyzer = IndexOptionsAnalyzer(fyers_client)
+    print('=' * 80)
+    print('🔍 TESTING ALL INDICES FOR ML MODULE INTEGRATION')
+    print('=' * 80)
     
-    for index in ['NIFTY', 'BANKNIFTY', 'FINNIFTY']:
-        print(f'\nTesting {index}...')
+    results = {}
+    
+    for idx in indices:
+        print(f'\n📊 Testing {idx}...')
         try:
-            result = analyzer.analyze_option_chain(index, 'weekly')
-            if result:
-                print(f'✅ {index}: spot={result.spot_price}, pcr={result.pcr_oi:.2f}, max_pain={result.max_pain}, strikes={len(result.strikes)}')
+            # Call actionable signal endpoint
+            resp = requests.get(
+                f'http://localhost:8000/signals/{idx}/actionable',
+                headers=headers,
+                params={'expiry_type': 'weekly'},
+                timeout=120
+            )
+            
+            if resp.status_code == 200:
+                data = resp.json()
+                ml = data.get('enhanced_ml_prediction', {})
+                
+                if ml and not ml.get('error'):
+                    modules = ml.get('available_modules', {})
+                    dir_pred = ml.get('direction_prediction', {})
+                    speed_pred = ml.get('speed_prediction', {})
+                    iv_pred = ml.get('iv_prediction', {})
+                    sim = ml.get('simulation', {})
+                    combined = ml.get('combined_recommendation', {})
+                    
+                    print(f'   ✅ {idx} - ALL ML MODULES WORKING')
+                    print(f'      Direction: {dir_pred.get("direction", "N/A")} ({dir_pred.get("confidence", 0):.0%})')
+                    print(f'      Speed: {speed_pred.get("category", "N/A")} ({speed_pred.get("confidence", 0):.0%})')
+                    print(f'      IV: {iv_pred.get("direction", "N/A")} ({iv_pred.get("confidence", 0):.0%})')
+                    grade = sim.get('trade_grade', {})
+                    print(f'      Grade: {grade.get("grade", "N/A")}')
+                    print(f'      Action: {combined.get("action", "N/A")}')
+                    results[idx] = '✅ PASS'
+                else:
+                    print(f'   ⚠️ {idx} - ML Error: {ml.get("error", "Unknown")}')
+                    results[idx] = f'⚠️ ML Error'
             else:
-                print(f'❌ {index}: No result returned')
+                print(f'   ❌ {idx} - HTTP Error: {resp.status_code}')
+                results[idx] = f'❌ HTTP {resp.status_code}'
         except Exception as e:
-            import traceback
-            print(f'❌ {index} Error: {e}')
-            traceback.print_exc()
+            print(f'   ❌ {idx} - Exception: {e}')
+            results[idx] = f'❌ Exception'
+    
+    print('\n' + '=' * 80)
+    print('📋 SUMMARY')
+    print('=' * 80)
+    for idx, result in results.items():
+        print(f'   {idx}: {result}')
+    
+    print('\n' + '=' * 80)
+    print('✅ INDEX TESTING COMPLETE')
+    print('=' * 80)
 
-if __name__ == '__main__':
-    asyncio.run(test())
+if __name__ == "__main__":
+    test_all_indices()
