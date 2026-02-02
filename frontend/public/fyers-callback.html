@@ -20,12 +20,10 @@
         // API Base URL - auto-detect based on environment
         const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
         // For localhost, always use port 8000 for backend
-        // For production, use the deployed backend URL
+        // For production, use Google Cloud Run backend
         const API_BASE = isLocalhost 
             ? 'http://localhost:8000' 
-            : (window.location.hostname.includes('vercel.app') || window.location.hostname.includes('stocxer'))
-                ? 'https://stocxer-ai.onrender.com'
-                : window.location.origin;
+            : 'https://stocxer-484044910258.europe-west1.run.app';
 
         async function handleCallback() {
             const message = document.getElementById('message');
