@@ -1089,10 +1089,12 @@ export default function DashboardPage() {
       }
 
       const symbol = symbolMapping[selectedIndex] || `NSE:${selectedIndex}-INDEX`
-      const signalUrl = `${apiUrl}/signals/${encodeURIComponent(symbol)}/actionable`
+      // Include expiry parameter to ensure correct expiry date is used
+      const signalUrl = `${apiUrl}/signals/${encodeURIComponent(symbol)}/actionable?expiry=${encodeURIComponent(expiry)}`
 
       console.log(`🎯 Fetching actionable signal for ${selectedIndex} -> ${symbol}`)
       console.log(`📡 Signal URL: ${signalUrl}`)
+      console.log(`📅 Using expiry: ${expiry}`)
 
       setLoadingMessage('Analyzing multi-timeframe trends...')
 

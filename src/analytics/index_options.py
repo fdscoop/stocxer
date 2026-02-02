@@ -771,7 +771,9 @@ class IndexOptionsAnalyzer:
                 try:
                     expiry_date_obj = datetime.strptime(expiry_type, "%Y-%m-%d")
                     expiry_date = expiry_type
-                    days_to_expiry = (expiry_date_obj - datetime.now()).days
+                    # Use IST timezone for proper date calculation
+                    days_to_expiry = (expiry_date_obj.date() - today).days
+                    logger.info(f"📅 Custom expiry: {expiry_date}, days_to_expiry: {days_to_expiry} (IST today: {today})")
                 except ValueError:
                     # Invalid format, fallback to weekly
                     logger.warning(f"Invalid expiry format: {expiry_type}, using weekly")

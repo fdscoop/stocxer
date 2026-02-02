@@ -3142,6 +3142,7 @@ async def get_event_calendar():
 async def get_actionable_trading_signal(
     symbol: str,
     quick_mode: bool = Query(False, description="Quick mode: skip 50-stock analysis for faster signals"),
+    expiry: str = Query("weekly", description="Expiry type: weekly, next_weekly, monthly, or date (YYYY-MM-DD)"),
     authorization: str = Header(None, description="Bearer token for authenticated access")
 ):
     """
@@ -3233,7 +3234,9 @@ async def get_actionable_trading_signal(
         index_data = None  # Store index-specific data for UI
         try:
             # Get analyzed option chain data with LTP prices (pass authorization for token loading)
-            chain_res = await get_option_chain_analysis(index_name, "weekly", authorization)
+            # Use the expiry parameter passed by the user (weekly, next_weekly, monthly, or specific date)
+            logger.info(f"📅 Using expiry: {expiry} for option chain analysis")
+            chain_res = await get_option_chain_analysis(index_name, expiry, authorization)
             chain_data = chain_res
             
             # Store index data for UI cards
