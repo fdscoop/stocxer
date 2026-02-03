@@ -2209,7 +2209,7 @@ export default function DashboardPage() {
                           {tradingSignal.enhanced_ml_prediction.direction_prediction.direction}
                         </div>
                         <div className="text-[9px] text-gray-400">
-                          {(tradingSignal.enhanced_ml_prediction.direction_prediction.confidence * 100).toFixed(0)}% conf
+                          {((tradingSignal.enhanced_ml_prediction.direction_prediction.confidence ?? 0) * 100).toFixed(0)}% conf
                         </div>
                       </div>
                     )}
@@ -2231,7 +2231,7 @@ export default function DashboardPage() {
                           {tradingSignal.enhanced_ml_prediction.speed_prediction.category}
                         </div>
                         <div className="text-[9px] text-gray-400">
-                          {tradingSignal.enhanced_ml_prediction.speed_prediction.expected_time_mins}min
+                          {tradingSignal.enhanced_ml_prediction.speed_prediction.expected_time_mins ?? 0}min
                         </div>
                       </div>
                     )}
@@ -2252,7 +2252,7 @@ export default function DashboardPage() {
                           {tradingSignal.enhanced_ml_prediction.iv_prediction.direction}
                         </div>
                         <div className="text-[9px] text-gray-400">
-                          {tradingSignal.enhanced_ml_prediction.iv_prediction.expected_change_pct > 0 ? '+' : ''}{tradingSignal.enhanced_ml_prediction.iv_prediction.expected_change_pct.toFixed(0)}%
+                          {(tradingSignal.enhanced_ml_prediction.iv_prediction.expected_change_pct ?? 0) > 0 ? '+' : ''}{(tradingSignal.enhanced_ml_prediction.iv_prediction.expected_change_pct ?? 0).toFixed(0)}%
                         </div>
                       </div>
                     )}
@@ -2260,18 +2260,18 @@ export default function DashboardPage() {
                     {/* Simulation Expected P&L */}
                     {tradingSignal.enhanced_ml_prediction.simulation && (
                       <div className={`p-2 rounded-lg border text-center ${
-                        tradingSignal.enhanced_ml_prediction.simulation.expected_pnl_pct > 10 ? 'bg-green-900/40 border-green-500/30' :
-                        tradingSignal.enhanced_ml_prediction.simulation.expected_pnl_pct > 0 ? 'bg-green-900/20 border-green-500/20' :
+                        (tradingSignal.enhanced_ml_prediction.simulation.expected_pnl_pct ?? 0) > 10 ? 'bg-green-900/40 border-green-500/30' :
+                        (tradingSignal.enhanced_ml_prediction.simulation.expected_pnl_pct ?? 0) > 0 ? 'bg-green-900/20 border-green-500/20' :
                         'bg-red-900/40 border-red-500/30'
                       }`}>
                         <div className="text-[10px] text-green-400/70">💰 Expected</div>
                         <div className={`text-sm font-bold ${
-                          tradingSignal.enhanced_ml_prediction.simulation.expected_pnl_pct > 0 ? 'text-green-400' : 'text-red-400'
+                          (tradingSignal.enhanced_ml_prediction.simulation.expected_pnl_pct ?? 0) > 0 ? 'text-green-400' : 'text-red-400'
                         }`}>
-                          {tradingSignal.enhanced_ml_prediction.simulation.expected_pnl_pct > 0 ? '+' : ''}{tradingSignal.enhanced_ml_prediction.simulation.expected_pnl_pct.toFixed(1)}%
+                          {(tradingSignal.enhanced_ml_prediction.simulation.expected_pnl_pct ?? 0) > 0 ? '+' : ''}{(tradingSignal.enhanced_ml_prediction.simulation.expected_pnl_pct ?? 0).toFixed(1)}%
                         </div>
                         <div className="text-[9px] text-gray-400">
-                          {(tradingSignal.enhanced_ml_prediction.simulation.win_probability * 100).toFixed(0)}% win
+                          {((tradingSignal.enhanced_ml_prediction.simulation.win_probability ?? 0) * 100).toFixed(0)}% win
                         </div>
                       </div>
                     )}
@@ -2308,11 +2308,11 @@ export default function DashboardPage() {
                             : '🚫 Not recommended'}
                         </span>
                         <span className="text-purple-400">
-                          SL: ₹{tradingSignal.enhanced_ml_prediction.simulation.stop_loss.toFixed(0)} | TP: ₹{tradingSignal.enhanced_ml_prediction.simulation.take_profit.toFixed(0)}
+                          SL: ₹{(tradingSignal.enhanced_ml_prediction.simulation.stop_loss ?? 0).toFixed(0)} | TP: ₹{(tradingSignal.enhanced_ml_prediction.simulation.take_profit ?? 0).toFixed(0)}
                         </span>
                       </div>
                       <div className="text-[10px] text-gray-500 mt-1">
-                        ⏱️ Max hold: {tradingSignal.enhanced_ml_prediction.simulation.max_hold_time_mins} mins | 📊 Position: {tradingSignal.enhanced_ml_prediction.simulation.position_size_pct}% of capital
+                        ⏱️ Max hold: {tradingSignal.enhanced_ml_prediction.simulation.max_hold_time_mins ?? 0} mins | 📊 Position: {tradingSignal.enhanced_ml_prediction.simulation.position_size_pct ?? 0}% of capital
                       </div>
                     </div>
                   )}
