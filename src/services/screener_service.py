@@ -582,6 +582,12 @@ class ScreenerService:
                 entry_analysis = opt.get("entry_analysis", {})
                 discount_zone = opt.get("discount_zone", {})
                 
+                # Helper to convert numpy bool to Python bool
+                def to_python_bool(val):
+                    if val is None:
+                        return None
+                    return bool(val)
+                
                 record = {
                     "id": str(uuid.uuid4()),
                     "scan_id": scan_id,
@@ -617,16 +623,16 @@ class ScreenerService:
                     "score": opt.get("score", 0),
                     "strategy_match": opt.get("strategy_match"),
                     "recommendation": opt.get("recommendation"),
-                    "probability_boost": opt.get("probability_boost", False),
-                    "sentiment_boost": opt.get("sentiment_boost", False),
-                    "sentiment_conflict": opt.get("sentiment_conflict", False),
+                    "probability_boost": to_python_bool(opt.get("probability_boost", False)),
+                    "sentiment_boost": to_python_bool(opt.get("sentiment_boost", False)),
+                    "sentiment_conflict": to_python_bool(opt.get("sentiment_conflict", False)),
                     
                     # Entry Analysis
                     "entry_grade": entry_analysis.get("entry_grade"),
                     "entry_recommendation": entry_analysis.get("entry_recommendation"),
                     "limit_order_price": entry_analysis.get("limit_order_price"),
                     "max_acceptable_price": entry_analysis.get("max_acceptable_price"),
-                    "wait_for_pullback": entry_analysis.get("wait_for_pullback"),
+                    "wait_for_pullback": to_python_bool(entry_analysis.get("wait_for_pullback")),
                     "pullback_probability": entry_analysis.get("pullback_probability"),
                     
                     # Targets
@@ -636,7 +642,7 @@ class ScreenerService:
                     
                     # Discount Zone
                     "discount_zone_type": discount_zone.get("zone_type"),
-                    "is_in_discount": discount_zone.get("is_in_discount"),
+                    "is_in_discount": to_python_bool(discount_zone.get("is_in_discount")),
                     "discount_pct": discount_zone.get("discount_pct"),
                     
                     # Rank
@@ -649,7 +655,7 @@ class ScreenerService:
                     "vix": market_data.get("vix"),
                     
                     # Recommended flag
-                    "is_recommended": is_recommended,
+                    "is_recommended": to_python_bool(is_recommended),
                     
                     "scanned_at": ist_timestamp()
                 }

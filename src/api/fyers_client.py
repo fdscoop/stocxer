@@ -15,6 +15,7 @@ import pandas as pd
 from datetime import datetime, timedelta
 import logging
 import time
+import os
 from config.settings import settings
 
 # Import rate limiter
@@ -26,6 +27,34 @@ except ImportError:
     fyers_rate_limiter = None
 
 logger = logging.getLogger(__name__)
+
+# ==================== BACKTEST MODE CONFIGURATION ====================
+# Set these environment variables to enable backtest mode:
+# BACKTEST_MODE=true
+# BACKTEST_DATE_TO=2026-02-05T10:30:00   (IST time)
+#
+# Example: export BACKTEST_MODE=true && export BACKTEST_DATE_TO=2026-02-05T10:30:00
+
+BACKTEST_MODE = os.environ.get('BACKTEST_MODE', 'false').lower() == 'true'
+BACKTEST_DATE_TO_STR = os.environ.get('BACKTEST_DATE_TO', None)
+
+def get_current_time() -> datetime:
+    """
+    Get current time, respecting backtest mode.
+    In backtest mode, returns a fixed historical time for testing.
+    """
+    if BACKTEST_MODE and BACKTEST_DATE_TO_STR:
+        try:
+            backtest_time = datetime.fromisoformat(BACKTEST_DATE_TO_STR)
+            logger.info(f"🔬 BACKTEST MODE: Using simulated time {backtest_time}")
+            return backtest_time
+        except ValueError:
+            logger.error(f"Invalid BACKTEST_DATE_TO format: {BACKTEST_DATE_TO_STR}")
+    return datetime.now()
+
+if BACKTEST_MODE:
+    logger.warning(f"⚠️ BACKTEST MODE ENABLED - Date To: {BACKTEST_DATE_TO_STR}")
+
 
 
 class FyersClient:
@@ -164,7 +193,7 @@ class FyersClient:
             raise Exception("Client not initialized")
         
         if date_to is None:
-            date_to = datetime.now()
+            date_to = get_current_time()  # Use backtest-aware time function
         if date_from is None:
             date_from = date_to - timedelta(days=365)
         
@@ -345,7 +374,7 @@ class FyersClient:
         if not self.fyers:
             raise Exception("Client not initialized")
         
-        date_to = datetime.now()
+        date_to = get_current_time()  # Use backtest-aware time function
         # Add buffer days for holidays/weekends
         date_from = date_to - timedelta(days=int(days * 1.5))
         

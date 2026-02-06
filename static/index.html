@@ -827,10 +827,13 @@
                     </div>
 
                     <!-- ⚡ BEGINNER SCALP TARGETS - Easy to understand -->
-                    <div id="beginner-scalp-targets" class="bg-gradient-to-r from-cyan-900/30 to-purple-900/30 rounded-xl p-4 border border-cyan-500/30">
-                        <h4 class="text-xs font-bold text-cyan-400 uppercase tracking-widest mb-3 flex items-center gap-2">
+                    <div id="beginner-scalp-targets"
+                        class="bg-gradient-to-r from-cyan-900/30 to-purple-900/30 rounded-xl p-4 border border-cyan-500/30">
+                        <h4
+                            class="text-xs font-bold text-cyan-400 uppercase tracking-widest mb-3 flex items-center gap-2">
                             ⚡ Quick Profit Targets
-                            <span class="text-[10px] bg-cyan-600/50 px-1.5 py-0.5 rounded normal-case">Based on current price</span>
+                            <span class="text-[10px] bg-cyan-600/50 px-1.5 py-0.5 rounded normal-case">Based on current
+                                price</span>
                         </h4>
                         <div class="grid grid-cols-3 gap-2 mb-3">
                             <div class="bg-green-900/40 rounded-lg p-3 text-center border border-green-500/30">
@@ -923,13 +926,16 @@
                     </div>
 
                     <!-- ⚡ QUICK SCALP TARGETS - 5/10/15 Point Zones -->
-                    <div id="quick-scalp-targets" class="mb-3 p-3 bg-gradient-to-r from-cyan-900/30 to-purple-900/30 rounded-xl border border-cyan-500/30">
+                    <div id="quick-scalp-targets"
+                        class="mb-3 p-3 bg-gradient-to-r from-cyan-900/30 to-purple-900/30 rounded-xl border border-cyan-500/30">
                         <div class="flex items-center justify-between mb-2">
-                            <h4 class="text-xs font-bold text-cyan-400 uppercase tracking-wider flex items-center gap-2">
+                            <h4
+                                class="text-xs font-bold text-cyan-400 uppercase tracking-wider flex items-center gap-2">
                                 ⚡ Quick Scalp Targets
                                 <span class="text-[10px] bg-cyan-600/50 px-1.5 py-0.5 rounded">INTRADAY</span>
                             </h4>
-                            <div class="text-[10px] text-gray-500">Delta: <span id="scalp-delta" class="text-cyan-300 font-mono">--</span></div>
+                            <div class="text-[10px] text-gray-500">Delta: <span id="scalp-delta"
+                                    class="text-cyan-300 font-mono">--</span></div>
                         </div>
                         <div class="grid grid-cols-3 gap-2">
                             <!-- 5 Points Target -->
@@ -1337,146 +1343,152 @@
         </div>
 
 
-<div id="option-aware-card" class="col-span-6 card rounded-xl p-4 border-2 border-purple-500/30" style="display: none;">
-    <div class="flex items-center justify-between mb-3">
-        <h3 class="font-semibold text-lg flex items-center gap-2">
-            🎯 Option-Aware ICT Signal
-            <span id="oa-signal-badge" class="text-xs bg-yellow-600 px-2 py-1 rounded">SCANNING</span>
-            <span class="text-xs bg-purple-600 px-2 py-1 rounded" title="Premium-based targets">📊 DELTA TARGETS</span>
-        </h3>
-        <div class="flex gap-2">
-            <button id="oa-refresh-btn" onclick="refreshOptionAwareSignal()"
-                class="text-blue-400 hover:text-blue-300 p-1" title="Reload signal">
-                <i data-lucide="refresh-cw" class="w-4 h-4"></i>
-            </button>
-            <span id="oa-timestamp" class="text-xs text-gray-500">--</span>
+        <div id="option-aware-card" class="col-span-6 card rounded-xl p-4 border-2 border-purple-500/30"
+            style="display: none;">
+            <div class="flex items-center justify-between mb-3">
+                <h3 class="font-semibold text-lg flex items-center gap-2">
+                    🎯 Option-Aware ICT Signal
+                    <span id="oa-signal-badge" class="text-xs bg-yellow-600 px-2 py-1 rounded">SCANNING</span>
+                    <span class="text-xs bg-purple-600 px-2 py-1 rounded" title="Premium-based targets">📊 DELTA
+                        TARGETS</span>
+                </h3>
+                <div class="flex gap-2">
+                    <button id="oa-refresh-btn" onclick="refreshOptionAwareSignal()"
+                        class="text-blue-400 hover:text-blue-300 p-1" title="Reload signal">
+                        <i data-lucide="refresh-cw" class="w-4 h-4"></i>
+                    </button>
+                    <span id="oa-timestamp" class="text-xs text-gray-500">--</span>
+                </div>
+            </div>
+
+            <div id="oa-wait-message" class="text-center py-8" style="display: none;">
+                <div class="text-4xl mb-2">⏸️</div>
+                <div class="text-lg font-semibold text-yellow-400">WAIT</div>
+                <div id="oa-wait-reason" class="text-sm text-gray-400 mt-2">No setup found</div>
+            </div>
+
+            <div id="oa-signal-details" style="display: none;">
+                <div class="grid grid-cols-3 gap-4 mb-4">
+                    <div class="bg-gray-800/50 rounded-lg p-3">
+                        <div class="text-xs text-gray-400 mb-1">Action</div>
+                        <div id="oa-signal-type" class="text-xl font-bold text-green-400">BUY CE</div>
+                        <div class="flex items-center gap-2 mt-2">
+                            <div class="text-xs text-gray-400">Confidence:</div>
+                            <div id="oa-confidence" class="text-2xl font-bold text-green-400">75%</div>
+                        </div>
+                        <div id="oa-confidence-level" class="text-xs text-gray-500">HIGH</div>
+                    </div>
+
+                    <div class="bg-gray-800/50 rounded-lg p-3">
+                        <div class="text-xs text-gray-400 mb-1">Setup Quality</div>
+                        <div id="oa-tier" class="text-xl font-bold text-blue-400">--</div>
+                        <div id="oa-setup-type" class="text-sm text-gray-300 mt-2">--</div>
+                    </div>
+
+                    <div class="bg-gray-800/50 rounded-lg p-3">
+                        <div class="text-xs text-gray-400 mb-1">Index Context</div>
+                        <div id="oa-spot-price" class="text-lg font-bold">--</div>
+                        <div class="text-xs text-gray-400 mt-1">Expected Move:</div>
+                        <div id="oa-expected-move" class="text-sm text-yellow-400">--</div>
+                    </div>
+                </div>
+
+                <div class="bg-purple-900/20 rounded-xl p-4 mb-4 border border-purple-500/30">
+                    <h4 class="text-sm font-bold text-purple-300 mb-3">📍 Specific Strike Recommendation</h4>
+
+                    <div class="grid grid-cols-2 gap-4 mb-3">
+                        <div>
+                            <div class="text-xs text-gray-400">Strike & Type</div>
+                            <div id="oa-strike" class="text-2xl font-bold text-white">--</div>
+                        </div>
+                        <div>
+                            <div class="text-xs text-gray-400">Entry Price (LTP)</div>
+                            <div id="oa-entry-price" class="text-2xl font-bold text-green-400">--</div>
+                        </div>
+                    </div>
+
+                    <div class="text-xs text-gray-500 mb-2">Trading Symbol:</div>
+                    <div id="oa-symbol" class="text-xs font-mono bg-gray-800 px-2 py-1 rounded">NSE:NIFTY26203254 00CE
+                    </div>
+
+                    <div class="grid grid-cols-4 gap-3 mt-4 text-center">
+                        <div class="bg-gray-800/50 rounded p-2">
+                            <div class="text-xs text-gray-400">Delta</div>
+                            <div id="oa-delta" class="text-sm font-bold text-blue-300">--</div>
+                        </div>
+                        <div class="bg-gray-800/50 rounded p-2">
+                            <div class="text-xs text-gray-400">Gamma</div>
+                            <div id="oa-gamma" class="text-sm font-bold text-purple-300">--</div>
+                        </div>
+                        <div class="bg-gray-800/50 rounded p-2">
+                            <div class="text-xs text-gray-400">Theta</div>
+                            <div id="oa-theta" class="text-sm font-bold text-red-300">--</div>
+                        </div>
+                        <div class="bg-gray-800/50 rounded p-2">
+                            <div class="text-xs text-gray-400">IV</div>
+                            <div id="oa-iv" class="text-sm font-bold text-yellow-300">--</div>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-3 mt-3">
+                        <div class="bg-gray-800/50 rounded p-2 text-center">
+                            <div class="text-xs text-gray-400">Volume</div>
+                            <div id="oa-volume" class="text-sm font-bold">--</div>
+                        </div>
+                        <div class="bg-gray-800/50 rounded p-2 text-center">
+                            <div class="text-xs text-gray-400">Open Interest</div>
+                            <div id="oa-oi" class="text-sm font-bold">--</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-blue-900/20 rounded-xl p-4 mb-4 border border-blue-500/30">
+                    <h4 class="text-sm font-bold text-blue-300 mb-3">🎯 Premium Targets (Delta-Based)</h4>
+
+                    <div class="space-y-2">
+                        <div
+                            class="flex justify-between items-center bg-green-900/30 rounded p-2 border border-green-500/30">
+                            <span class="text-xs text-gray-300">Target 1</span>
+                            <span id="oa-target1" class="font-bold text-green-400">--</span>
+                        </div>
+                        <div
+                            class="flex justify-between items-center bg-green-900/30 rounded p-2 border border-green-500/30">
+                            <span class="text-xs text-gray-300">Target 2</span>
+                            <span id="oa-target2" class="font-bold text-green-400">--</span>
+                        </div>
+                        <div
+                            class="flex justify-between items-center bg-red-900/30 rounded p-2 border border-red-500/30">
+                            <span class="text-xs text-gray-300">Stop Loss</span>
+                            <span id="oa-stoploss" class="font-bold text-red-400">--</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-yellow-900/20 rounded-xl p-4 border border-yellow-500/30">
+                    <h4 class="text-sm font-bold text-yellow-300 mb-3">💰 Risk/Reward Per Lot</h4>
+
+                    <div class="grid grid-cols-3 gap-3">
+                        <div class="text-center">
+                            <div class="text-xs text-gray-400 mb-1">Risk</div>
+                            <div id="oa-risk" class="text-lg font-bold text-red-400">--</div>
+                        </div>
+                        <div class="text-center">
+                            <div class="text-xs text-gray-400 mb-1">Reward (T1)</div>
+                            <div id="oa-reward1" class="text-lg font-bold text-green-400">--</div>
+                        </div>
+                        <div class="text-center">
+                            <div class="text-xs text-gray-400 mb-1">Reward (T2)</div>
+                            <div id="oa-reward2" class="text-lg font-bold text-green-400">--</div>
+                        </div>
+                    </div>
+
+                    <div class="mt-3 pt-3 border-t border-yellow-500/30 text-center">
+                        <span class="text-xs text-gray-400">Lot Size: </span>
+                        <span id="oa-lot-size" class="text-sm font-bold text-white">--</span>
+                    </div>
+                </div>
+            </div>
         </div>
-    </div>
-
-    <div id="oa-wait-message" class="text-center py-8" style="display: none;">
-        <div class="text-4xl mb-2">⏸️</div>
-        <div class="text-lg font-semibold text-yellow-400">WAIT</div>
-        <div id="oa-wait-reason" class="text-sm text-gray-400 mt-2">No setup found</div>
-    </div>
-
-    <div id="oa-signal-details" style="display: none;">
-        <div class="grid grid-cols-3 gap-4 mb-4">
-            <div class="bg-gray-800/50 rounded-lg p-3">
-                <div class="text-xs text-gray-400 mb-1">Action</div>
-                <div id="oa-signal-type" class="text-xl font-bold text-green-400">BUY CE</div>
-                <div class="flex items-center gap-2 mt-2">
-                    <div class="text-xs text-gray-400">Confidence:</div>
-                    <div id="oa-confidence" class="text-2xl font-bold text-green-400">75%</div>
-                </div>
-                <div id="oa-confidence-level" class="text-xs text-gray-500">HIGH</div>
-            </div>
-
-            <div class="bg-gray-800/50 rounded-lg p-3">
-                <div class="text-xs text-gray-400 mb-1">Setup Quality</div>
-                <div id="oa-tier" class="text-xl font-bold text-blue-400">--</div>
-                <div id="oa-setup-type" class="text-sm text-gray-300 mt-2">--</div>
-            </div>
-
-            <div class="bg-gray-800/50 rounded-lg p-3">
-                <div class="text-xs text-gray-400 mb-1">Index Context</div>
-                <div id="oa-spot-price" class="text-lg font-bold">--</div>
-                <div class="text-xs text-gray-400 mt-1">Expected Move:</div>
-                <div id="oa-expected-move" class="text-sm text-yellow-400">--</div>
-            </div>
-        </div>
-
-        <div class="bg-purple-900/20 rounded-xl p-4 mb-4 border border-purple-500/30">
-            <h4 class="text-sm font-bold text-purple-300 mb-3">📍 Specific Strike Recommendation</h4>
-
-            <div class="grid grid-cols-2 gap-4 mb-3">
-                <div>
-                    <div class="text-xs text-gray-400">Strike & Type</div>
-                    <div id="oa-strike" class="text-2xl font-bold text-white">--</div>
-                </div>
-                <div>
-                    <div class="text-xs text-gray-400">Entry Price (LTP)</div>
-                    <div id="oa-entry-price" class="text-2xl font-bold text-green-400">--</div>
-                </div>
-            </div>
-
-            <div class="text-xs text-gray-500 mb-2">Trading Symbol:</div>
-            <div id="oa-symbol" class="text-xs font-mono bg-gray-800 px-2 py-1 rounded">NSE:NIFTY26203254 00CE</div>
-
-            <div class="grid grid-cols-4 gap-3 mt-4 text-center">
-                <div class="bg-gray-800/50 rounded p-2">
-                    <div class="text-xs text-gray-400">Delta</div>
-                    <div id="oa-delta" class="text-sm font-bold text-blue-300">--</div>
-                </div>
-                <div class="bg-gray-800/50 rounded p-2">
-                    <div class="text-xs text-gray-400">Gamma</div>
-                    <div id="oa-gamma" class="text-sm font-bold text-purple-300">--</div>
-                </div>
-                <div class="bg-gray-800/50 rounded p-2">
-                    <div class="text-xs text-gray-400">Theta</div>
-                    <div id="oa-theta" class="text-sm font-bold text-red-300">--</div>
-                </div>
-                <div class="bg-gray-800/50 rounded p-2">
-                    <div class="text-xs text-gray-400">IV</div>
-                    <div id="oa-iv" class="text-sm font-bold text-yellow-300">--</div>
-                </div>
-            </div>
-
-            <div class="grid grid-cols-2 gap-3 mt-3">
-                <div class="bg-gray-800/50 rounded p-2 text-center">
-                    <div class="text-xs text-gray-400">Volume</div>
-                    <div id="oa-volume" class="text-sm font-bold">--</div>
-                </div>
-                <div class="bg-gray-800/50 rounded p-2 text-center">
-                    <div class="text-xs text-gray-400">Open Interest</div>
-                    <div id="oa-oi" class="text-sm font-bold">--</div>
-                </div>
-            </div>
-        </div>
-
-        <div class="bg-blue-900/20 rounded-xl p-4 mb-4 border border-blue-500/30">
-            <h4 class="text-sm font-bold text-blue-300 mb-3">🎯 Premium Targets (Delta-Based)</h4>
-
-            <div class="space-y-2">
-                <div class="flex justify-between items-center bg-green-900/30 rounded p-2 border border-green-500/30">
-                    <span class="text-xs text-gray-300">Target 1</span>
-                    <span id="oa-target1" class="font-bold text-green-400">--</span>
-                </div>
-                <div class="flex justify-between items-center bg-green-900/30 rounded p-2 border border-green-500/30">
-                    <span class="text-xs text-gray-300">Target 2</span>
-                    <span id="oa-target2" class="font-bold text-green-400">--</span>
-                </div>
-                <div class="flex justify-between items-center bg-red-900/30 rounded p-2 border border-red-500/30">
-                    <span class="text-xs text-gray-300">Stop Loss</span>
-                    <span id="oa-stoploss" class="font-bold text-red-400">--</span>
-                </div>
-            </div>
-        </div>
-
-        <div class="bg-yellow-900/20 rounded-xl p-4 border border-yellow-500/30">
-            <h4 class="text-sm font-bold text-yellow-300 mb-3">💰 Risk/Reward Per Lot</h4>
-
-            <div class="grid grid-cols-3 gap-3">
-                <div class="text-center">
-                    <div class="text-xs text-gray-400 mb-1">Risk</div>
-                    <div id="oa-risk" class="text-lg font-bold text-red-400">--</div>
-                </div>
-                <div class="text-center">
-                    <div class="text-xs text-gray-400 mb-1">Reward (T1)</div>
-                    <div id="oa-reward1" class="text-lg font-bold text-green-400">--</div>
-                </div>
-                <div class="text-center">
-                    <div class="text-xs text-gray-400 mb-1">Reward (T2)</div>
-                    <div id="oa-reward2" class="text-lg font-bold text-green-400">--</div>
-                </div>
-            </div>
-
-            <div class="mt-3 pt-3 border-t border-yellow-500/30 text-center">
-                <span class="text-xs text-gray-400">Lot Size: </span>
-                <span id="oa-lot-size" class="text-sm font-bold text-white">--</span>
-            </div>
-        </div>
-    </div>
-</div>
 
         <!-- Quick Action Buttons -->
         <div class="grid grid-cols-4 gap-4">
@@ -3055,10 +3067,10 @@
         // Uses backend scalp_feasibility data when available, otherwise calculates from delta
         function updateScalpTargets(signal) {
             console.log('🎯 updateScalpTargets called with signal:', signal);
-            
+
             const scalpContainer = document.getElementById('quick-scalp-targets');
             const beginnerScalpContainer = document.getElementById('beginner-scalp-targets');
-            
+
             if (!scalpContainer) {
                 console.log('❌ scalp container not found');
                 return;
@@ -3092,7 +3104,7 @@
 
             // Use backend data if available, otherwise calculate
             let target5, target10, target15, stopLoss, indexMove5, indexMove10, indexMove15;
-            
+
             if (scalp && scalp.targets) {
                 console.log('🎯 Using backend scalp data');
                 target5 = scalp.targets.target_5;
@@ -3113,9 +3125,9 @@
                 indexMove10 = Math.round(10 / absDelta);
                 indexMove15 = Math.round(15 / absDelta);
             }
-            
+
             console.log('📈 Scalp targets calculated:', { target5, target10, target15, stopLoss });
-            
+
             // Update target displays
             document.getElementById('scalp-target-5').textContent = `₹${target5.toFixed(1)}`;
             document.getElementById('scalp-move-5').textContent = `~${indexMove5} idx pts`;
@@ -3137,7 +3149,7 @@
             if (scalpHeader && scalp) {
                 const riskLevel = scalp.risk_level || 'MEDIUM';
                 const feasible = scalp.feasible;
-                
+
                 // Update the header badge based on risk level
                 let riskBadge = scalpContainer.querySelector('.scalp-risk-badge');
                 if (!riskBadge) {
@@ -3145,7 +3157,7 @@
                     riskBadge.className = 'scalp-risk-badge text-[10px] px-1.5 py-0.5 rounded ml-2';
                     scalpHeader.appendChild(riskBadge);
                 }
-                
+
                 if (!feasible || riskLevel === 'EXTREME') {
                     riskBadge.textContent = '⛔ HIGH RISK';
                     riskBadge.className = 'scalp-risk-badge text-[10px] px-1.5 py-0.5 rounded ml-2 bg-red-600/80';
@@ -3162,18 +3174,18 @@
                     scalpContainer.classList.add('border-cyan-500/30');
                     scalpContainer.classList.remove('border-yellow-500/50', 'border-red-500/50');
                 }
-                
+
                 // Add theta warning if high
                 const thetaWarning = scalp.theta_impact;
                 if (thetaWarning && thetaWarning.per_hour > 1.5) {
                     const perLotEl = document.getElementById('scalp-per-lot');
                     if (perLotEl) {
-                        perLotEl.parentElement.innerHTML = 
+                        perLotEl.parentElement.innerHTML =
                             `<span>Per Lot: <span id="scalp-per-lot" class="text-cyan-300">₹${minProfit} to ₹${maxProfit}</span></span>` +
                             `<span class="text-red-400 ml-2">⏱️ θ: -₹${thetaWarning.per_hour.toFixed(1)}/hr</span>`;
                     }
                 }
-                
+
                 console.log(`⚡ Scalp Feasibility: ${feasible ? 'VIABLE' : 'AVOID'} (${riskLevel})`);
                 console.log(`   Recommendation: ${scalp.recommendation}`);
                 console.log(`   Time Window: ${scalp.time_window}`);
@@ -3189,7 +3201,7 @@
             if (beginnerTarget10) beginnerTarget10.textContent = `₹${target10.toFixed(1)}`;
             if (beginnerTarget15) beginnerTarget15.textContent = `₹${target15.toFixed(1)}`;
             if (beginnerSL) beginnerSL.textContent = `₹${stopLoss.toFixed(1)}`;
-            
+
             // Update beginner view with feasibility indicator
             if (beginnerScalpContainer && scalp) {
                 const beginnerHeader = beginnerScalpContainer.querySelector('h4');
@@ -3200,7 +3212,7 @@
                         feasibilityText.className = 'feasibility-text text-[10px] px-1.5 py-0.5 rounded normal-case ml-2';
                         beginnerHeader.appendChild(feasibilityText);
                     }
-                    
+
                     if (!scalp.feasible || scalp.risk_level === 'EXTREME') {
                         feasibilityText.textContent = '⛔ Not recommended now';
                         feasibilityText.className = 'feasibility-text text-[10px] px-1.5 py-0.5 rounded normal-case ml-2 bg-red-600/50';
@@ -5338,8 +5350,9 @@
             // Update data source badge
             const dataBadge = document.getElementById('data-source-badge');
             if (scanData) {
-                dataBadge.textContent = scanData.data_source === 'live' ? '🟢 Live Data' : '🟡 Demo Data';
-                dataBadge.className = `text-xs px-2 py-1 rounded ${scanData.data_source === 'live' ? 'bg-green-900 text-green-400' : 'bg-yellow-900 text-yellow-400'}`;
+                // Always show live data status when authenticated
+                dataBadge.textContent = scanData.data_source === 'live' ? '🟢 Live Data' : '🔄 Checking...';
+                dataBadge.className = `text-xs px-2 py-1 rounded ${scanData.data_source === 'live' ? 'bg-green-900 text-green-400' : 'bg-gray-900 text-gray-400'}`;
             }
 
             tbody.innerHTML = options.map(option => `

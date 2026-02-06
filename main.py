@@ -2124,6 +2124,11 @@ async def get_option_aware_signal(
         
         logger.info(f"📅 Days to expiry: {dte}")
         
+        # Cache context for ICT-based option type selection
+        option_aware_ict.cached_candles = candles_by_timeframe
+        option_aware_ict.cached_htf_bias = None  # Not available in this flow
+        option_aware_ict.cached_probability = None  # Not available in this flow
+        
         # Generate option-aware signal
         signal = await option_aware_ict.generate_option_signal(
             index=symbol,
@@ -4780,8 +4785,20 @@ def _generate_actionable_signal_topdown(mtf_result, session_info, chain_data, hi
     htf_bias = topdown_result['htf_bias']
     ltf_entry = topdown_result['ltf_entry']
     
+    # CRITICAL FIX: Use MTF overall_bias as the source of truth for direction
+    # The topdown analysis may calculate neutral when MTF shows clear bias
+    mtf_overall_bias = mtf_result.overall_bias  # This is the authoritative bias
+    
+    # Override HTF direction with MTF overall_bias if they conflict
+    if htf_bias.overall_direction != mtf_overall_bias:
+        logger.warning(f"   ⚠️ HTF/MTF BIAS MISMATCH DETECTED:")
+        logger.warning(f"      HTF Topdown: {htf_bias.overall_direction}")
+        logger.warning(f"      MTF Overall: {mtf_overall_bias}")
+        logger.warning(f"      🔧 OVERRIDING with MTF bias (source of truth)")
+        htf_bias.overall_direction = mtf_overall_bias  # Use MTF as source of truth
+    
     logger.info(f"\n   ✅ HTF BIAS:")
-    logger.info(f"      Direction: {htf_bias.overall_direction.upper()}")
+    logger.info(f"      Direction: {htf_bias.overall_direction.upper()} (from MTF)")
     logger.info(f"      Strength: {htf_bias.bias_strength:.1f}/100")
     logger.info(f"      Structure: {htf_bias.structure_quality}")
     logger.info(f"      Premium/Discount: {htf_bias.premium_discount.upper()}")
@@ -4809,6 +4826,17 @@ def _generate_actionable_signal_topdown(mtf_result, session_info, chain_data, hi
     
     # ==================== PHASE 3: CONFIRMATION STACK ====================
     logger.info("\n🔍 Phase 3: Confirmation Stack (ML + Candlesticks + Futures)")
+    
+    # CRITICAL: Cache HTF bias and probability for option type selection
+    if option_aware_ict:
+        option_aware_ict.cached_candles = candles_by_timeframe
+        option_aware_ict.cached_htf_bias = {
+            'overall_direction': htf_bias.overall_direction,
+            'bias_strength': htf_bias.bias_strength,
+            'structure_quality': htf_bias.structure_quality
+        }
+        option_aware_ict.cached_probability = probability_analysis
+        logger.info("   ✅ Cached HTF bias + probability for option type selection")
     
     # 3.1: ML Prediction (15% weight - CONFIRMATION ONLY)
     ml_signal = None
@@ -4921,31 +4949,37 @@ def _generate_actionable_signal_topdown(mtf_result, session_info, chain_data, hi
             logger.info(f"      Price at DISCOUNT in bullish market")
             logger.info(f"      LTF entry model confirms reversal setup")
     
-    # Determine option type and strike
-    if trade_direction == 'bullish':
-        option_type = 'call'
-        action = "BUY CALL"
-        
-        # Select strike based on setup quality
-        if ltf_entry and ltf_entry.confidence > 0.6:
-            target_delta = 0.50  # ATM for strong setups
-        elif htf_bias.bias_strength > 60:
-            target_delta = 0.45  # Slightly OTM for strong HTF
-        else:
-            target_delta = 0.40  # OTM for weaker setups
+    # ==================== CRITICAL FIX: ICT-BASED OPTION TYPE SELECTION ====================
+    # Use ICT key levels, HTF bias, and ML confirmation to determine option type
+    logger.info(f"\n🎯 Determining Option Type (ICT-Based):")
+    logger.info(f"   Trade Direction (HTF): {trade_direction}")
+    
+    # Use option_aware_ict to determine option type if available
+    if option_aware_ict:
+        direction = "BUY" if trade_direction == "bullish" else "SELL" if trade_direction == "bearish" else "WAIT"
+        ict_option_type = option_aware_ict._determine_option_type_from_ict(
+            direction=direction,
+            spot_price=spot_price
+        )
+        option_type = 'call' if ict_option_type == 'CE' else 'put'
+        logger.info(f"   ✅ ICT-Based Option Type: {ict_option_type} ({option_type})")
+    else:
+        logger.warning(f"   ⚠️ option_aware_ict not available, using fallback logic")
+        option_type = 'call' if trade_direction == 'bullish' else 'put' if trade_direction == 'bearish' else 'call'
+    
+    action = f"BUY {'CALL' if option_type == 'call' else 'PUT'}"
+    logger.info(f"   Action: {action}")
+    
+    # Select strike based on setup quality
+    if ltf_entry and ltf_entry.confidence > 0.6:
+        target_delta = 0.50  # ATM for strong setups
+    elif htf_bias.bias_strength > 60:
+        target_delta = 0.45  # Slightly OTM for strong HTF
+    else:
+        target_delta = 0.40  # OTM for weaker setups
             
-    elif trade_direction == 'bearish':
-        option_type = 'put'
-        action = "BUY PUT"
-        
-        if ltf_entry and ltf_entry.confidence > 0.6:
-            target_delta = 0.50
-        elif htf_bias.bias_strength > 60:
-            target_delta = 0.45
-        else:
-            target_delta = 0.40
-            
-    else:  # neutral
+    # Handle neutral trade direction (override if strong evidence exists)
+    if trade_direction == 'neutral':
         # CRITICAL FIX: Override neutral when evidence is overwhelming
         # Check if we have strong HTF bias + trend reversal + constituent confirmation
         if probability_analysis and not probability_analysis.get('error'):
@@ -4959,7 +4993,15 @@ def _generate_actionable_signal_topdown(mtf_result, session_info, chain_data, hi
                 logger.info("🚨 OVERRIDE: Overwhelming bearish evidence despite neutral HTF")
                 logger.info(f"   Constituent: {probability_analysis.get('bearish_pct')}% bearish stocks")
                 trade_direction = 'bearish'
-                option_type = 'put'
+                # Re-run ICT option selection with new direction
+                if option_aware_ict:
+                    ict_option_type = option_aware_ict._determine_option_type_from_ict(
+                        direction="SELL",
+                        spot_price=spot_price
+                    )
+                    option_type = 'call' if ict_option_type == 'CE' else 'put'
+                else:
+                    option_type = 'put'
                 action = "BUY PUT (OVERRIDE)"
                 target_delta = 0.40
             # Check for overwhelming bullish evidence
@@ -4969,15 +5011,23 @@ def _generate_actionable_signal_topdown(mtf_result, session_info, chain_data, hi
                 logger.info("🚨 OVERRIDE: Overwhelming bullish evidence despite neutral HTF")
                 logger.info(f"   Constituent: {probability_analysis.get('bullish_pct')}% bullish stocks")
                 trade_direction = 'bullish'
-                option_type = 'call'
+                # Re-run ICT option selection with new direction
+                if option_aware_ict:
+                    ict_option_type = option_aware_ict._determine_option_type_from_ict(
+                        direction="BUY",
+                        spot_price=spot_price
+                    )
+                    option_type = 'call' if ict_option_type == 'CE' else 'put'
+                else:
+                    option_type = 'call'
                 action = "BUY CALL (OVERRIDE)"
                 target_delta = 0.40
             else:
-                option_type = 'call'  # Default to call in neutral
+                # No strong override - keep neutral
                 action = "WAIT"
                 target_delta = 0.40
         else:
-            option_type = 'call'  # Default to call in neutral
+            # No probability analysis - keep neutral
             action = "WAIT"
             target_delta = 0.40
     

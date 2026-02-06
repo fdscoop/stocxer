@@ -37,6 +37,11 @@ class OptionAwarePracticalICT:
             fyers_client: Your Fyers client for fetching option chain
         """
         self.fyers = fyers_client
+        
+        # Cache for ICT-based option type selection
+        self.cached_candles = None
+        self.cached_htf_bias = None
+        self.cached_probability = None
     
     async def generate_option_signal(
         self,
@@ -350,7 +355,14 @@ class OptionAwarePracticalICT:
         4. Premium range (₹50-300 for affordability)
         """
         
-        option_type = 'CE' if direction == 'BUY' else 'PE'
+        # CRITICAL FIX: Determine option type based on ICT levels + HTF bias + ML
+        # Instead of simple: 'CE' if direction == 'BUY' else 'PE'
+        option_type = self._determine_option_type_from_ict(
+            direction=direction,
+            spot_price=spot_price
+        )
+        
+        logger.info(f"📊 Option Type Selected: {option_type} (based on ICT + HTF + ML)")
         
         # Filter options
         candidates = [
@@ -558,6 +570,131 @@ class OptionAwarePracticalICT:
             'lot_size': lot_size,
             'timestamp': datetime.now().isoformat()
         }
+    
+    
+    # ==================== ICT-BASED OPTION TYPE SELECTION ====================
+    
+    def _determine_option_type_from_ict(
+        self,
+        direction: str,
+        spot_price: float
+    ) -> str:
+        """
+        Determine CE or PE based on ICT levels, HTF bias, and ML confirmation
+        
+        Priority:
+        1. ICT key levels (resistance → PE, support → CE)
+        2. HTF bias (bearish → PE, bullish → CE)
+        3. ML confirmation (bearish stocks → PE, bullish stocks → CE)
+        4. Fallback to direction
+        
+        Returns:
+            'CE' for Call options, 'PE' for Put options
+        """
+        
+        logger.info("🎯 Determining Option Type (ICT + HTF + ML):")
+        
+        # Step 1: Check ICT key levels (highest priority)
+        if self.cached_candles:
+            tf_1h = self.cached_candles.get('60')
+            tf_4h = self.cached_candles.get('240')
+            
+            if tf_1h is not None:
+                # Find nearest resistance/support zones
+                resistance_zones = self._find_resistance_zones(tf_1h, tf_4h, spot_price)
+                support_zones = self._find_support_zones(tf_1h, tf_4h, spot_price)
+                
+                # Check if price is at resistance (within 0.3%)
+                at_resistance = any(
+                    abs(spot_price - zone) / spot_price < 0.003 
+                    for zone in resistance_zones
+                )
+                
+                # Check if price is at support (within 0.3%)
+                at_support = any(
+                    abs(spot_price - zone) / spot_price < 0.003 
+                    for zone in support_zones
+                )
+                
+                if at_resistance:
+                    logger.info(f"   🔴 Price at RESISTANCE ({resistance_zones[0]:.2f}) → PE (Put)")
+                    return 'PE'
+                elif at_support:
+                    logger.info(f"   🟢 Price at SUPPORT ({support_zones[0]:.2f}) → CE (Call)")
+                    return 'CE'
+        
+        # Step 2: Use HTF bias (second priority) - CRITICAL FIX: Lowered threshold to >=30
+        if self.cached_htf_bias:
+            htf_direction = self.cached_htf_bias.get('overall_direction', 'neutral')
+            htf_strength = self.cached_htf_bias.get('bias_strength', 0)
+            
+            # FIXED: Lowered threshold from >60 to >=30 to use HTF bias more often
+            if htf_direction == 'bearish' and htf_strength >= 30:
+                logger.info(f"   📉 HTF BEARISH (strength: {htf_strength:.0f}) → PE (Put)")
+                return 'PE'
+            elif htf_direction == 'bullish' and htf_strength >= 30:
+                logger.info(f"   📈 HTF BULLISH (strength: {htf_strength:.0f}) → CE (Call)")
+                return 'CE'
+        
+        # Step 3: Direction-based fallback (REMOVED ML override - it was conflicting with HTF)
+        # When HTF is neutral/weak, use the direction passed from the caller
+        fallback_type = 'CE' if direction == 'BUY' else 'PE'
+        logger.info(f"   ⚠️ Using direction fallback: {direction} → {fallback_type}")
+        return fallback_type
+    
+    def _find_resistance_zones(self, tf_1h, tf_4h, current_price):
+        """Find ICT resistance zones (bearish OBs, bearish FVGs, swing highs)"""
+        zones = []
+        
+        # Bearish Order Blocks from 1H
+        obs = self._find_order_blocks(tf_1h, 25)
+        for ob in obs:
+            if ob['type'] == 'bearish' and ob['high'] >= current_price * 0.995:
+                zones.append(ob['high'])
+        
+        # Bearish FVGs from 1H
+        fvgs = self._find_fvgs(tf_1h, 20)
+        for fvg in fvgs:
+            if fvg['type'] == 'bearish' and fvg['low'] >= current_price * 0.995:
+                zones.append(fvg['low'])
+        
+        # Swing highs from 4H
+        if tf_4h is not None and len(tf_4h) > 20:
+            recent_highs = tf_4h['high'].tail(20).nlargest(3)
+            for high in recent_highs:
+                if high >= current_price * 0.995:
+                    zones.append(high)
+        
+        # Return top 5 nearest zones above current price
+        unique_zones = sorted(set(zones))
+        return [z for z in unique_zones if z >= current_price][:5]
+    
+    def _find_support_zones(self, tf_1h, tf_4h, current_price):
+        """Find ICT support zones (bullish OBs, bullish FVGs, swing lows)"""
+        zones = []
+        
+        # Bullish Order Blocks from 1H
+        obs = self._find_order_blocks(tf_1h, 25)
+        for ob in obs:
+            if ob['type'] == 'bullish' and ob['low'] <= current_price * 1.005:
+                zones.append(ob['low'])
+        
+        # Bullish FVGs from 1H
+        fvgs = self._find_fvgs(tf_1h, 20)
+        for fvg in fvgs:
+            if fvg['type'] == 'bullish' and fvg['high'] <= current_price * 1.005:
+                zones.append(fvg['high'])
+        
+        # Swing lows from 4H
+        if tf_4h is not None and len(tf_4h) > 20:
+            recent_lows = tf_4h['low'].tail(20).nsmallest(3)
+            for low in recent_lows:
+                if low <= current_price * 1.005:
+                    zones.append(low)
+        
+        # Return top 5 nearest zones below current price
+        unique_zones = sorted(set(zones), reverse=True)
+        return [z for z in unique_zones if z <= current_price][:5]
     
     # ==================== HELPERS ====================
     
