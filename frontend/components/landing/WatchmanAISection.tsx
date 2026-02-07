@@ -1,37 +1,37 @@
 'use client'
 
-import { TrendingUp, Activity, BarChart2, Calculator, Newspaper, Target } from 'lucide-react'
+import { TrendingUp, Activity, BarChart2, Calculator, Newspaper, Target, Layers, Zap } from 'lucide-react'
 
 const capabilities = [
     {
-        icon: TrendingUp,
-        title: 'Price Action Analysis',
-        description: 'Detects ICT patterns: Order Blocks, FVG, BOS/CHoCH',
+        icon: Layers,
+        title: 'Multi-Timeframe ICT Top-Down',
+        description: '6 timeframes: Monthly → Weekly → Daily → 4H → 1H → 15min',
     },
     {
         icon: Activity,
-        title: 'Momentum Evaluation',
-        description: 'Measures trend strength across multiple timeframes',
+        title: 'AMD Phase Detection',
+        description: 'Accumulation, Manipulation & Distribution with bear/bull trap alerts',
     },
     {
         icon: BarChart2,
-        title: 'Volatility Assessment',
-        description: 'Tracks India VIX and instrument-specific volatility',
+        title: 'ML Ensemble Predictions',
+        description: 'Direction, speed, IV & volatility models with trade grades',
     },
     {
         icon: Calculator,
-        title: 'Options Greeks',
-        description: 'Delta, Gamma, Theta, Vega, Rho calculations',
+        title: 'P&L Simulation Engine',
+        description: '5 scenarios × 5 time horizons with full Greek decomposition',
     },
     {
-        icon: Newspaper,
-        title: 'News Sentiment',
-        description: 'Real-time bullish/bearish/neutral scoring',
+        icon: Zap,
+        title: 'Scalp Feasibility Analyzer',
+        description: 'Per-lot P&L, index move requirements & theta impact per minute',
     },
     {
         icon: Target,
-        title: 'Risk Analysis',
-        description: 'Educational position sizing calculators',
+        title: 'Confidence Stack',
+        description: 'Weighted scoring: ICT + ML + Candlestick + Futures + Constituents',
     },
 ]
 
@@ -95,14 +95,15 @@ export default function WatchmanAISection() {
                         <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold mb-6">
                             <span className="text-white">Powered by </span>
                             <span className="bg-gradient-to-r from-purple-400 via-pink-400 to-cyan-400 bg-clip-text text-transparent">
-                                Watchman AI v3.5
+                                Watchman AI v4.0
                             </span>
                         </h2>
 
                         {/* Description */}
                         <p className="text-lg text-gray-400 mb-8 leading-relaxed">
-                            Watchman AI is Stocxer&apos;s proprietary analysis engine. It combines multiple analytical 
-                            methods to generate probability-based data patterns for research and informational purposes.
+                            Watchman AI is Stocxer&apos;s proprietary analysis engine. v4.0 introduces ICT Top-Down 
+                            multi-timeframe analysis, AMD phase detection, ML trade grading (A–F), full P&L simulation 
+                            with theta scenarios, and a weighted confidence stack — all in one scan.
                         </p>
 
                         {/* Important Note */}
@@ -147,7 +148,7 @@ export default function WatchmanAISection() {
                             {/* Center Core */}
                             <div className="absolute inset-24 rounded-full bg-gradient-to-br from-purple-600 to-blue-600 flex items-center justify-center shadow-lg shadow-purple-500/30">
                                 <div className="text-center">
-                                    <div className="text-4xl font-bold text-white">v3.5</div>
+                                    <div className="text-4xl font-bold text-white">v4.0</div>
                                     <div className="text-sm text-purple-200">Watchman AI</div>
                                 </div>
                             </div>

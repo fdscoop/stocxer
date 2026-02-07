@@ -1,0 +1,3911 @@
+{
+  "scan_data": {
+    "status": "success",
+    "scan_time": "2026-02-02T22:53:57.385564",
+    "scan_id": "69e35bda-3279-4afa-9888-cae9ce017a5a",
+    "index": "NIFTY",
+    "expiry": "weekly",
+    "filters": {
+      "min_volume": 1000,
+      "min_oi": 10000,
+      "strategy": "all"
+    },
+    "scan_mode": "full",
+    "scan_performance": {
+      "quick_scan": false,
+      "stocks_analyzed": 50,
+      "estimated_api_calls": "100-150",
+      "estimated_time": "3-5 minutes"
+    },
+    "market_data": {
+      "spot_price": 25088.4,
+      "atm_strike": 25100,
+      "vix": 13.87,
+      "expiry_date": "2026-02-10",
+      "days_to_expiry": 7,
+      "future_price": 25149.6,
+      "pcr_oi": 0.87
+    },
+    "probability_analysis": {
+      "stocks_scanned": 50,
+      "total_stocks": 50,
+      "expected_direction": "BEARISH",
+      "constituent_direction": "BEARISH",
+      "mtf_bias": "bearish",
+      "mtf_override": false,
+      "expected_move_pct": -0.48,
+      "confidence": 0.295,
+      "probability_up": 0.223,
+      "probability_down": 0.715,
+      "bullish_stocks": 15,
+      "bearish_stocks": 32,
+      "bullish_pct": 30.0,
+      "bearish_pct": 64.0,
+      "recommended_option_type": "PUT",
+      "market_regime": "Range Bound",
+      "top_bullish_stocks": [
+        {
+          "symbol": "NTPC",
+          "probability": 1.0,
+          "expected_move": 1.8
+        },
+        {
+          "symbol": "TMPV",
+          "probability": 1.0,
+          "expected_move": 1.8
+        },
+        {
+          "symbol": "BPCL",
+          "probability": 1.0,
+          "expected_move": 1.8
+        },
+        {
+          "symbol": "ULTRACEMCO",
+          "probability": 0.72,
+          "expected_move": 1.8
+        },
+        {
+          "symbol": "POWERGRID",
+          "probability": 0.69,
+          "expected_move": 1.8
+        }
+      ],
+      "top_bearish_stocks": [
+        {
+          "symbol": "GRASIM",
+          "probability": 1.0,
+          "expected_move": -1.8
+        },
+        {
+          "symbol": "ICICIBANK",
+          "probability": 0.72,
+          "expected_move": -1.8
+        },
+        {
+          "symbol": "BAJFINANCE",
+          "probability": 0.72,
+          "expected_move": -1.8
+        },
+        {
+          "symbol": "KOTAKBANK",
+          "probability": 0.72,
+          "expected_move": -1.8
+        },
+        {
+          "symbol": "BAJAJFINSV",
+          "probability": 0.72,
+          "expected_move": -1.8
+        }
+      ],
+      "volume_surge_stocks": [
+        {
+          "symbol": "POWERGRID",
+          "has_surge": true
+        },
+        {
+          "symbol": "SHRIRAMFIN",
+          "has_surge": true
+        },
+        {
+          "symbol": "TMPV",
+          "has_surge": true
+        }
+      ]
+    },
+    "mtf_ict_analysis": {
+      "overall_bias": "bearish",
+      "timeframes_analyzed": [
+        "W",
+        "D",
+        "240",
+        "60"
+      ],
+      "timeframe_details": {
+        "W": {
+          "bias": "bearish",
+          "trend": "ranging",
+          "structure": null
+        },
+        "D": {
+          "bias": "bearish",
+          "trend": "ranging",
+          "structure": null
+        },
+        "240": {
+          "bias": "bearish",
+          "trend": "bearish",
+          "structure": null
+        },
+        "60": {
+          "bias": "bearish",
+          "trend": "ranging",
+          "structure": null
+        }
+      },
+      "confluence_zones": [
+        {
+          "level": 25974.46710526316,
+          "strength": 321.5,
+          "timeframes": [
+            "60",
+            "D",
+            "240"
+          ]
+        },
+        {
+          "level": 26103.466666666664,
+          "strength": 82.0,
+          "timeframes": [
+            "240",
+            "W"
+          ]
+        },
+        {
+          "level": 25140.55625,
+          "strength": 38.5,
+          "timeframes": [
+            "60",
+            "D",
+            "W",
+            "240"
+          ]
+        }
+      ],
+      "trade_setups": 3
+    },
+    "recommended_option_type": "PUT",
+    "sentiment_analysis": {
+      "sentiment": "bullish",
+      "sentiment_score": 0.5,
+      "confidence_adjustment": 0,
+      "signal_adjustment": null,
+      "market_mood": "Strong bullish sentiment - Markets showing optimism",
+      "key_themes": [
+        "global"
+      ],
+      "news_count": 2,
+      "latest_news": [
+        {
+          "title": "Nifty advances 191 points on IT sector strength",
+          "source": "Economic Times",
+          "sentiment": "positive",
+          "timestamp": "2026-02-02T21:11:30.182098"
+        },
+        {
+          "title": "Bank Nifty rallies as Q4 earnings exceed expectations",
+          "source": "Moneycontrol",
+          "sentiment": "positive",
+          "timestamp": "2026-02-02T22:26:59.429681"
+        },
+        {
+          "title": "FII inflows of Rs 4580 crore in morning session",
+          "source": "BSE",
+          "sentiment": "positive",
+          "timestamp": "2026-02-02T21:20:19.758895"
+        },
+        {
+          "title": "India VIX drops to 12, signaling confident market",
+          "source": "NSE",
+          "sentiment": "negative",
+          "timestamp": "2026-02-02T22:11:14.403505"
+        },
+        {
+          "title": "IT stocks advance on strong Q4 guidance",
+          "source": "Reuters",
+          "sentiment": "positive",
+          "timestamp": "2026-02-02T17:55:03.402931"
+        }
+      ],
+      "reason": "Neutral sentiment. Strong bullish sentiment - Markets showing optimism",
+      "data_source": "real"
+    },
+    "total_options": 61,
+    "options": [
+      {
+        "strike": 24350,
+        "type": "PUT",
+        "ltp": 35.25,
+        "volume": 1749085,
+        "oi": 245310,
+        "iv": 13.87,
+        "delta": -0.5606488706365504,
+        "gamma": 0.0014113614259976712,
+        "score": 102.6,
+        "fyers_symbol": "NSE:NIFTY2621024350PE",
+        "strategy_match": "Excellent all opportunity",
+        "recommendation": "Strong BUY - OTM PUT",
+        "discount_zone": {
+          "zone_type": "discount",
+          "is_in_discount": true,
+          "discount_pct": 38.23,
+          "avg_premium": 57.07
+        },
+        "entry_analysis": {
+          "entry_grade": "B",
+          "entry_score": 20,
+          "recommended_entry": 28.2,
+          "limit_order_price": 38.0,
+          "max_acceptable_price": 34.54,
+          "wait_for_pullback": true,
+          "pullback_target_price": 28.2,
+          "time_feasible": true,
+          "time_remaining_minutes": 375,
+          "estimated_minutes_to_target": 63,
+          "liquidity_grade": "A",
+          "theta_impact_per_hour": 0.02,
+          "supports_immediate_entry": false,
+          "entry_recommendation": "LIMIT_ORDER",
+          "reasoning": [
+            "\u2705 Discount zone: 38.2% below avg",
+            "\u26a0\ufe0f Price dropped 45.4%. Expect pullback to \u20b939",
+            "\u2705 Near support (\u20b934), tight SL possible",
+            "\u2705 Move feasible in today's session",
+            "\u2705 Low theta: 2.0%/hr"
+          ],
+          "pullback_probability": 0.8,
+          "option_target_1": 44.55,
+          "option_target_2": 46.25,
+          "option_stop_loss": 34.5,
+          "option_supports": [
+            34.5,
+            33.7,
+            24.8
+          ],
+          "option_resistances": [
+            44.55,
+            46.25,
+            51.85
+          ]
+        },
+        "historical_context": {
+          "has_history": true,
+          "day_high": 63.55,
+          "day_low": 34.5,
+          "day_open": 55.7,
+          "vwap_estimate": 44.9,
+          "price_range": 29.05,
+          "position_in_range_pct": 2.6,
+          "near_day_high": false,
+          "near_day_low": true,
+          "at_vwap": false,
+          "recommendation": "good_entry"
+        },
+        "probability_boost": true,
+        "sentiment_conflict": true
+      },
+      {
+        "strike": 24400,
+        "type": "PUT",
+        "ltp": 40.7,
+        "volume": 7646275,
+        "oi": 1043835,
+        "iv": 13.87,
+        "delta": -0.556426229508197,
+        "gamma": 0.0014512204843672763,
+        "score": 102.6,
+        "fyers_symbol": "NSE:NIFTY2621024400PE",
+        "strategy_match": "Excellent all opportunity",
+        "recommendation": "Strong BUY - OTM PUT",
+        "discount_zone": {
+          "zone_type": "discount",
+          "is_in_discount": true,
+          "discount_pct": 35.52,
+          "avg_premium": 63.12
+        },
+        "entry_analysis": {
+          "entry_grade": "B",
+          "entry_score": 20,
+          "recommended_entry": 32.56,
+          "limit_order_price": 43.87,
+          "max_acceptable_price": 39.89,
+          "wait_for_pullback": true,
+          "pullback_target_price": 32.56,
+          "time_feasible": true,
+          "time_remaining_minutes": 375,
+          "estimated_minutes_to_target": 73,
+          "liquidity_grade": "A",
+          "theta_impact_per_hour": 0.02,
+          "supports_immediate_entry": false,
+          "entry_recommendation": "LIMIT_ORDER",
+          "reasoning": [
+            "\u2705 Discount zone: 35.5% below avg",
+            "\u26a0\ufe0f Price dropped 43.4%. Expect pullback to \u20b945",
+            "\u2705 Near support (\u20b940), tight SL possible",
+            "\u2705 Move feasible in today's session",
+            "\u2705 Low theta: 2.0%/hr"
+          ],
+          "pullback_probability": 0.8,
+          "option_target_1": 49.1,
+          "option_target_2": 51.0,
+          "option_stop_loss": 40.0,
+          "option_supports": [
+            40.0,
+            38.75,
+            29.88
+          ],
+          "option_resistances": [
+            49.1,
+            51.0,
+            51.9
+          ]
+        },
+        "historical_context": {
+          "has_history": true,
+          "day_high": 71.6,
+          "day_low": 38.75,
+          "day_open": 62.2,
+          "vwap_estimate": 54.47,
+          "price_range": 32.85,
+          "position_in_range_pct": 5.9,
+          "near_day_high": false,
+          "near_day_low": true,
+          "at_vwap": false,
+          "recommendation": "good_entry"
+        },
+        "probability_boost": true,
+        "sentiment_conflict": true
+      },
+      {
+        "strike": 24450,
+        "type": "PUT",
+        "ltp": 45,
+        "volume": 2018965,
+        "oi": 215865,
+        "iv": 13.87,
+        "delta": -0.5522208588957058,
+        "gamma": 0.0014910795427368812,
+        "score": 102.6,
+        "fyers_symbol": "NSE:NIFTY2621024450PE",
+        "strategy_match": "Excellent all opportunity",
+        "recommendation": "Strong BUY - OTM PUT",
+        "discount_zone": {
+          "zone_type": "discount",
+          "is_in_discount": true,
+          "discount_pct": 35.61,
+          "avg_premium": 69.89
+        },
+        "entry_analysis": {
+          "entry_grade": "B",
+          "entry_score": 20,
+          "recommended_entry": 36.0,
+          "limit_order_price": 48.51,
+          "max_acceptable_price": 44.1,
+          "wait_for_pullback": true,
+          "pullback_target_price": 36.0,
+          "time_feasible": true,
+          "time_remaining_minutes": 375,
+          "estimated_minutes_to_target": 81,
+          "liquidity_grade": "A",
+          "theta_impact_per_hour": 0.02,
+          "supports_immediate_entry": false,
+          "entry_recommendation": "LIMIT_ORDER",
+          "reasoning": [
+            "\u2705 Discount zone: 35.6% below avg",
+            "\u26a0\ufe0f Price dropped 43.9%. Expect pullback to \u20b950",
+            "\u2705 Near support (\u20b944), tight SL possible",
+            "\u2705 Move feasible in today's session",
+            "\u2705 Low theta: 2.0%/hr"
+          ],
+          "pullback_probability": 0.8,
+          "option_target_1": 54.42,
+          "option_target_2": 56.4,
+          "option_stop_loss": 44.18,
+          "option_supports": [
+            44.18,
+            40.35,
+            32.8
+          ],
+          "option_resistances": [
+            54.42,
+            56.4,
+            62.8
+          ]
+        },
+        "historical_context": {
+          "has_history": true,
+          "day_high": 79.3,
+          "day_low": 43.75,
+          "day_open": 69.85,
+          "vwap_estimate": 59.9,
+          "price_range": 35.55,
+          "position_in_range_pct": 3.5,
+          "near_day_high": false,
+          "near_day_low": true,
+          "at_vwap": false,
+          "recommendation": "good_entry"
+        },
+        "probability_boost": true,
+        "sentiment_conflict": true
+      },
+      {
+        "strike": 24500,
+        "type": "PUT",
+        "ltp": 51.95,
+        "volume": 19377215,
+        "oi": 2069730,
+        "iv": 13.87,
+        "delta": -0.5480326530612247,
+        "gamma": 0.0015309386011064863,
+        "score": 102.6,
+        "fyers_symbol": "NSE:NIFTY2621024500PE",
+        "strategy_match": "Excellent all opportunity",
+        "recommendation": "Strong BUY - OTM PUT",
+        "discount_zone": {
+          "zone_type": "fair_value",
+          "is_in_discount": false,
+          "discount_pct": 32.48,
+          "avg_premium": 77.09
+        },
+        "entry_analysis": {
+          "entry_grade": "C",
+          "entry_score": 20,
+          "recommended_entry": 41.56,
+          "limit_order_price": 56.11,
+          "max_acceptable_price": 51.01,
+          "wait_for_pullback": true,
+          "pullback_target_price": 41.56,
+          "time_feasible": true,
+          "time_remaining_minutes": 375,
+          "estimated_minutes_to_target": 95,
+          "liquidity_grade": "A",
+          "theta_impact_per_hour": 0.02,
+          "supports_immediate_entry": false,
+          "entry_recommendation": "WAIT",
+          "reasoning": [
+            "\u26a0\ufe0f Price dropped 41.5%. Expect pullback to \u20b957",
+            "\u26a1 Moderate distance from support",
+            "\u2705 Move feasible in today's session",
+            "\u2705 Low theta: 2.0%/hr"
+          ],
+          "pullback_probability": 0.8,
+          "option_target_1": 59.8,
+          "option_target_2": 62.52,
+          "option_stop_loss": 50.38,
+          "option_supports": [
+            50.38,
+            48.58,
+            44.05
+          ],
+          "option_resistances": [
+            59.8,
+            62.52,
+            69.25
+          ]
+        },
+        "probability_boost": true,
+        "sentiment_conflict": true
+      },
+      {
+        "strike": 24550,
+        "type": "PUT",
+        "ltp": 56.25,
+        "volume": 3489460,
+        "oi": 492440,
+        "iv": 13.87,
+        "delta": -0.5438615071283097,
+        "gamma": 0.0015707976594760912,
+        "score": 102.6,
+        "fyers_symbol": "NSE:NIFTY2621024550PE",
+        "strategy_match": "Excellent all opportunity",
+        "recommendation": "Strong BUY - OTM PUT",
+        "discount_zone": {
+          "zone_type": "fair_value",
+          "is_in_discount": false,
+          "discount_pct": 34.06,
+          "avg_premium": 85.3
+        },
+        "entry_analysis": {
+          "entry_grade": "C",
+          "entry_score": 20,
+          "recommended_entry": 45.0,
+          "limit_order_price": 60.64,
+          "max_acceptable_price": 55.12,
+          "wait_for_pullback": true,
+          "pullback_target_price": 45.0,
+          "time_feasible": true,
+          "time_remaining_minutes": 375,
+          "estimated_minutes_to_target": 103,
+          "liquidity_grade": "A",
+          "theta_impact_per_hour": 0.02,
+          "supports_immediate_entry": false,
+          "entry_recommendation": "WAIT",
+          "reasoning": [
+            "\u26a0\ufe0f Price dropped 43.6%. Expect pullback to \u20b962",
+            "\u2705 Near support (\u20b955), tight SL possible",
+            "\u2705 Move feasible in today's session",
+            "\u2705 Low theta: 2.0%/hr"
+          ],
+          "pullback_probability": 0.8,
+          "option_target_1": 64.7,
+          "option_target_2": 66.25,
+          "option_stop_loss": 55.43,
+          "option_supports": [
+            55.43,
+            51.85,
+            48.6
+          ],
+          "option_resistances": [
+            64.7,
+            66.25,
+            68.95
+          ]
+        },
+        "probability_boost": true,
+        "sentiment_conflict": true
+      },
+      {
+        "strike": 24600,
+        "type": "PUT",
+        "ltp": 65.9,
+        "volume": 8921510,
+        "oi": 1057940,
+        "iv": 13.87,
+        "delta": -0.5397073170731708,
+        "gamma": 0.0016106567178456965,
+        "score": 102.6,
+        "fyers_symbol": "NSE:NIFTY2621024600PE",
+        "strategy_match": "Excellent all opportunity",
+        "recommendation": "Strong BUY - OTM PUT",
+        "discount_zone": {
+          "status": "high_premium",
+          "current_price": 65.9,
+          "best_entry_price": 52.72,
+          "max_entry_price": 56.02,
+          "target_price": 85.67,
+          "expected_pullback_pct": 2.0,
+          "iv_vs_avg_pct": 9146.7,
+          "time_feasible": true,
+          "minutes_remaining": 375,
+          "supports_entry": false,
+          "momentum_direction": "neutral",
+          "reasoning": "\ud83d\udd34 HIGH PREMIUM: IV +9147% very elevated. Avoid or wait for significant pullback.",
+          "price_position": null
+        },
+        "entry_analysis": {
+          "entry_grade": "F",
+          "entry_score": 20,
+          "recommended_entry": 52.72,
+          "limit_order_price": 52.72,
+          "max_acceptable_price": 56.02,
+          "wait_for_pullback": true,
+          "pullback_target_price": 52.72,
+          "time_feasible": true,
+          "time_remaining_minutes": 375,
+          "estimated_minutes_to_target": 122,
+          "liquidity_grade": "A",
+          "theta_impact_per_hour": 0.2,
+          "supports_immediate_entry": false,
+          "entry_recommendation": "AVOID",
+          "reasoning": [
+            "\u26d4 AVOID: Unfavorable conditions for entry",
+            "\ud83d\udd34 HIGH PREMIUM: IV very elevated +9147% - avoid or wait"
+          ]
+        },
+        "probability_boost": true,
+        "sentiment_conflict": true
+      },
+      {
+        "strike": 24650,
+        "type": "PUT",
+        "ltp": 73.45,
+        "volume": 3464305,
+        "oi": 749905,
+        "iv": 13.87,
+        "delta": -0.5355699797160245,
+        "gamma": 0.0016505157762153016,
+        "score": 102.6,
+        "fyers_symbol": "NSE:NIFTY2621024650PE",
+        "strategy_match": "Excellent all opportunity",
+        "recommendation": "Strong BUY - OTM PUT",
+        "discount_zone": {
+          "status": "high_premium",
+          "current_price": 73.45,
+          "best_entry_price": 58.76,
+          "max_entry_price": 62.43,
+          "target_price": 95.49,
+          "expected_pullback_pct": 2.0,
+          "iv_vs_avg_pct": 9146.7,
+          "time_feasible": true,
+          "minutes_remaining": 375,
+          "supports_entry": false,
+          "momentum_direction": "neutral",
+          "reasoning": "\ud83d\udd34 HIGH PREMIUM: IV +9147% very elevated. Avoid or wait for significant pullback.",
+          "price_position": null
+        },
+        "entry_analysis": {
+          "entry_grade": "F",
+          "entry_score": 20,
+          "recommended_entry": 58.76,
+          "limit_order_price": 58.76,
+          "max_acceptable_price": 62.43,
+          "wait_for_pullback": true,
+          "pullback_target_price": 58.76,
+          "time_feasible": true,
+          "time_remaining_minutes": 375,
+          "estimated_minutes_to_target": 137,
+          "liquidity_grade": "A",
+          "theta_impact_per_hour": 0.22,
+          "supports_immediate_entry": false,
+          "entry_recommendation": "AVOID",
+          "reasoning": [
+            "\u26d4 AVOID: Unfavorable conditions for entry",
+            "\ud83d\udd34 HIGH PREMIUM: IV very elevated +9147% - avoid or wait"
+          ]
+        },
+        "probability_boost": true,
+        "sentiment_conflict": true
+      },
+      {
+        "strike": 24700,
+        "type": "PUT",
+        "ltp": 83.6,
+        "volume": 10533510,
+        "oi": 1323985,
+        "iv": 13.87,
+        "delta": -0.5314493927125508,
+        "gamma": 0.0016903748345849065,
+        "score": 102.6,
+        "fyers_symbol": "NSE:NIFTY2621024700PE",
+        "strategy_match": "Excellent all opportunity",
+        "recommendation": "Strong BUY - OTM PUT",
+        "discount_zone": {
+          "status": "high_premium",
+          "current_price": 83.6,
+          "best_entry_price": 66.88,
+          "max_entry_price": 71.06,
+          "target_price": 108.68,
+          "expected_pullback_pct": 2.0,
+          "iv_vs_avg_pct": 9146.7,
+          "time_feasible": true,
+          "minutes_remaining": 375,
+          "supports_entry": false,
+          "momentum_direction": "neutral",
+          "reasoning": "\ud83d\udd34 HIGH PREMIUM: IV +9147% very elevated. Avoid or wait for significant pullback.",
+          "price_position": null
+        },
+        "entry_analysis": {
+          "entry_grade": "F",
+          "entry_score": 20,
+          "recommended_entry": 66.88,
+          "limit_order_price": 66.88,
+          "max_acceptable_price": 71.06,
+          "wait_for_pullback": true,
+          "pullback_target_price": 66.88,
+          "time_feasible": true,
+          "time_remaining_minutes": 375,
+          "estimated_minutes_to_target": 157,
+          "liquidity_grade": "A",
+          "theta_impact_per_hour": 0.25,
+          "supports_immediate_entry": false,
+          "entry_recommendation": "AVOID",
+          "reasoning": [
+            "\u26d4 AVOID: Unfavorable conditions for entry",
+            "\ud83d\udd34 HIGH PREMIUM: IV very elevated +9147% - avoid or wait"
+          ]
+        },
+        "probability_boost": true,
+        "sentiment_conflict": true
+      },
+      {
+        "strike": 24750,
+        "type": "PUT",
+        "ltp": 94,
+        "volume": 4274205,
+        "oi": 474045,
+        "iv": 13.87,
+        "delta": -0.5273454545454546,
+        "gamma": 0.0017302338929545118,
+        "score": 102.6,
+        "fyers_symbol": "NSE:NIFTY2621024750PE",
+        "strategy_match": "Excellent all opportunity",
+        "recommendation": "Strong BUY - OTM PUT",
+        "discount_zone": {
+          "status": "high_premium",
+          "current_price": 94,
+          "best_entry_price": 75.2,
+          "max_entry_price": 79.9,
+          "target_price": 122.2,
+          "expected_pullback_pct": 2.0,
+          "iv_vs_avg_pct": 9146.7,
+          "time_feasible": true,
+          "minutes_remaining": 375,
+          "supports_entry": false,
+          "momentum_direction": "neutral",
+          "reasoning": "\ud83d\udd34 HIGH PREMIUM: IV +9147% very elevated. Avoid or wait for significant pullback.",
+          "price_position": null
+        },
+        "entry_analysis": {
+          "entry_grade": "F",
+          "entry_score": 20,
+          "recommended_entry": 75.2,
+          "limit_order_price": 75.2,
+          "max_acceptable_price": 79.9,
+          "wait_for_pullback": true,
+          "pullback_target_price": 75.2,
+          "time_feasible": true,
+          "time_remaining_minutes": 375,
+          "estimated_minutes_to_target": 178,
+          "liquidity_grade": "A",
+          "theta_impact_per_hour": 0.28,
+          "supports_immediate_entry": false,
+          "entry_recommendation": "AVOID",
+          "reasoning": [
+            "\u26d4 AVOID: Unfavorable conditions for entry",
+            "\ud83d\udd34 HIGH PREMIUM: IV very elevated +9147% - avoid or wait"
+          ]
+        },
+        "probability_boost": true,
+        "sentiment_conflict": true
+      },
+      {
+        "strike": 24800,
+        "type": "PUT",
+        "ltp": 106.25,
+        "volume": 16521310,
+        "oi": 1571765,
+        "iv": 13.87,
+        "delta": -0.5232580645161291,
+        "gamma": 0.001770092951324117,
+        "score": 102.6,
+        "fyers_symbol": "NSE:NIFTY2621024800PE",
+        "strategy_match": "Excellent all opportunity",
+        "recommendation": "Strong BUY - OTM PUT",
+        "discount_zone": {
+          "status": "high_premium",
+          "current_price": 106.25,
+          "best_entry_price": 85.0,
+          "max_entry_price": 90.31,
+          "target_price": 138.12,
+          "expected_pullback_pct": 2.0,
+          "iv_vs_avg_pct": 9146.7,
+          "time_feasible": true,
+          "minutes_remaining": 375,
+          "supports_entry": false,
+          "momentum_direction": "neutral",
+          "reasoning": "\ud83d\udd34 HIGH PREMIUM: IV +9147% very elevated. Avoid or wait for significant pullback.",
+          "price_position": null
+        },
+        "entry_analysis": {
+          "entry_grade": "F",
+          "entry_score": 20,
+          "recommended_entry": 85.0,
+          "limit_order_price": 85.0,
+          "max_acceptable_price": 90.31,
+          "wait_for_pullback": true,
+          "pullback_target_price": 85.0,
+          "time_feasible": true,
+          "time_remaining_minutes": 375,
+          "estimated_minutes_to_target": 203,
+          "liquidity_grade": "A",
+          "theta_impact_per_hour": 0.32,
+          "supports_immediate_entry": false,
+          "entry_recommendation": "AVOID",
+          "reasoning": [
+            "\u26d4 AVOID: Unfavorable conditions for entry",
+            "\ud83d\udd34 HIGH PREMIUM: IV very elevated +9147% - avoid or wait"
+          ]
+        },
+        "probability_boost": true,
+        "sentiment_conflict": true
+      },
+      {
+        "strike": 24850,
+        "type": "PUT",
+        "ltp": 120.4,
+        "volume": 5182320,
+        "oi": 365625,
+        "iv": 13.87,
+        "delta": -0.5191871227364184,
+        "gamma": 0.0018099520096937218,
+        "score": 102.6,
+        "fyers_symbol": "NSE:NIFTY2621024850PE",
+        "strategy_match": "Excellent all opportunity",
+        "recommendation": "Strong BUY - OTM PUT",
+        "discount_zone": {
+          "status": "high_premium",
+          "current_price": 120.4,
+          "best_entry_price": 96.32,
+          "max_entry_price": 102.34,
+          "target_price": 156.52,
+          "expected_pullback_pct": 2.0,
+          "iv_vs_avg_pct": 9146.7,
+          "time_feasible": true,
+          "minutes_remaining": 375,
+          "supports_entry": false,
+          "momentum_direction": "neutral",
+          "reasoning": "\ud83d\udd34 HIGH PREMIUM: IV +9147% very elevated. Avoid or wait for significant pullback.",
+          "price_position": null
+        },
+        "entry_analysis": {
+          "entry_grade": "F",
+          "entry_score": 20,
+          "recommended_entry": 96.32,
+          "limit_order_price": 96.32,
+          "max_acceptable_price": 102.34,
+          "wait_for_pullback": true,
+          "pullback_target_price": 96.32,
+          "time_feasible": true,
+          "time_remaining_minutes": 375,
+          "estimated_minutes_to_target": 232,
+          "liquidity_grade": "A",
+          "theta_impact_per_hour": 0.36,
+          "supports_immediate_entry": false,
+          "entry_recommendation": "AVOID",
+          "reasoning": [
+            "\u26d4 AVOID: Unfavorable conditions for entry",
+            "\ud83d\udd34 HIGH PREMIUM: IV very elevated +9147% - avoid or wait"
+          ]
+        },
+        "probability_boost": true,
+        "sentiment_conflict": true
+      },
+      {
+        "strike": 24900,
+        "type": "PUT",
+        "ltp": 135.05,
+        "volume": 16035630,
+        "oi": 1309750,
+        "iv": 13.87,
+        "delta": -0.5151325301204821,
+        "gamma": 0.001849811068063327,
+        "score": 102.6,
+        "fyers_symbol": "NSE:NIFTY2621024900PE",
+        "strategy_match": "Excellent all opportunity",
+        "recommendation": "Strong BUY - OTM PUT",
+        "discount_zone": {
+          "status": "high_premium",
+          "current_price": 135.05,
+          "best_entry_price": 108.04,
+          "max_entry_price": 114.79,
+          "target_price": 175.57,
+          "expected_pullback_pct": 2.0,
+          "iv_vs_avg_pct": 9146.7,
+          "time_feasible": true,
+          "minutes_remaining": 375,
+          "supports_entry": false,
+          "momentum_direction": "neutral",
+          "reasoning": "\ud83d\udd34 HIGH PREMIUM: IV +9147% very elevated. Avoid or wait for significant pullback.",
+          "price_position": null
+        },
+        "entry_analysis": {
+          "entry_grade": "F",
+          "entry_score": 20,
+          "recommended_entry": 108.04,
+          "limit_order_price": 108.04,
+          "max_acceptable_price": 114.79,
+          "wait_for_pullback": true,
+          "pullback_target_price": 108.04,
+          "time_feasible": true,
+          "time_remaining_minutes": 375,
+          "estimated_minutes_to_target": 262,
+          "liquidity_grade": "A",
+          "theta_impact_per_hour": 0.41,
+          "supports_immediate_entry": false,
+          "entry_recommendation": "AVOID",
+          "reasoning": [
+            "\u26d4 AVOID: Unfavorable conditions for entry",
+            "\ud83d\udd34 HIGH PREMIUM: IV very elevated +9147% - avoid or wait"
+          ]
+        },
+        "probability_boost": true,
+        "sentiment_conflict": true
+      },
+      {
+        "strike": 24950,
+        "type": "PUT",
+        "ltp": 150.05,
+        "volume": 3528655,
+        "oi": 277550,
+        "iv": 13.87,
+        "delta": -0.5110941883767537,
+        "gamma": 0.001889670126432932,
+        "score": 102.6,
+        "fyers_symbol": "NSE:NIFTY2621024950PE",
+        "strategy_match": "Excellent all opportunity",
+        "recommendation": "Strong BUY - OTM PUT",
+        "discount_zone": {
+          "status": "high_premium",
+          "current_price": 150.05,
+          "best_entry_price": 120.04,
+          "max_entry_price": 127.54,
+          "target_price": 195.07,
+          "expected_pullback_pct": 2.0,
+          "iv_vs_avg_pct": 9146.7,
+          "time_feasible": true,
+          "minutes_remaining": 375,
+          "supports_entry": false,
+          "momentum_direction": "neutral",
+          "reasoning": "\ud83d\udd34 HIGH PREMIUM: IV +9147% very elevated. Avoid or wait for significant pullback.",
+          "price_position": null
+        },
+        "entry_analysis": {
+          "entry_grade": "F",
+          "entry_score": 20,
+          "recommended_entry": 120.04,
+          "limit_order_price": 120.04,
+          "max_acceptable_price": 127.54,
+          "wait_for_pullback": true,
+          "pullback_target_price": 120.04,
+          "time_feasible": true,
+          "time_remaining_minutes": 375,
+          "estimated_minutes_to_target": 294,
+          "liquidity_grade": "A",
+          "theta_impact_per_hour": 0.45,
+          "supports_immediate_entry": false,
+          "entry_recommendation": "AVOID",
+          "reasoning": [
+            "\u26d4 AVOID: Unfavorable conditions for entry",
+            "\ud83d\udd34 HIGH PREMIUM: IV very elevated +9147% - avoid or wait"
+          ]
+        },
+        "probability_boost": true,
+        "sentiment_conflict": true
+      },
+      {
+        "strike": 25000,
+        "type": "PUT",
+        "ltp": 168.7,
+        "volume": 15518360,
+        "oi": 2521025,
+        "iv": 13.87,
+        "delta": -0.507072,
+        "gamma": 0.0019295291848025371,
+        "score": 102.6,
+        "fyers_symbol": "NSE:NIFTY2621025000PE",
+        "strategy_match": "Excellent all opportunity",
+        "recommendation": "Strong BUY - OTM PUT",
+        "discount_zone": {
+          "status": "high_premium",
+          "current_price": 168.7,
+          "best_entry_price": 134.96,
+          "max_entry_price": 143.39,
+          "target_price": 219.31,
+          "expected_pullback_pct": 2.0,
+          "iv_vs_avg_pct": 9146.7,
+          "time_feasible": true,
+          "minutes_remaining": 375,
+          "supports_entry": false,
+          "momentum_direction": "neutral",
+          "reasoning": "\ud83d\udd34 HIGH PREMIUM: IV +9147% very elevated. Avoid or wait for significant pullback.",
+          "price_position": null
+        },
+        "entry_analysis": {
+          "entry_grade": "F",
+          "entry_score": 20,
+          "recommended_entry": 134.96,
+          "limit_order_price": 134.96,
+          "max_acceptable_price": 143.39,
+          "wait_for_pullback": true,
+          "pullback_target_price": 134.96,
+          "time_feasible": true,
+          "time_remaining_minutes": 375,
+          "estimated_minutes_to_target": 333,
+          "liquidity_grade": "A",
+          "theta_impact_per_hour": 0.51,
+          "supports_immediate_entry": false,
+          "entry_recommendation": "AVOID",
+          "reasoning": [
+            "\u26d4 AVOID: Unfavorable conditions for entry",
+            "\ud83d\udd34 HIGH PREMIUM: IV very elevated +9147% - avoid or wait"
+          ]
+        },
+        "probability_boost": true,
+        "sentiment_conflict": true
+      },
+      {
+        "strike": 25050,
+        "type": "PUT",
+        "ltp": 189.75,
+        "volume": 1549925,
+        "oi": 313235,
+        "iv": 13.87,
+        "delta": -0.503065868263473,
+        "gamma": 0.001969388243172142,
+        "score": 102.6,
+        "fyers_symbol": "NSE:NIFTY2621025050PE",
+        "strategy_match": "Excellent all opportunity",
+        "recommendation": "Strong BUY - OTM PUT",
+        "discount_zone": {
+          "status": "high_premium",
+          "current_price": 189.75,
+          "best_entry_price": 151.8,
+          "max_entry_price": 161.29,
+          "target_price": 246.68,
+          "expected_pullback_pct": 2.0,
+          "iv_vs_avg_pct": 9146.7,
+          "time_feasible": true,
+          "minutes_remaining": 375,
+          "supports_entry": false,
+          "momentum_direction": "neutral",
+          "reasoning": "\ud83d\udd34 HIGH PREMIUM: IV +9147% very elevated. Avoid or wait for significant pullback.",
+          "price_position": null
+        },
+        "entry_analysis": {
+          "entry_grade": "F",
+          "entry_score": 20,
+          "recommended_entry": 151.8,
+          "limit_order_price": 151.8,
+          "max_acceptable_price": 161.29,
+          "wait_for_pullback": true,
+          "pullback_target_price": 151.8,
+          "time_feasible": true,
+          "time_remaining_minutes": 375,
+          "estimated_minutes_to_target": 377,
+          "liquidity_grade": "A",
+          "theta_impact_per_hour": 0.57,
+          "supports_immediate_entry": false,
+          "entry_recommendation": "AVOID",
+          "reasoning": [
+            "\u26d4 AVOID: Unfavorable conditions for entry",
+            "\ud83d\udd34 HIGH PREMIUM: IV very elevated +9147% - avoid or wait"
+          ]
+        },
+        "probability_boost": true,
+        "sentiment_conflict": true
+      },
+      {
+        "strike": 25100,
+        "type": "PUT",
+        "ltp": 213.5,
+        "volume": 4139655,
+        "oi": 1130415,
+        "iv": 13.87,
+        "delta": -0.4990756972111554,
+        "gamma": 0.0019907526984582528,
+        "score": 102.6,
+        "fyers_symbol": "NSE:NIFTY2621025100PE",
+        "strategy_match": "Excellent all opportunity",
+        "recommendation": "Strong BUY - ITM PUT",
+        "discount_zone": {
+          "status": "high_premium",
+          "current_price": 213.5,
+          "best_entry_price": 170.8,
+          "max_entry_price": 181.47,
+          "target_price": 277.55,
+          "expected_pullback_pct": 2.0,
+          "iv_vs_avg_pct": 9146.7,
+          "time_feasible": true,
+          "minutes_remaining": 375,
+          "supports_entry": false,
+          "momentum_direction": "neutral",
+          "reasoning": "\ud83d\udd34 HIGH PREMIUM: IV +9147% very elevated. Avoid or wait for significant pullback.",
+          "price_position": null
+        },
+        "entry_analysis": {
+          "entry_grade": "F",
+          "entry_score": 20,
+          "recommended_entry": 170.8,
+          "limit_order_price": 170.8,
+          "max_acceptable_price": 181.47,
+          "wait_for_pullback": true,
+          "pullback_target_price": 170.8,
+          "time_feasible": true,
+          "time_remaining_minutes": 375,
+          "estimated_minutes_to_target": 428,
+          "liquidity_grade": "A",
+          "theta_impact_per_hour": 0.64,
+          "supports_immediate_entry": false,
+          "entry_recommendation": "AVOID",
+          "reasoning": [
+            "\u26d4 AVOID: Unfavorable conditions for entry",
+            "\ud83d\udd34 HIGH PREMIUM: IV very elevated +9147% - avoid or wait"
+          ]
+        },
+        "probability_boost": true,
+        "sentiment_conflict": true
+      },
+      {
+        "strike": 25150,
+        "type": "PUT",
+        "ltp": 236.2,
+        "volume": 513695,
+        "oi": 132080,
+        "iv": 13.87,
+        "delta": -0.4951013916500995,
+        "gamma": 0.0019508936400886477,
+        "score": 102.6,
+        "fyers_symbol": "NSE:NIFTY2621025150PE",
+        "strategy_match": "Excellent all opportunity",
+        "recommendation": "Strong BUY - ITM PUT",
+        "discount_zone": {
+          "status": "high_premium",
+          "current_price": 236.2,
+          "best_entry_price": 188.96,
+          "max_entry_price": 200.77,
+          "target_price": 307.06,
+          "expected_pullback_pct": 2.0,
+          "iv_vs_avg_pct": 9146.7,
+          "time_feasible": true,
+          "minutes_remaining": 375,
+          "supports_entry": false,
+          "momentum_direction": "neutral",
+          "reasoning": "\ud83d\udd34 HIGH PREMIUM: IV +9147% very elevated. Avoid or wait for significant pullback.",
+          "price_position": null
+        },
+        "entry_analysis": {
+          "entry_grade": "F",
+          "entry_score": 20,
+          "recommended_entry": 188.96,
+          "limit_order_price": 188.96,
+          "max_acceptable_price": 200.77,
+          "wait_for_pullback": true,
+          "pullback_target_price": 188.96,
+          "time_feasible": true,
+          "time_remaining_minutes": 375,
+          "estimated_minutes_to_target": 477,
+          "liquidity_grade": "A",
+          "theta_impact_per_hour": 0.71,
+          "supports_immediate_entry": false,
+          "entry_recommendation": "AVOID",
+          "reasoning": [
+            "\u26d4 AVOID: Unfavorable conditions for entry",
+            "\ud83d\udd34 HIGH PREMIUM: IV very elevated +9147% - avoid or wait"
+          ]
+        },
+        "probability_boost": true,
+        "sentiment_conflict": true
+      },
+      {
+        "strike": 25200,
+        "type": "PUT",
+        "ltp": 263,
+        "volume": 1889485,
+        "oi": 533130,
+        "iv": 13.87,
+        "delta": -0.4911428571428573,
+        "gamma": 0.0019110345817190426,
+        "score": 102.6,
+        "fyers_symbol": "NSE:NIFTY2621025200PE",
+        "strategy_match": "Excellent all opportunity",
+        "recommendation": "Strong BUY - ITM PUT",
+        "discount_zone": {
+          "status": "high_premium",
+          "current_price": 263,
+          "best_entry_price": 210.4,
+          "max_entry_price": 223.55,
+          "target_price": 341.9,
+          "expected_pullback_pct": 2.0,
+          "iv_vs_avg_pct": 9146.7,
+          "time_feasible": true,
+          "minutes_remaining": 375,
+          "supports_entry": false,
+          "momentum_direction": "neutral",
+          "reasoning": "\ud83d\udd34 HIGH PREMIUM: IV +9147% very elevated. Avoid or wait for significant pullback.",
+          "price_position": null
+        },
+        "entry_analysis": {
+          "entry_grade": "F",
+          "entry_score": 20,
+          "recommended_entry": 210.4,
+          "limit_order_price": 210.4,
+          "max_acceptable_price": 223.55,
+          "wait_for_pullback": true,
+          "pullback_target_price": 210.4,
+          "time_feasible": true,
+          "time_remaining_minutes": 375,
+          "estimated_minutes_to_target": 535,
+          "liquidity_grade": "A",
+          "theta_impact_per_hour": 0.79,
+          "supports_immediate_entry": false,
+          "entry_recommendation": "AVOID",
+          "reasoning": [
+            "\u26d4 AVOID: Unfavorable conditions for entry",
+            "\ud83d\udd34 HIGH PREMIUM: IV very elevated +9147% - avoid or wait"
+          ]
+        },
+        "probability_boost": true,
+        "sentiment_conflict": true
+      },
+      {
+        "strike": 25250,
+        "type": "PUT",
+        "ltp": 293.25,
+        "volume": 243750,
+        "oi": 90610,
+        "iv": 13.87,
+        "delta": -0.4872000000000001,
+        "gamma": 0.0018711755233494377,
+        "score": 102.6,
+        "fyers_symbol": "NSE:NIFTY2621025250PE",
+        "strategy_match": "Excellent all opportunity",
+        "recommendation": "Strong BUY - ITM PUT",
+        "discount_zone": {
+          "status": "high_premium",
+          "current_price": 293.25,
+          "best_entry_price": 234.6,
+          "max_entry_price": 249.26,
+          "target_price": 381.23,
+          "expected_pullback_pct": 2.0,
+          "iv_vs_avg_pct": 9146.7,
+          "time_feasible": true,
+          "minutes_remaining": 375,
+          "supports_entry": false,
+          "momentum_direction": "neutral",
+          "reasoning": "\ud83d\udd34 HIGH PREMIUM: IV +9147% very elevated. Avoid or wait for significant pullback.",
+          "price_position": null
+        },
+        "entry_analysis": {
+          "entry_grade": "F",
+          "entry_score": 20,
+          "recommended_entry": 234.6,
+          "limit_order_price": 234.6,
+          "max_acceptable_price": 249.26,
+          "wait_for_pullback": true,
+          "pullback_target_price": 234.6,
+          "time_feasible": true,
+          "time_remaining_minutes": 375,
+          "estimated_minutes_to_target": 602,
+          "liquidity_grade": "A",
+          "theta_impact_per_hour": 0.88,
+          "supports_immediate_entry": false,
+          "entry_recommendation": "AVOID",
+          "reasoning": [
+            "\u26d4 AVOID: Unfavorable conditions for entry",
+            "\ud83d\udd34 HIGH PREMIUM: IV very elevated +9147% - avoid or wait"
+          ]
+        },
+        "probability_boost": true,
+        "sentiment_conflict": true
+      },
+      {
+        "strike": 25300,
+        "type": "PUT",
+        "ltp": 322,
+        "volume": 2169245,
+        "oi": 755885,
+        "iv": 13.87,
+        "delta": -0.4832727272727273,
+        "gamma": 0.0018313164649798326,
+        "score": 102.6,
+        "fyers_symbol": "NSE:NIFTY2621025300PE",
+        "strategy_match": "Excellent all opportunity",
+        "recommendation": "Strong BUY - ITM PUT",
+        "discount_zone": {
+          "status": "high_premium",
+          "current_price": 322,
+          "best_entry_price": 257.6,
+          "max_entry_price": 273.7,
+          "target_price": 418.6,
+          "expected_pullback_pct": 2.0,
+          "iv_vs_avg_pct": 9146.7,
+          "time_feasible": true,
+          "minutes_remaining": 375,
+          "supports_entry": false,
+          "momentum_direction": "neutral",
+          "reasoning": "\ud83d\udd34 HIGH PREMIUM: IV +9147% very elevated. Avoid or wait for significant pullback.",
+          "price_position": null
+        },
+        "entry_analysis": {
+          "entry_grade": "F",
+          "entry_score": 20,
+          "recommended_entry": 257.6,
+          "limit_order_price": 257.6,
+          "max_acceptable_price": 273.7,
+          "wait_for_pullback": true,
+          "pullback_target_price": 257.6,
+          "time_feasible": true,
+          "time_remaining_minutes": 375,
+          "estimated_minutes_to_target": 666,
+          "liquidity_grade": "A",
+          "theta_impact_per_hour": 0.97,
+          "supports_immediate_entry": false,
+          "entry_recommendation": "AVOID",
+          "reasoning": [
+            "\u26d4 AVOID: Unfavorable conditions for entry",
+            "\ud83d\udd34 HIGH PREMIUM: IV very elevated +9147% - avoid or wait"
+          ]
+        },
+        "probability_boost": true,
+        "sentiment_conflict": true
+      },
+      {
+        "strike": 25350,
+        "type": "PUT",
+        "ltp": 355.5,
+        "volume": 205530,
+        "oi": 127075,
+        "iv": 13.87,
+        "delta": -0.4793609467455622,
+        "gamma": 0.0017914574066102275,
+        "score": 102.6,
+        "fyers_symbol": "NSE:NIFTY2621025350PE",
+        "strategy_match": "Excellent all opportunity",
+        "recommendation": "Strong BUY - ITM PUT",
+        "discount_zone": {
+          "status": "high_premium",
+          "current_price": 355.5,
+          "best_entry_price": 284.4,
+          "max_entry_price": 302.18,
+          "target_price": 462.15,
+          "expected_pullback_pct": 2.0,
+          "iv_vs_avg_pct": 9146.7,
+          "time_feasible": true,
+          "minutes_remaining": 375,
+          "supports_entry": false,
+          "momentum_direction": "neutral",
+          "reasoning": "\ud83d\udd34 HIGH PREMIUM: IV +9147% very elevated. Avoid or wait for significant pullback.",
+          "price_position": null
+        },
+        "entry_analysis": {
+          "entry_grade": "F",
+          "entry_score": 20,
+          "recommended_entry": 284.4,
+          "limit_order_price": 284.4,
+          "max_acceptable_price": 302.18,
+          "wait_for_pullback": true,
+          "pullback_target_price": 284.4,
+          "time_feasible": true,
+          "time_remaining_minutes": 375,
+          "estimated_minutes_to_target": 742,
+          "liquidity_grade": "A",
+          "theta_impact_per_hour": 1.07,
+          "supports_immediate_entry": false,
+          "entry_recommendation": "AVOID",
+          "reasoning": [
+            "\u26d4 AVOID: Unfavorable conditions for entry",
+            "\ud83d\udd34 HIGH PREMIUM: IV very elevated +9147% - avoid or wait"
+          ]
+        },
+        "probability_boost": true,
+        "sentiment_conflict": true
+      },
+      {
+        "strike": 25400,
+        "type": "PUT",
+        "ltp": 390.2,
+        "volume": 892710,
+        "oi": 681915,
+        "iv": 13.87,
+        "delta": -0.47546456692913397,
+        "gamma": 0.0017515983482406224,
+        "score": 102.6,
+        "fyers_symbol": "NSE:NIFTY2621025400PE",
+        "strategy_match": "Excellent all opportunity",
+        "recommendation": "Strong BUY - ITM PUT",
+        "discount_zone": {
+          "status": "high_premium",
+          "current_price": 390.2,
+          "best_entry_price": 312.16,
+          "max_entry_price": 331.67,
+          "target_price": 507.26,
+          "expected_pullback_pct": 2.0,
+          "iv_vs_avg_pct": 9146.7,
+          "time_feasible": true,
+          "minutes_remaining": 375,
+          "supports_entry": false,
+          "momentum_direction": "neutral",
+          "reasoning": "\ud83d\udd34 HIGH PREMIUM: IV +9147% very elevated. Avoid or wait for significant pullback.",
+          "price_position": null
+        },
+        "entry_analysis": {
+          "entry_grade": "F",
+          "entry_score": 20,
+          "recommended_entry": 312.16,
+          "limit_order_price": 312.16,
+          "max_acceptable_price": 331.67,
+          "wait_for_pullback": true,
+          "pullback_target_price": 312.16,
+          "time_feasible": true,
+          "time_remaining_minutes": 375,
+          "estimated_minutes_to_target": 821,
+          "liquidity_grade": "A",
+          "theta_impact_per_hour": 1.17,
+          "supports_immediate_entry": false,
+          "entry_recommendation": "AVOID",
+          "reasoning": [
+            "\u26d4 AVOID: Unfavorable conditions for entry",
+            "\ud83d\udd34 HIGH PREMIUM: IV very elevated +9147% - avoid or wait"
+          ]
+        },
+        "probability_boost": true,
+        "sentiment_conflict": true
+      },
+      {
+        "strike": 25450,
+        "type": "PUT",
+        "ltp": 425.55,
+        "volume": 83135,
+        "oi": 64805,
+        "iv": 13.87,
+        "delta": -0.47158349705304525,
+        "gamma": 0.0017117392898710173,
+        "score": 102.6,
+        "fyers_symbol": "NSE:NIFTY2621025450PE",
+        "strategy_match": "Excellent all opportunity",
+        "recommendation": "Strong BUY - ITM PUT",
+        "discount_zone": {
+          "status": "high_premium",
+          "current_price": 425.55,
+          "best_entry_price": 340.44,
+          "max_entry_price": 361.72,
+          "target_price": 553.22,
+          "expected_pullback_pct": 2.0,
+          "iv_vs_avg_pct": 9146.7,
+          "time_feasible": true,
+          "minutes_remaining": 375,
+          "supports_entry": false,
+          "momentum_direction": "neutral",
+          "reasoning": "\ud83d\udd34 HIGH PREMIUM: IV +9147% very elevated. Avoid or wait for significant pullback.",
+          "price_position": null
+        },
+        "entry_analysis": {
+          "entry_grade": "F",
+          "entry_score": 20,
+          "recommended_entry": 340.44,
+          "limit_order_price": 340.44,
+          "max_acceptable_price": 361.72,
+          "wait_for_pullback": true,
+          "pullback_target_price": 340.44,
+          "time_feasible": true,
+          "time_remaining_minutes": 375,
+          "estimated_minutes_to_target": 902,
+          "liquidity_grade": "A",
+          "theta_impact_per_hour": 1.28,
+          "supports_immediate_entry": false,
+          "entry_recommendation": "AVOID",
+          "reasoning": [
+            "\u26d4 AVOID: Unfavorable conditions for entry",
+            "\ud83d\udd34 HIGH PREMIUM: IV very elevated +9147% - avoid or wait"
+          ]
+        },
+        "probability_boost": true,
+        "sentiment_conflict": true
+      },
+      {
+        "strike": 25500,
+        "type": "PUT",
+        "ltp": 464,
+        "volume": 1122745,
+        "oi": 658060,
+        "iv": 13.87,
+        "delta": -0.46771764705882357,
+        "gamma": 0.0016718802315014122,
+        "score": 102.6,
+        "fyers_symbol": "NSE:NIFTY2621025500PE",
+        "strategy_match": "Excellent all opportunity",
+        "recommendation": "Strong BUY - ITM PUT",
+        "discount_zone": {
+          "status": "high_premium",
+          "current_price": 464,
+          "best_entry_price": 371.2,
+          "max_entry_price": 394.4,
+          "target_price": 603.2,
+          "expected_pullback_pct": 2.0,
+          "iv_vs_avg_pct": 9146.7,
+          "time_feasible": true,
+          "minutes_remaining": 375,
+          "supports_entry": false,
+          "momentum_direction": "neutral",
+          "reasoning": "\ud83d\udd34 HIGH PREMIUM: IV +9147% very elevated. Avoid or wait for significant pullback.",
+          "price_position": null
+        },
+        "entry_analysis": {
+          "entry_grade": "F",
+          "entry_score": 20,
+          "recommended_entry": 371.2,
+          "limit_order_price": 371.2,
+          "max_acceptable_price": 394.4,
+          "wait_for_pullback": true,
+          "pullback_target_price": 371.2,
+          "time_feasible": true,
+          "time_remaining_minutes": 375,
+          "estimated_minutes_to_target": 992,
+          "liquidity_grade": "A",
+          "theta_impact_per_hour": 1.39,
+          "supports_immediate_entry": false,
+          "entry_recommendation": "AVOID",
+          "reasoning": [
+            "\u26d4 AVOID: Unfavorable conditions for entry",
+            "\ud83d\udd34 HIGH PREMIUM: IV very elevated +9147% - avoid or wait"
+          ]
+        },
+        "probability_boost": true,
+        "sentiment_conflict": true
+      },
+      {
+        "strike": 25550,
+        "type": "PUT",
+        "ltp": 500.5,
+        "volume": 24245,
+        "oi": 23595,
+        "iv": 13.87,
+        "delta": -0.463866927592955,
+        "gamma": 0.001632021173131807,
+        "score": 102.6,
+        "fyers_symbol": "NSE:NIFTY2621025550PE",
+        "strategy_match": "Excellent all opportunity",
+        "recommendation": "Strong BUY - ITM PUT",
+        "discount_zone": {
+          "status": "high_premium",
+          "current_price": 500.5,
+          "best_entry_price": 400.4,
+          "max_entry_price": 425.43,
+          "target_price": 650.65,
+          "expected_pullback_pct": 2.0,
+          "iv_vs_avg_pct": 9146.7,
+          "time_feasible": true,
+          "minutes_remaining": 375,
+          "supports_entry": false,
+          "momentum_direction": "neutral",
+          "reasoning": "\ud83d\udd34 HIGH PREMIUM: IV +9147% very elevated. Avoid or wait for significant pullback.",
+          "price_position": null
+        },
+        "entry_analysis": {
+          "entry_grade": "F",
+          "entry_score": 20,
+          "recommended_entry": 400.4,
+          "limit_order_price": 400.4,
+          "max_acceptable_price": 425.43,
+          "wait_for_pullback": true,
+          "pullback_target_price": 400.4,
+          "time_feasible": true,
+          "time_remaining_minutes": 375,
+          "estimated_minutes_to_target": 1079,
+          "liquidity_grade": "A",
+          "theta_impact_per_hour": 1.5,
+          "supports_immediate_entry": false,
+          "entry_recommendation": "AVOID",
+          "reasoning": [
+            "\u26d4 AVOID: Unfavorable conditions for entry",
+            "\ud83d\udd34 HIGH PREMIUM: IV very elevated +9147% - avoid or wait"
+          ]
+        },
+        "probability_boost": true,
+        "sentiment_conflict": true
+      },
+      {
+        "strike": 25600,
+        "type": "PUT",
+        "ltp": 543,
+        "volume": 139555,
+        "oi": 119990,
+        "iv": 13.87,
+        "delta": -0.4600312500000001,
+        "gamma": 0.0015921621147622022,
+        "score": 102.6,
+        "fyers_symbol": "NSE:NIFTY2621025600PE",
+        "strategy_match": "Excellent all opportunity",
+        "recommendation": "Strong BUY - ITM PUT",
+        "discount_zone": {
+          "status": "high_premium",
+          "current_price": 543,
+          "best_entry_price": 434.4,
+          "max_entry_price": 461.55,
+          "target_price": 705.9,
+          "expected_pullback_pct": 2.0,
+          "iv_vs_avg_pct": 9146.7,
+          "time_feasible": true,
+          "minutes_remaining": 375,
+          "supports_entry": false,
+          "momentum_direction": "neutral",
+          "reasoning": "\ud83d\udd34 HIGH PREMIUM: IV +9147% very elevated. Avoid or wait for significant pullback.",
+          "price_position": null
+        },
+        "entry_analysis": {
+          "entry_grade": "F",
+          "entry_score": 20,
+          "recommended_entry": 434.4,
+          "limit_order_price": 434.4,
+          "max_acceptable_price": 461.55,
+          "wait_for_pullback": true,
+          "pullback_target_price": 434.4,
+          "time_feasible": true,
+          "time_remaining_minutes": 375,
+          "estimated_minutes_to_target": 1180,
+          "liquidity_grade": "A",
+          "theta_impact_per_hour": 1.63,
+          "supports_immediate_entry": false,
+          "entry_recommendation": "AVOID",
+          "reasoning": [
+            "\u26d4 AVOID: Unfavorable conditions for entry",
+            "\ud83d\udd34 HIGH PREMIUM: IV very elevated +9147% - avoid or wait"
+          ]
+        },
+        "probability_boost": true,
+        "sentiment_conflict": true
+      },
+      {
+        "strike": 25700,
+        "type": "PUT",
+        "ltp": 634.85,
+        "volume": 184275,
+        "oi": 140595,
+        "iv": 13.87,
+        "delta": -0.45240466926070044,
+        "gamma": 0.001512443998022992,
+        "score": 102.6,
+        "fyers_symbol": "NSE:NIFTY2621025700PE",
+        "strategy_match": "Excellent all opportunity",
+        "recommendation": "Strong BUY - ITM PUT",
+        "discount_zone": {
+          "status": "high_premium",
+          "current_price": 634.85,
+          "best_entry_price": 507.88,
+          "max_entry_price": 539.62,
+          "target_price": 825.31,
+          "expected_pullback_pct": 2.0,
+          "iv_vs_avg_pct": 9146.7,
+          "time_feasible": true,
+          "minutes_remaining": 375,
+          "supports_entry": false,
+          "momentum_direction": "neutral",
+          "reasoning": "\ud83d\udd34 HIGH PREMIUM: IV +9147% very elevated. Avoid or wait for significant pullback.",
+          "price_position": null
+        },
+        "entry_analysis": {
+          "entry_grade": "F",
+          "entry_score": 20,
+          "recommended_entry": 507.88,
+          "limit_order_price": 507.88,
+          "max_acceptable_price": 539.62,
+          "wait_for_pullback": true,
+          "pullback_target_price": 507.88,
+          "time_feasible": true,
+          "time_remaining_minutes": 375,
+          "estimated_minutes_to_target": 1403,
+          "liquidity_grade": "A",
+          "theta_impact_per_hour": 1.9,
+          "supports_immediate_entry": false,
+          "entry_recommendation": "AVOID",
+          "reasoning": [
+            "\u26d4 AVOID: Unfavorable conditions for entry",
+            "\ud83d\udd34 HIGH PREMIUM: IV very elevated +9147% - avoid or wait"
+          ]
+        },
+        "probability_boost": true,
+        "sentiment_conflict": true
+      },
+      {
+        "strike": 25750,
+        "type": "PUT",
+        "ltp": 678.45,
+        "volume": 32305,
+        "oi": 30355,
+        "iv": 13.87,
+        "delta": -0.4486135922330099,
+        "gamma": 0.001472584939653387,
+        "score": 102.6,
+        "fyers_symbol": "NSE:NIFTY2621025750PE",
+        "strategy_match": "Excellent all opportunity",
+        "recommendation": "Strong BUY - ITM PUT",
+        "discount_zone": {
+          "status": "high_premium",
+          "current_price": 678.45,
+          "best_entry_price": 542.76,
+          "max_entry_price": 576.68,
+          "target_price": 881.99,
+          "expected_pullback_pct": 2.0,
+          "iv_vs_avg_pct": 9146.7,
+          "time_feasible": true,
+          "minutes_remaining": 375,
+          "supports_entry": false,
+          "momentum_direction": "neutral",
+          "reasoning": "\ud83d\udd34 HIGH PREMIUM: IV +9147% very elevated. Avoid or wait for significant pullback.",
+          "price_position": null
+        },
+        "entry_analysis": {
+          "entry_grade": "F",
+          "entry_score": 20,
+          "recommended_entry": 542.76,
+          "limit_order_price": 542.76,
+          "max_acceptable_price": 576.68,
+          "wait_for_pullback": true,
+          "pullback_target_price": 542.76,
+          "time_feasible": true,
+          "time_remaining_minutes": 375,
+          "estimated_minutes_to_target": 1512,
+          "liquidity_grade": "A",
+          "theta_impact_per_hour": 2.04,
+          "supports_immediate_entry": false,
+          "entry_recommendation": "AVOID",
+          "reasoning": [
+            "\u26d4 AVOID: Unfavorable conditions for entry",
+            "\ud83d\udd34 HIGH PREMIUM: IV very elevated +9147% - avoid or wait"
+          ]
+        },
+        "probability_boost": true,
+        "sentiment_conflict": true
+      },
+      {
+        "strike": 25800,
+        "type": "PUT",
+        "ltp": 725,
+        "volume": 108095,
+        "oi": 112385,
+        "iv": 13.87,
+        "delta": -0.4448372093023256,
+        "gamma": 0.0014327258812837818,
+        "score": 102.6,
+        "fyers_symbol": "NSE:NIFTY2621025800PE",
+        "strategy_match": "Excellent all opportunity",
+        "recommendation": "Strong BUY - ITM PUT",
+        "discount_zone": {
+          "status": "high_premium",
+          "current_price": 725,
+          "best_entry_price": 580.0,
+          "max_entry_price": 616.25,
+          "target_price": 942.5,
+          "expected_pullback_pct": 2.0,
+          "iv_vs_avg_pct": 9146.7,
+          "time_feasible": true,
+          "minutes_remaining": 375,
+          "supports_entry": false,
+          "momentum_direction": "neutral",
+          "reasoning": "\ud83d\udd34 HIGH PREMIUM: IV +9147% very elevated. Avoid or wait for significant pullback.",
+          "price_position": null
+        },
+        "entry_analysis": {
+          "entry_grade": "F",
+          "entry_score": 20,
+          "recommended_entry": 580.0,
+          "limit_order_price": 580.0,
+          "max_acceptable_price": 616.25,
+          "wait_for_pullback": true,
+          "pullback_target_price": 580.0,
+          "time_feasible": true,
+          "time_remaining_minutes": 375,
+          "estimated_minutes_to_target": 1630,
+          "liquidity_grade": "A",
+          "theta_impact_per_hour": 2.17,
+          "supports_immediate_entry": false,
+          "entry_recommendation": "AVOID",
+          "reasoning": [
+            "\u26d4 AVOID: Unfavorable conditions for entry",
+            "\ud83d\udd34 HIGH PREMIUM: IV very elevated +9147% - avoid or wait"
+          ]
+        },
+        "probability_boost": true,
+        "sentiment_conflict": true
+      },
+      {
+        "strike": 25850,
+        "type": "PUT",
+        "ltp": 763.1,
+        "volume": 43550,
+        "oi": 37180,
+        "iv": 13.87,
+        "delta": -0.441075435203095,
+        "gamma": 0.0013928668229141765,
+        "score": 102.6,
+        "fyers_symbol": "NSE:NIFTY2621025850PE",
+        "strategy_match": "Excellent all opportunity",
+        "recommendation": "Strong BUY - ITM PUT",
+        "discount_zone": {
+          "status": "high_premium",
+          "current_price": 763.1,
+          "best_entry_price": 610.48,
+          "max_entry_price": 648.63,
+          "target_price": 992.03,
+          "expected_pullback_pct": 2.0,
+          "iv_vs_avg_pct": 9146.7,
+          "time_feasible": true,
+          "minutes_remaining": 375,
+          "supports_entry": false,
+          "momentum_direction": "neutral",
+          "reasoning": "\ud83d\udd34 HIGH PREMIUM: IV +9147% very elevated. Avoid or wait for significant pullback.",
+          "price_position": null
+        },
+        "entry_analysis": {
+          "entry_grade": "F",
+          "entry_score": 20,
+          "recommended_entry": 610.48,
+          "limit_order_price": 610.48,
+          "max_acceptable_price": 648.63,
+          "wait_for_pullback": true,
+          "pullback_target_price": 610.48,
+          "time_feasible": true,
+          "time_remaining_minutes": 375,
+          "estimated_minutes_to_target": 1730,
+          "liquidity_grade": "A",
+          "theta_impact_per_hour": 2.29,
+          "supports_immediate_entry": false,
+          "entry_recommendation": "AVOID",
+          "reasoning": [
+            "\u26d4 AVOID: Unfavorable conditions for entry",
+            "\ud83d\udd34 HIGH PREMIUM: IV very elevated +9147% - avoid or wait"
+          ]
+        },
+        "probability_boost": true,
+        "sentiment_conflict": true
+      },
+      {
+        "strike": 25650,
+        "type": "PUT",
+        "ltp": 582.35,
+        "volume": 13780,
+        "oi": 17680,
+        "iv": 13.87,
+        "delta": -0.4562105263157896,
+        "gamma": 0.001552303056392597,
+        "score": 99.294,
+        "fyers_symbol": "NSE:NIFTY2621025650PE",
+        "strategy_match": "Excellent all opportunity",
+        "recommendation": "BUY - ITM PUT",
+        "discount_zone": {
+          "status": "high_premium",
+          "current_price": 582.35,
+          "best_entry_price": 465.88,
+          "max_entry_price": 495.0,
+          "target_price": 757.06,
+          "expected_pullback_pct": 2.0,
+          "iv_vs_avg_pct": 9146.7,
+          "time_feasible": true,
+          "minutes_remaining": 375,
+          "supports_entry": false,
+          "momentum_direction": "neutral",
+          "reasoning": "\ud83d\udd34 HIGH PREMIUM: IV +9147% very elevated. Avoid or wait for significant pullback.",
+          "price_position": null
+        },
+        "entry_analysis": {
+          "entry_grade": "F",
+          "entry_score": 20,
+          "recommended_entry": 465.88,
+          "limit_order_price": 465.88,
+          "max_acceptable_price": 495.0,
+          "wait_for_pullback": true,
+          "pullback_target_price": 465.88,
+          "time_feasible": true,
+          "time_remaining_minutes": 375,
+          "estimated_minutes_to_target": 1276,
+          "liquidity_grade": "B",
+          "theta_impact_per_hour": 1.75,
+          "supports_immediate_entry": false,
+          "entry_recommendation": "AVOID",
+          "reasoning": [
+            "\u26d4 AVOID: Unfavorable conditions for entry",
+            "\ud83d\udd34 HIGH PREMIUM: IV very elevated +9147% - avoid or wait"
+          ]
+        },
+        "probability_boost": true,
+        "sentiment_conflict": true
+      },
+      {
+        "strike": 24400,
+        "type": "CALL",
+        "ltp": 730.7,
+        "volume": 108160,
+        "oi": 29900,
+        "iv": 13.87,
+        "delta": 0.556426229508197,
+        "gamma": 0.0014512204843672763,
+        "score": 96.75,
+        "fyers_symbol": "NSE:NIFTY2621024400CE",
+        "strategy_match": "Excellent all opportunity",
+        "recommendation": "Strong BUY - ITM CALL",
+        "discount_zone": {
+          "status": "high_premium",
+          "current_price": 730.7,
+          "best_entry_price": 584.56,
+          "max_entry_price": 621.1,
+          "target_price": 949.91,
+          "expected_pullback_pct": 2.0,
+          "iv_vs_avg_pct": 9146.7,
+          "time_feasible": true,
+          "minutes_remaining": 375,
+          "supports_entry": false,
+          "momentum_direction": "neutral",
+          "reasoning": "\ud83d\udd34 HIGH PREMIUM: IV +9147% very elevated. Avoid or wait for significant pullback.",
+          "price_position": {
+            "day_high": 738.95,
+            "day_low": 606.3,
+            "vwap": 673.01,
+            "position_in_range_pct": 93.8,
+            "near_day_high": true,
+            "near_day_low": false,
+            "intraday_recommendation": "wait_pullback"
+          }
+        },
+        "entry_analysis": {
+          "entry_grade": "F",
+          "entry_score": 20,
+          "recommended_entry": 584.56,
+          "limit_order_price": 584.56,
+          "max_acceptable_price": 621.1,
+          "wait_for_pullback": true,
+          "pullback_target_price": 584.56,
+          "time_feasible": true,
+          "time_remaining_minutes": 375,
+          "estimated_minutes_to_target": 1313,
+          "liquidity_grade": "A",
+          "theta_impact_per_hour": 2.19,
+          "supports_immediate_entry": false,
+          "entry_recommendation": "AVOID",
+          "reasoning": [
+            "\u26d4 AVOID: Unfavorable conditions for entry",
+            "\ud83d\udd34 HIGH PREMIUM: IV very elevated +9147% - avoid or wait"
+          ]
+        },
+        "historical_context": {
+          "has_history": true,
+          "day_high": 738.95,
+          "day_low": 606.3,
+          "day_open": 652.0,
+          "vwap_estimate": 673.01,
+          "price_range": 132.65,
+          "position_in_range_pct": 93.8,
+          "near_day_high": true,
+          "near_day_low": false,
+          "at_vwap": false,
+          "recommendation": "wait_pullback"
+        },
+        "probability_boost": false,
+        "sentiment_boost": true
+      },
+      {
+        "strike": 24500,
+        "type": "CALL",
+        "ltp": 639.95,
+        "volume": 1140945,
+        "oi": 315445,
+        "iv": 13.87,
+        "delta": 0.5480326530612247,
+        "gamma": 0.0015309386011064863,
+        "score": 96.75,
+        "fyers_symbol": "NSE:NIFTY2621024500CE",
+        "strategy_match": "Excellent all opportunity",
+        "recommendation": "Strong BUY - ITM CALL",
+        "discount_zone": {
+          "status": "high_premium",
+          "current_price": 639.95,
+          "best_entry_price": 511.96,
+          "max_entry_price": 543.96,
+          "target_price": 831.94,
+          "expected_pullback_pct": 2.0,
+          "iv_vs_avg_pct": 9146.7,
+          "time_feasible": true,
+          "minutes_remaining": 375,
+          "supports_entry": false,
+          "momentum_direction": "neutral",
+          "reasoning": "\ud83d\udd34 HIGH PREMIUM: IV +9147% very elevated. Avoid or wait for significant pullback.",
+          "price_position": {
+            "day_high": 654.5,
+            "day_low": 523.95,
+            "vwap": 600.07,
+            "position_in_range_pct": 88.9,
+            "near_day_high": true,
+            "near_day_low": false,
+            "intraday_recommendation": "wait_pullback"
+          }
+        },
+        "entry_analysis": {
+          "entry_grade": "F",
+          "entry_score": 20,
+          "recommended_entry": 511.96,
+          "limit_order_price": 511.96,
+          "max_acceptable_price": 543.96,
+          "wait_for_pullback": true,
+          "pullback_target_price": 511.96,
+          "time_feasible": true,
+          "time_remaining_minutes": 375,
+          "estimated_minutes_to_target": 1168,
+          "liquidity_grade": "A",
+          "theta_impact_per_hour": 1.92,
+          "supports_immediate_entry": false,
+          "entry_recommendation": "AVOID",
+          "reasoning": [
+            "\u26d4 AVOID: Unfavorable conditions for entry",
+            "\ud83d\udd34 HIGH PREMIUM: IV very elevated +9147% - avoid or wait"
+          ]
+        },
+        "historical_context": {
+          "has_history": true,
+          "day_high": 654.5,
+          "day_low": 523.95,
+          "day_open": 564.95,
+          "vwap_estimate": 600.07,
+          "price_range": 130.55,
+          "position_in_range_pct": 88.9,
+          "near_day_high": true,
+          "near_day_low": false,
+          "at_vwap": false,
+          "recommendation": "wait_pullback"
+        },
+        "probability_boost": false,
+        "sentiment_boost": true
+      },
+      {
+        "strike": 24600,
+        "type": "CALL",
+        "ltp": 560.55,
+        "volume": 832780,
+        "oi": 163215,
+        "iv": 13.87,
+        "delta": 0.5397073170731708,
+        "gamma": 0.0016106567178456965,
+        "score": 96.75,
+        "fyers_symbol": "NSE:NIFTY2621024600CE",
+        "strategy_match": "Excellent all opportunity",
+        "recommendation": "Strong BUY - ITM CALL",
+        "discount_zone": {
+          "status": "high_premium",
+          "current_price": 560.55,
+          "best_entry_price": 448.44,
+          "max_entry_price": 476.47,
+          "target_price": 728.71,
+          "expected_pullback_pct": 2.0,
+          "iv_vs_avg_pct": 9146.7,
+          "time_feasible": true,
+          "minutes_remaining": 375,
+          "supports_entry": false,
+          "momentum_direction": "neutral",
+          "reasoning": "\ud83d\udd34 HIGH PREMIUM: IV +9147% very elevated. Avoid or wait for significant pullback.",
+          "price_position": null
+        },
+        "entry_analysis": {
+          "entry_grade": "F",
+          "entry_score": 20,
+          "recommended_entry": 448.44,
+          "limit_order_price": 448.44,
+          "max_acceptable_price": 476.47,
+          "wait_for_pullback": true,
+          "pullback_target_price": 448.44,
+          "time_feasible": true,
+          "time_remaining_minutes": 375,
+          "estimated_minutes_to_target": 1039,
+          "liquidity_grade": "A",
+          "theta_impact_per_hour": 1.68,
+          "supports_immediate_entry": false,
+          "entry_recommendation": "AVOID",
+          "reasoning": [
+            "\u26d4 AVOID: Unfavorable conditions for entry",
+            "\ud83d\udd34 HIGH PREMIUM: IV very elevated +9147% - avoid or wait"
+          ]
+        },
+        "probability_boost": false,
+        "sentiment_boost": true
+      },
+      {
+        "strike": 24650,
+        "type": "CALL",
+        "ltp": 514.7,
+        "volume": 315965,
+        "oi": 32695,
+        "iv": 13.87,
+        "delta": 0.5355699797160245,
+        "gamma": 0.0016505157762153016,
+        "score": 96.75,
+        "fyers_symbol": "NSE:NIFTY2621024650CE",
+        "strategy_match": "Excellent all opportunity",
+        "recommendation": "Strong BUY - ITM CALL",
+        "discount_zone": {
+          "status": "high_premium",
+          "current_price": 514.7,
+          "best_entry_price": 411.76,
+          "max_entry_price": 437.5,
+          "target_price": 669.11,
+          "expected_pullback_pct": 2.0,
+          "iv_vs_avg_pct": 9146.7,
+          "time_feasible": true,
+          "minutes_remaining": 375,
+          "supports_entry": false,
+          "momentum_direction": "neutral",
+          "reasoning": "\ud83d\udd34 HIGH PREMIUM: IV +9147% very elevated. Avoid or wait for significant pullback.",
+          "price_position": null
+        },
+        "entry_analysis": {
+          "entry_grade": "F",
+          "entry_score": 20,
+          "recommended_entry": 411.76,
+          "limit_order_price": 411.76,
+          "max_acceptable_price": 437.5,
+          "wait_for_pullback": true,
+          "pullback_target_price": 411.76,
+          "time_feasible": true,
+          "time_remaining_minutes": 375,
+          "estimated_minutes_to_target": 961,
+          "liquidity_grade": "A",
+          "theta_impact_per_hour": 1.54,
+          "supports_immediate_entry": false,
+          "entry_recommendation": "AVOID",
+          "reasoning": [
+            "\u26d4 AVOID: Unfavorable conditions for entry",
+            "\ud83d\udd34 HIGH PREMIUM: IV very elevated +9147% - avoid or wait"
+          ]
+        },
+        "probability_boost": false,
+        "sentiment_boost": true
+      },
+      {
+        "strike": 24700,
+        "type": "CALL",
+        "ltp": 471.7,
+        "volume": 3138395,
+        "oi": 170105,
+        "iv": 13.87,
+        "delta": 0.5314493927125508,
+        "gamma": 0.0016903748345849065,
+        "score": 96.75,
+        "fyers_symbol": "NSE:NIFTY2621024700CE",
+        "strategy_match": "Excellent all opportunity",
+        "recommendation": "Strong BUY - ITM CALL",
+        "discount_zone": {
+          "status": "high_premium",
+          "current_price": 471.7,
+          "best_entry_price": 377.36,
+          "max_entry_price": 400.94,
+          "target_price": 613.21,
+          "expected_pullback_pct": 2.0,
+          "iv_vs_avg_pct": 9146.7,
+          "time_feasible": true,
+          "minutes_remaining": 375,
+          "supports_entry": false,
+          "momentum_direction": "neutral",
+          "reasoning": "\ud83d\udd34 HIGH PREMIUM: IV +9147% very elevated. Avoid or wait for significant pullback.",
+          "price_position": null
+        },
+        "entry_analysis": {
+          "entry_grade": "F",
+          "entry_score": 20,
+          "recommended_entry": 377.36,
+          "limit_order_price": 377.36,
+          "max_acceptable_price": 400.94,
+          "wait_for_pullback": true,
+          "pullback_target_price": 377.36,
+          "time_feasible": true,
+          "time_remaining_minutes": 375,
+          "estimated_minutes_to_target": 888,
+          "liquidity_grade": "A",
+          "theta_impact_per_hour": 1.42,
+          "supports_immediate_entry": false,
+          "entry_recommendation": "AVOID",
+          "reasoning": [
+            "\u26d4 AVOID: Unfavorable conditions for entry",
+            "\ud83d\udd34 HIGH PREMIUM: IV very elevated +9147% - avoid or wait"
+          ]
+        },
+        "probability_boost": false,
+        "sentiment_boost": true
+      },
+      {
+        "strike": 24750,
+        "type": "CALL",
+        "ltp": 438,
+        "volume": 1570335,
+        "oi": 112320,
+        "iv": 13.87,
+        "delta": 0.5273454545454546,
+        "gamma": 0.0017302338929545118,
+        "score": 96.75,
+        "fyers_symbol": "NSE:NIFTY2621024750CE",
+        "strategy_match": "Excellent all opportunity",
+        "recommendation": "Strong BUY - ITM CALL",
+        "discount_zone": {
+          "status": "high_premium",
+          "current_price": 438,
+          "best_entry_price": 350.4,
+          "max_entry_price": 372.3,
+          "target_price": 569.4,
+          "expected_pullback_pct": 2.0,
+          "iv_vs_avg_pct": 9146.7,
+          "time_feasible": true,
+          "minutes_remaining": 375,
+          "supports_entry": false,
+          "momentum_direction": "neutral",
+          "reasoning": "\ud83d\udd34 HIGH PREMIUM: IV +9147% very elevated. Avoid or wait for significant pullback.",
+          "price_position": null
+        },
+        "entry_analysis": {
+          "entry_grade": "F",
+          "entry_score": 20,
+          "recommended_entry": 350.4,
+          "limit_order_price": 350.4,
+          "max_acceptable_price": 372.3,
+          "wait_for_pullback": true,
+          "pullback_target_price": 350.4,
+          "time_feasible": true,
+          "time_remaining_minutes": 375,
+          "estimated_minutes_to_target": 831,
+          "liquidity_grade": "A",
+          "theta_impact_per_hour": 1.31,
+          "supports_immediate_entry": false,
+          "entry_recommendation": "AVOID",
+          "reasoning": [
+            "\u26d4 AVOID: Unfavorable conditions for entry",
+            "\ud83d\udd34 HIGH PREMIUM: IV very elevated +9147% - avoid or wait"
+          ]
+        },
+        "probability_boost": false,
+        "sentiment_boost": true
+      },
+      {
+        "strike": 24800,
+        "type": "CALL",
+        "ltp": 400.65,
+        "volume": 9245080,
+        "oi": 512655,
+        "iv": 13.87,
+        "delta": 0.5232580645161291,
+        "gamma": 0.001770092951324117,
+        "score": 96.75,
+        "fyers_symbol": "NSE:NIFTY2621024800CE",
+        "strategy_match": "Excellent all opportunity",
+        "recommendation": "Strong BUY - ITM CALL",
+        "discount_zone": {
+          "status": "high_premium",
+          "current_price": 400.65,
+          "best_entry_price": 320.52,
+          "max_entry_price": 340.55,
+          "target_price": 520.85,
+          "expected_pullback_pct": 2.0,
+          "iv_vs_avg_pct": 9146.7,
+          "time_feasible": true,
+          "minutes_remaining": 375,
+          "supports_entry": false,
+          "momentum_direction": "neutral",
+          "reasoning": "\ud83d\udd34 HIGH PREMIUM: IV +9147% very elevated. Avoid or wait for significant pullback.",
+          "price_position": null
+        },
+        "entry_analysis": {
+          "entry_grade": "F",
+          "entry_score": 20,
+          "recommended_entry": 320.52,
+          "limit_order_price": 320.52,
+          "max_acceptable_price": 340.55,
+          "wait_for_pullback": true,
+          "pullback_target_price": 320.52,
+          "time_feasible": true,
+          "time_remaining_minutes": 375,
+          "estimated_minutes_to_target": 766,
+          "liquidity_grade": "A",
+          "theta_impact_per_hour": 1.2,
+          "supports_immediate_entry": false,
+          "entry_recommendation": "AVOID",
+          "reasoning": [
+            "\u26d4 AVOID: Unfavorable conditions for entry",
+            "\ud83d\udd34 HIGH PREMIUM: IV very elevated +9147% - avoid or wait"
+          ]
+        },
+        "probability_boost": false,
+        "sentiment_boost": true
+      },
+      {
+        "strike": 24850,
+        "type": "CALL",
+        "ltp": 362.1,
+        "volume": 3834415,
+        "oi": 114400,
+        "iv": 13.87,
+        "delta": 0.5191871227364184,
+        "gamma": 0.0018099520096937218,
+        "score": 96.75,
+        "fyers_symbol": "NSE:NIFTY2621024850CE",
+        "strategy_match": "Excellent all opportunity",
+        "recommendation": "Strong BUY - ITM CALL",
+        "discount_zone": {
+          "status": "high_premium",
+          "current_price": 362.1,
+          "best_entry_price": 289.68,
+          "max_entry_price": 307.79,
+          "target_price": 470.73,
+          "expected_pullback_pct": 2.0,
+          "iv_vs_avg_pct": 9146.7,
+          "time_feasible": true,
+          "minutes_remaining": 375,
+          "supports_entry": false,
+          "momentum_direction": "neutral",
+          "reasoning": "\ud83d\udd34 HIGH PREMIUM: IV +9147% very elevated. Avoid or wait for significant pullback.",
+          "price_position": null
+        },
+        "entry_analysis": {
+          "entry_grade": "F",
+          "entry_score": 20,
+          "recommended_entry": 289.68,
+          "limit_order_price": 289.68,
+          "max_acceptable_price": 307.79,
+          "wait_for_pullback": true,
+          "pullback_target_price": 289.68,
+          "time_feasible": true,
+          "time_remaining_minutes": 375,
+          "estimated_minutes_to_target": 697,
+          "liquidity_grade": "A",
+          "theta_impact_per_hour": 1.09,
+          "supports_immediate_entry": false,
+          "entry_recommendation": "AVOID",
+          "reasoning": [
+            "\u26d4 AVOID: Unfavorable conditions for entry",
+            "\ud83d\udd34 HIGH PREMIUM: IV very elevated +9147% - avoid or wait"
+          ]
+        },
+        "probability_boost": false,
+        "sentiment_boost": true
+      },
+      {
+        "strike": 24900,
+        "type": "CALL",
+        "ltp": 326.55,
+        "volume": 12899575,
+        "oi": 786045,
+        "iv": 13.87,
+        "delta": 0.5151325301204821,
+        "gamma": 0.001849811068063327,
+        "score": 96.75,
+        "fyers_symbol": "NSE:NIFTY2621024900CE",
+        "strategy_match": "Excellent all opportunity",
+        "recommendation": "Strong BUY - ITM CALL",
+        "discount_zone": {
+          "status": "high_premium",
+          "current_price": 326.55,
+          "best_entry_price": 261.24,
+          "max_entry_price": 277.57,
+          "target_price": 424.52,
+          "expected_pullback_pct": 2.0,
+          "iv_vs_avg_pct": 9146.7,
+          "time_feasible": true,
+          "minutes_remaining": 375,
+          "supports_entry": false,
+          "momentum_direction": "neutral",
+          "reasoning": "\ud83d\udd34 HIGH PREMIUM: IV +9147% very elevated. Avoid or wait for significant pullback.",
+          "price_position": null
+        },
+        "entry_analysis": {
+          "entry_grade": "F",
+          "entry_score": 20,
+          "recommended_entry": 261.24,
+          "limit_order_price": 261.24,
+          "max_acceptable_price": 277.57,
+          "wait_for_pullback": true,
+          "pullback_target_price": 261.24,
+          "time_feasible": true,
+          "time_remaining_minutes": 375,
+          "estimated_minutes_to_target": 634,
+          "liquidity_grade": "A",
+          "theta_impact_per_hour": 0.98,
+          "supports_immediate_entry": false,
+          "entry_recommendation": "AVOID",
+          "reasoning": [
+            "\u26d4 AVOID: Unfavorable conditions for entry",
+            "\ud83d\udd34 HIGH PREMIUM: IV very elevated +9147% - avoid or wait"
+          ]
+        },
+        "probability_boost": false,
+        "sentiment_boost": true
+      },
+      {
+        "strike": 24950,
+        "type": "CALL",
+        "ltp": 295.05,
+        "volume": 4737395,
+        "oi": 172510,
+        "iv": 13.87,
+        "delta": 0.5110941883767537,
+        "gamma": 0.001889670126432932,
+        "score": 96.75,
+        "fyers_symbol": "NSE:NIFTY2621024950CE",
+        "strategy_match": "Excellent all opportunity",
+        "recommendation": "Strong BUY - ITM CALL",
+        "discount_zone": {
+          "status": "high_premium",
+          "current_price": 295.05,
+          "best_entry_price": 236.04,
+          "max_entry_price": 250.79,
+          "target_price": 383.57,
+          "expected_pullback_pct": 2.0,
+          "iv_vs_avg_pct": 9146.7,
+          "time_feasible": true,
+          "minutes_remaining": 375,
+          "supports_entry": false,
+          "momentum_direction": "neutral",
+          "reasoning": "\ud83d\udd34 HIGH PREMIUM: IV +9147% very elevated. Avoid or wait for significant pullback.",
+          "price_position": null
+        },
+        "entry_analysis": {
+          "entry_grade": "F",
+          "entry_score": 20,
+          "recommended_entry": 236.04,
+          "limit_order_price": 236.04,
+          "max_acceptable_price": 250.79,
+          "wait_for_pullback": true,
+          "pullback_target_price": 236.04,
+          "time_feasible": true,
+          "time_remaining_minutes": 375,
+          "estimated_minutes_to_target": 577,
+          "liquidity_grade": "A",
+          "theta_impact_per_hour": 0.89,
+          "supports_immediate_entry": false,
+          "entry_recommendation": "AVOID",
+          "reasoning": [
+            "\u26d4 AVOID: Unfavorable conditions for entry",
+            "\ud83d\udd34 HIGH PREMIUM: IV very elevated +9147% - avoid or wait"
+          ]
+        },
+        "probability_boost": false,
+        "sentiment_boost": true
+      },
+      {
+        "strike": 25000,
+        "type": "CALL",
+        "ltp": 262.95,
+        "volume": 20308990,
+        "oi": 1978210,
+        "iv": 13.87,
+        "delta": 0.507072,
+        "gamma": 0.0019295291848025371,
+        "score": 96.75,
+        "fyers_symbol": "NSE:NIFTY2621025000CE",
+        "strategy_match": "Excellent all opportunity",
+        "recommendation": "Strong BUY - ITM CALL",
+        "discount_zone": {
+          "status": "high_premium",
+          "current_price": 262.95,
+          "best_entry_price": 210.36,
+          "max_entry_price": 223.51,
+          "target_price": 341.83,
+          "expected_pullback_pct": 2.0,
+          "iv_vs_avg_pct": 9146.7,
+          "time_feasible": true,
+          "minutes_remaining": 375,
+          "supports_entry": false,
+          "momentum_direction": "neutral",
+          "reasoning": "\ud83d\udd34 HIGH PREMIUM: IV +9147% very elevated. Avoid or wait for significant pullback.",
+          "price_position": null
+        },
+        "entry_analysis": {
+          "entry_grade": "F",
+          "entry_score": 20,
+          "recommended_entry": 210.36,
+          "limit_order_price": 210.36,
+          "max_acceptable_price": 223.51,
+          "wait_for_pullback": true,
+          "pullback_target_price": 210.36,
+          "time_feasible": true,
+          "time_remaining_minutes": 375,
+          "estimated_minutes_to_target": 519,
+          "liquidity_grade": "A",
+          "theta_impact_per_hour": 0.79,
+          "supports_immediate_entry": false,
+          "entry_recommendation": "AVOID",
+          "reasoning": [
+            "\u26d4 AVOID: Unfavorable conditions for entry",
+            "\ud83d\udd34 HIGH PREMIUM: IV very elevated +9147% - avoid or wait"
+          ]
+        },
+        "probability_boost": false,
+        "sentiment_boost": true
+      },
+      {
+        "strike": 25050,
+        "type": "CALL",
+        "ltp": 234.45,
+        "volume": 2977585,
+        "oi": 218530,
+        "iv": 13.87,
+        "delta": 0.503065868263473,
+        "gamma": 0.001969388243172142,
+        "score": 96.75,
+        "fyers_symbol": "NSE:NIFTY2621025050CE",
+        "strategy_match": "Excellent all opportunity",
+        "recommendation": "Strong BUY - ITM CALL",
+        "discount_zone": {
+          "status": "high_premium",
+          "current_price": 234.45,
+          "best_entry_price": 187.56,
+          "max_entry_price": 199.28,
+          "target_price": 304.78,
+          "expected_pullback_pct": 2.0,
+          "iv_vs_avg_pct": 9146.7,
+          "time_feasible": true,
+          "minutes_remaining": 375,
+          "supports_entry": false,
+          "momentum_direction": "neutral",
+          "reasoning": "\ud83d\udd34 HIGH PREMIUM: IV +9147% very elevated. Avoid or wait for significant pullback.",
+          "price_position": null
+        },
+        "entry_analysis": {
+          "entry_grade": "F",
+          "entry_score": 20,
+          "recommended_entry": 187.56,
+          "limit_order_price": 187.56,
+          "max_acceptable_price": 199.28,
+          "wait_for_pullback": true,
+          "pullback_target_price": 187.56,
+          "time_feasible": true,
+          "time_remaining_minutes": 375,
+          "estimated_minutes_to_target": 466,
+          "liquidity_grade": "A",
+          "theta_impact_per_hour": 0.7,
+          "supports_immediate_entry": false,
+          "entry_recommendation": "AVOID",
+          "reasoning": [
+            "\u26d4 AVOID: Unfavorable conditions for entry",
+            "\ud83d\udd34 HIGH PREMIUM: IV very elevated +9147% - avoid or wait"
+          ]
+        },
+        "probability_boost": false,
+        "sentiment_boost": true
+      },
+      {
+        "strike": 25100,
+        "type": "CALL",
+        "ltp": 204.75,
+        "volume": 10066355,
+        "oi": 1881490,
+        "iv": 13.87,
+        "delta": 0.4990756972111554,
+        "gamma": 0.0019907526984582528,
+        "score": 96.75,
+        "fyers_symbol": "NSE:NIFTY2621025100CE",
+        "strategy_match": "Excellent all opportunity",
+        "recommendation": "Strong BUY - OTM CALL",
+        "discount_zone": {
+          "status": "high_premium",
+          "current_price": 204.75,
+          "best_entry_price": 163.8,
+          "max_entry_price": 174.04,
+          "target_price": 266.18,
+          "expected_pullback_pct": 2.0,
+          "iv_vs_avg_pct": 9146.7,
+          "time_feasible": true,
+          "minutes_remaining": 375,
+          "supports_entry": false,
+          "momentum_direction": "neutral",
+          "reasoning": "\ud83d\udd34 HIGH PREMIUM: IV +9147% very elevated. Avoid or wait for significant pullback.",
+          "price_position": null
+        },
+        "entry_analysis": {
+          "entry_grade": "F",
+          "entry_score": 20,
+          "recommended_entry": 163.8,
+          "limit_order_price": 163.8,
+          "max_acceptable_price": 174.04,
+          "wait_for_pullback": true,
+          "pullback_target_price": 163.8,
+          "time_feasible": true,
+          "time_remaining_minutes": 375,
+          "estimated_minutes_to_target": 410,
+          "liquidity_grade": "A",
+          "theta_impact_per_hour": 0.61,
+          "supports_immediate_entry": false,
+          "entry_recommendation": "AVOID",
+          "reasoning": [
+            "\u26d4 AVOID: Unfavorable conditions for entry",
+            "\ud83d\udd34 HIGH PREMIUM: IV very elevated +9147% - avoid or wait"
+          ]
+        },
+        "probability_boost": false,
+        "sentiment_boost": true
+      },
+      {
+        "strike": 25150,
+        "type": "CALL",
+        "ltp": 180.95,
+        "volume": 2780115,
+        "oi": 244725,
+        "iv": 13.87,
+        "delta": 0.4951013916500995,
+        "gamma": 0.0019508936400886477,
+        "score": 96.75,
+        "fyers_symbol": "NSE:NIFTY2621025150CE",
+        "strategy_match": "Excellent all opportunity",
+        "recommendation": "Strong BUY - OTM CALL",
+        "discount_zone": {
+          "status": "high_premium",
+          "current_price": 180.95,
+          "best_entry_price": 144.76,
+          "max_entry_price": 153.81,
+          "target_price": 235.23,
+          "expected_pullback_pct": 2.0,
+          "iv_vs_avg_pct": 9146.7,
+          "time_feasible": true,
+          "minutes_remaining": 375,
+          "supports_entry": false,
+          "momentum_direction": "neutral",
+          "reasoning": "\ud83d\udd34 HIGH PREMIUM: IV +9147% very elevated. Avoid or wait for significant pullback.",
+          "price_position": null
+        },
+        "entry_analysis": {
+          "entry_grade": "F",
+          "entry_score": 20,
+          "recommended_entry": 144.76,
+          "limit_order_price": 144.76,
+          "max_acceptable_price": 153.81,
+          "wait_for_pullback": true,
+          "pullback_target_price": 144.76,
+          "time_feasible": true,
+          "time_remaining_minutes": 375,
+          "estimated_minutes_to_target": 365,
+          "liquidity_grade": "A",
+          "theta_impact_per_hour": 0.54,
+          "supports_immediate_entry": false,
+          "entry_recommendation": "AVOID",
+          "reasoning": [
+            "\u26d4 AVOID: Unfavorable conditions for entry",
+            "\ud83d\udd34 HIGH PREMIUM: IV very elevated +9147% - avoid or wait"
+          ]
+        },
+        "probability_boost": false,
+        "sentiment_boost": true
+      },
+      {
+        "strike": 25200,
+        "type": "CALL",
+        "ltp": 157.5,
+        "volume": 10880545,
+        "oi": 1305330,
+        "iv": 13.87,
+        "delta": 0.4911428571428573,
+        "gamma": 0.0019110345817190426,
+        "score": 96.75,
+        "fyers_symbol": "NSE:NIFTY2621025200CE",
+        "strategy_match": "Excellent all opportunity",
+        "recommendation": "Strong BUY - OTM CALL",
+        "discount_zone": {
+          "status": "high_premium",
+          "current_price": 157.5,
+          "best_entry_price": 126.0,
+          "max_entry_price": 133.88,
+          "target_price": 204.75,
+          "expected_pullback_pct": 2.0,
+          "iv_vs_avg_pct": 9146.7,
+          "time_feasible": true,
+          "minutes_remaining": 375,
+          "supports_entry": false,
+          "momentum_direction": "neutral",
+          "reasoning": "\ud83d\udd34 HIGH PREMIUM: IV +9147% very elevated. Avoid or wait for significant pullback.",
+          "price_position": null
+        },
+        "entry_analysis": {
+          "entry_grade": "F",
+          "entry_score": 20,
+          "recommended_entry": 126.0,
+          "limit_order_price": 126.0,
+          "max_acceptable_price": 133.88,
+          "wait_for_pullback": true,
+          "pullback_target_price": 126.0,
+          "time_feasible": true,
+          "time_remaining_minutes": 375,
+          "estimated_minutes_to_target": 321,
+          "liquidity_grade": "A",
+          "theta_impact_per_hour": 0.47,
+          "supports_immediate_entry": false,
+          "entry_recommendation": "AVOID",
+          "reasoning": [
+            "\u26d4 AVOID: Unfavorable conditions for entry",
+            "\ud83d\udd34 HIGH PREMIUM: IV very elevated +9147% - avoid or wait"
+          ]
+        },
+        "probability_boost": false,
+        "sentiment_boost": true
+      },
+      {
+        "strike": 25250,
+        "type": "CALL",
+        "ltp": 136.85,
+        "volume": 3366935,
+        "oi": 480870,
+        "iv": 13.87,
+        "delta": 0.4872000000000001,
+        "gamma": 0.0018711755233494377,
+        "score": 96.75,
+        "fyers_symbol": "NSE:NIFTY2621025250CE",
+        "strategy_match": "Excellent all opportunity",
+        "recommendation": "Strong BUY - OTM CALL",
+        "discount_zone": {
+          "status": "high_premium",
+          "current_price": 136.85,
+          "best_entry_price": 109.48,
+          "max_entry_price": 116.32,
+          "target_price": 177.91,
+          "expected_pullback_pct": 2.0,
+          "iv_vs_avg_pct": 9146.7,
+          "time_feasible": true,
+          "minutes_remaining": 375,
+          "supports_entry": false,
+          "momentum_direction": "neutral",
+          "reasoning": "\ud83d\udd34 HIGH PREMIUM: IV +9147% very elevated. Avoid or wait for significant pullback.",
+          "price_position": null
+        },
+        "entry_analysis": {
+          "entry_grade": "F",
+          "entry_score": 20,
+          "recommended_entry": 109.48,
+          "limit_order_price": 109.48,
+          "max_acceptable_price": 116.32,
+          "wait_for_pullback": true,
+          "pullback_target_price": 109.48,
+          "time_feasible": true,
+          "time_remaining_minutes": 375,
+          "estimated_minutes_to_target": 281,
+          "liquidity_grade": "A",
+          "theta_impact_per_hour": 0.41,
+          "supports_immediate_entry": false,
+          "entry_recommendation": "AVOID",
+          "reasoning": [
+            "\u26d4 AVOID: Unfavorable conditions for entry",
+            "\ud83d\udd34 HIGH PREMIUM: IV very elevated +9147% - avoid or wait"
+          ]
+        },
+        "probability_boost": false,
+        "sentiment_boost": true
+      },
+      {
+        "strike": 25300,
+        "type": "CALL",
+        "ltp": 117.7,
+        "volume": 12339145,
+        "oi": 1741740,
+        "iv": 13.87,
+        "delta": 0.4832727272727273,
+        "gamma": 0.0018313164649798326,
+        "score": 96.75,
+        "fyers_symbol": "NSE:NIFTY2621025300CE",
+        "strategy_match": "Excellent all opportunity",
+        "recommendation": "Strong BUY - OTM CALL",
+        "discount_zone": {
+          "status": "high_premium",
+          "current_price": 117.7,
+          "best_entry_price": 94.16,
+          "max_entry_price": 100.05,
+          "target_price": 153.01,
+          "expected_pullback_pct": 2.0,
+          "iv_vs_avg_pct": 9146.7,
+          "time_feasible": true,
+          "minutes_remaining": 375,
+          "supports_entry": false,
+          "momentum_direction": "neutral",
+          "reasoning": "\ud83d\udd34 HIGH PREMIUM: IV +9147% very elevated. Avoid or wait for significant pullback.",
+          "price_position": null
+        },
+        "entry_analysis": {
+          "entry_grade": "F",
+          "entry_score": 20,
+          "recommended_entry": 94.16,
+          "limit_order_price": 94.16,
+          "max_acceptable_price": 100.05,
+          "wait_for_pullback": true,
+          "pullback_target_price": 94.16,
+          "time_feasible": true,
+          "time_remaining_minutes": 375,
+          "estimated_minutes_to_target": 244,
+          "liquidity_grade": "A",
+          "theta_impact_per_hour": 0.35,
+          "supports_immediate_entry": false,
+          "entry_recommendation": "AVOID",
+          "reasoning": [
+            "\u26d4 AVOID: Unfavorable conditions for entry",
+            "\ud83d\udd34 HIGH PREMIUM: IV very elevated +9147% - avoid or wait"
+          ]
+        },
+        "probability_boost": false,
+        "sentiment_boost": true
+      },
+      {
+        "strike": 25350,
+        "type": "CALL",
+        "ltp": 100.95,
+        "volume": 2767440,
+        "oi": 387595,
+        "iv": 13.87,
+        "delta": 0.4793609467455622,
+        "gamma": 0.0017914574066102275,
+        "score": 96.75,
+        "fyers_symbol": "NSE:NIFTY2621025350CE",
+        "strategy_match": "Excellent all opportunity",
+        "recommendation": "Strong BUY - OTM CALL",
+        "discount_zone": {
+          "status": "high_premium",
+          "current_price": 100.95,
+          "best_entry_price": 80.76,
+          "max_entry_price": 85.81,
+          "target_price": 131.24,
+          "expected_pullback_pct": 2.0,
+          "iv_vs_avg_pct": 9146.7,
+          "time_feasible": true,
+          "minutes_remaining": 375,
+          "supports_entry": false,
+          "momentum_direction": "neutral",
+          "reasoning": "\ud83d\udd34 HIGH PREMIUM: IV +9147% very elevated. Avoid or wait for significant pullback.",
+          "price_position": null
+        },
+        "entry_analysis": {
+          "entry_grade": "F",
+          "entry_score": 20,
+          "recommended_entry": 80.76,
+          "limit_order_price": 80.76,
+          "max_acceptable_price": 85.81,
+          "wait_for_pullback": true,
+          "pullback_target_price": 80.76,
+          "time_feasible": true,
+          "time_remaining_minutes": 375,
+          "estimated_minutes_to_target": 211,
+          "liquidity_grade": "A",
+          "theta_impact_per_hour": 0.3,
+          "supports_immediate_entry": false,
+          "entry_recommendation": "AVOID",
+          "reasoning": [
+            "\u26d4 AVOID: Unfavorable conditions for entry",
+            "\ud83d\udd34 HIGH PREMIUM: IV very elevated +9147% - avoid or wait"
+          ]
+        },
+        "probability_boost": false,
+        "sentiment_boost": true
+      },
+      {
+        "strike": 25400,
+        "type": "CALL",
+        "ltp": 84.5,
+        "volume": 7590245,
+        "oi": 1544530,
+        "iv": 13.87,
+        "delta": 0.47546456692913397,
+        "gamma": 0.0017515983482406224,
+        "score": 96.75,
+        "fyers_symbol": "NSE:NIFTY2621025400CE",
+        "strategy_match": "Excellent all opportunity",
+        "recommendation": "Strong BUY - OTM CALL",
+        "discount_zone": {
+          "status": "high_premium",
+          "current_price": 84.5,
+          "best_entry_price": 67.6,
+          "max_entry_price": 71.83,
+          "target_price": 109.85,
+          "expected_pullback_pct": 2.0,
+          "iv_vs_avg_pct": 9146.7,
+          "time_feasible": true,
+          "minutes_remaining": 375,
+          "supports_entry": false,
+          "momentum_direction": "neutral",
+          "reasoning": "\ud83d\udd34 HIGH PREMIUM: IV +9147% very elevated. Avoid or wait for significant pullback.",
+          "price_position": null
+        },
+        "entry_analysis": {
+          "entry_grade": "F",
+          "entry_score": 20,
+          "recommended_entry": 67.6,
+          "limit_order_price": 67.6,
+          "max_acceptable_price": 71.83,
+          "wait_for_pullback": true,
+          "pullback_target_price": 67.6,
+          "time_feasible": true,
+          "time_remaining_minutes": 375,
+          "estimated_minutes_to_target": 178,
+          "liquidity_grade": "A",
+          "theta_impact_per_hour": 0.25,
+          "supports_immediate_entry": false,
+          "entry_recommendation": "AVOID",
+          "reasoning": [
+            "\u26d4 AVOID: Unfavorable conditions for entry",
+            "\ud83d\udd34 HIGH PREMIUM: IV very elevated +9147% - avoid or wait"
+          ]
+        },
+        "probability_boost": false,
+        "sentiment_boost": true
+      }
+    ],
+    "user_email": "bineshch@gmail.com",
+    "data_source": "live",
+    "opportunities_saved": 20
+  },
+  "signal_data": {
+    "index": "NIFTY",
+    "signal": "ICT_NEUTRAL_BIAS",
+    "action": "WAIT",
+    "option": {
+      "strike": 25250,
+      "type": "CE",
+      "symbol": "25250 CE",
+      "trading_symbol": "NSE:NIFTY2621025250CE",
+      "expiry_date": "2026-02-10",
+      "expiry_info": {
+        "days_to_expiry": 7,
+        "is_weekly": true,
+        "time_to_expiry_years": 0.0192
+      }
+    },
+    "pricing": {
+      "ltp": 136.85,
+      "entry_price": 136.85,
+      "price_source": "LIVE_CHAIN",
+      "iv_used": 13.87
+    },
+    "entry": {
+      "price": 136.85,
+      "trigger_level": 25088.4,
+      "timing": "Wait for clear setup",
+      "session_advice": "CLOSED session"
+    },
+    "targets": {
+      "target_1": 191.59,
+      "target_2": 246.33,
+      "stop_loss": 82.11
+    },
+    "risk_reward": {
+      "risk_per_lot": 2737.0,
+      "reward_1_per_lot": 2737.0,
+      "reward_2_per_lot": 5474.0,
+      "ratio_1": "1:1.0",
+      "ratio_2": "1:2.0"
+    },
+    "greeks": {
+      "delta": 0.3975,
+      "gamma": 0.0008,
+      "theta": -15.0285,
+      "vega": 13.4009
+    },
+    "htf_analysis": {
+      "direction": "neutral",
+      "strength": 30,
+      "structure_quality": "LOW",
+      "premium_discount": "equilibrium",
+      "key_zones_count": 0,
+      "timeframe_breakdown": {}
+    },
+    "ltf_entry_model": {
+      "found": false,
+      "entry_type": null,
+      "timeframe": null,
+      "entry_zone": null,
+      "trigger_price": null,
+      "momentum_confirmed": false,
+      "alignment_score": 0,
+      "confidence": 0
+    },
+    "confirmation_stack": {
+      "ml_prediction": {
+        "direction": "neutral",
+        "confidence": 60.0,
+        "agrees_with_htf": true,
+        "price_target": 25064.15
+      },
+      "candlestick_patterns": {
+        "confluence_score": 0,
+        "confidence_level": "LOW",
+        "aligned_patterns": 0
+      },
+      "futures_sentiment": {
+        "basis_pct": 0.244,
+        "sentiment": "neutral",
+        "agrees_with_htf": true
+      },
+      "constituents": {
+        "direction": "bullish",
+        "confidence": 0.3,
+        "agrees_with_htf": false
+      }
+    },
+    "confidence_breakdown": {
+      "total": 26.5,
+      "level": "AVOID",
+      "components": {
+        "ict_htf_structure": 14.5,
+        "ict_ltf_confirmation": 1.0,
+        "ml_alignment": 7.5,
+        "candlestick_patterns": 0.0,
+        "futures_basis": 2.5,
+        "constituents": 1.0
+      },
+      "weights": {
+        "ict_total": 65,
+        "ml": 15,
+        "candlestick": 10,
+        "market_data": 10
+      }
+    },
+    "confidence": {
+      "score": 26.5,
+      "level": "AVOID"
+    },
+    "is_reversal_play": false,
+    "is_expiry_day": false,
+    "spot_price": 25088.4,
+    "timestamp": "2026-02-02T22:54:13.914435",
+    "warnings": [],
+    "trading_mode": {
+      "mode": "INTRADAY",
+      "dte": 7,
+      "description": "INTRADAY",
+      "timeframe_focus": "4H/1H/15min"
+    },
+    "scalp_feasibility": {
+      "feasible": true,
+      "risk_level": "MEDIUM",
+      "risk_score": 35,
+      "recommendation": "\u2705 SCALP VIABLE - Target 5-10 pts within 1 hour",
+      "time_window": "30-60 minutes",
+      "targets": {
+        "entry": 136.85,
+        "target_5": 141.85,
+        "target_10": 146.85,
+        "target_15": 151.85,
+        "stop_loss": 131.85
+      },
+      "index_moves_needed": {
+        "for_5_pts": 13,
+        "for_10_pts": 25,
+        "for_15_pts": 38
+      },
+      "per_lot_pnl": {
+        "profit_5": 325,
+        "profit_10": 650,
+        "profit_15": 975,
+        "max_loss": 325,
+        "lot_size": 65
+      },
+      "theta_impact": {
+        "per_hour": 2.31,
+        "per_30_min": 1.16,
+        "warning": "High decay"
+      },
+      "risk_factors": [
+        "Moderate theta: \u20b92.3/hour",
+        "Needs 25 pts move - achievable",
+        "CLOSED - lower volatility period"
+      ],
+      "momentum_boost": false
+    },
+    "expiry_gamma_analysis": null,
+    "index_data": {
+      "spot_price": 25088.4,
+      "future_price": 25149.6,
+      "basis": 61.2,
+      "basis_pct": 0.2439,
+      "vix": 13.87,
+      "pcr_oi": 0.87,
+      "pcr_volume": 0.81,
+      "max_pain": 25100,
+      "atm_strike": 25100,
+      "atm_iv": 13.87,
+      "iv_skew": 0.0,
+      "support_levels": [
+        25000,
+        24900,
+        24800
+      ],
+      "resistance_levels": [
+        25100,
+        25200,
+        25300
+      ],
+      "total_call_oi": 21396765,
+      "total_put_oi": 18687760,
+      "futures_data": {
+        "symbol": "NSE:NIFTY26FEBFUT",
+        "price": 25149.6,
+        "basis": 61.2,
+        "basis_pct": 0.2439,
+        "oi": 0,
+        "volume": 9239490,
+        "oi_change": 0,
+        "oi_analysis": "Short Cover",
+        "expiry_date": "2026-02-26",
+        "days_to_expiry": 23,
+        "next_month_symbol": "NSE:NIFTY26MARFUT",
+        "next_month_price": 25306.9,
+        "rollover_cost": 157.3
+      }
+    },
+    "mtf_analysis": {
+      "overall_bias": "bearish",
+      "current_price": 25088.4,
+      "timeframes_analyzed": [
+        "M",
+        "W",
+        "D",
+        "240",
+        "60",
+        "15"
+      ],
+      "confluence_zones": [
+        {
+          "center": 25970.04051724138,
+          "weight": 956.1666666666665,
+          "timeframes": [
+            "15",
+            "60",
+            "D",
+            "240"
+          ],
+          "distance_pct": 3.5141360837732964
+        },
+        {
+          "center": 26103.466666666664,
+          "weight": 82.0,
+          "timeframes": [
+            "240",
+            "W"
+          ],
+          "distance_pct": 4.045960151570694
+        },
+        {
+          "center": 25130.777500000004,
+          "weight": 40.5,
+          "timeframes": [
+            "D",
+            "60",
+            "240",
+            "15",
+            "W"
+          ],
+          "distance_pct": 0.1689127246058032
+        }
+      ],
+      "timeframe_biases": {
+        "M": {
+          "bias": "bearish",
+          "trend": "ranging",
+          "fvg_count": 2,
+          "ob_count": 0,
+          "bos": null,
+          "choch": null
+        },
+        "W": {
+          "bias": "bearish",
+          "trend": "ranging",
+          "fvg_count": 3,
+          "ob_count": 4,
+          "bos": null,
+          "choch": null
+        },
+        "D": {
+          "bias": "bearish",
+          "trend": "ranging",
+          "fvg_count": 7,
+          "ob_count": 5,
+          "bos": null,
+          "choch": null
+        },
+        "240": {
+          "bias": "bearish",
+          "trend": "bearish",
+          "fvg_count": 6,
+          "ob_count": 5,
+          "bos": null,
+          "choch": null
+        },
+        "60": {
+          "bias": "bearish",
+          "trend": "ranging",
+          "fvg_count": 10,
+          "ob_count": 5,
+          "bos": null,
+          "choch": null
+        },
+        "15": {
+          "bias": "bearish",
+          "trend": "ranging",
+          "fvg_count": 10,
+          "ob_count": 5,
+          "bos": null,
+          "choch": null
+        }
+      },
+      "trend_reversal": {
+        "is_reversal": false,
+        "direction": "NONE",
+        "confidence": 0,
+        "reason": "No clear reversal signal detected",
+        "key_levels": [
+          {
+            "timeframe": "M",
+            "high": 25440.9,
+            "low": 24571.75
+          },
+          {
+            "timeframe": "W",
+            "high": 25108.1,
+            "low": 24679.4
+          },
+          {
+            "timeframe": "D",
+            "high": 26373.2,
+            "low": 24919.8
+          },
+          {
+            "timeframe": "240",
+            "high": 25458.15,
+            "low": 24571.75
+          },
+          {
+            "timeframe": "60",
+            "high": 25108.1,
+            "low": 24679.4
+          },
+          {
+            "timeframe": "15",
+            "high": 25108.1,
+            "low": 24851.35
+          }
+        ],
+        "timeframes_signaling": []
+      }
+    },
+    "probability_analysis": {
+      "stocks_scanned": 50,
+      "total_stocks": 50,
+      "expected_direction": "BULLISH",
+      "expected_move_pct": 0,
+      "confidence": 0.32,
+      "probability_up": 0.52,
+      "probability_down": 0.2,
+      "bullish_stocks": 26,
+      "bearish_stocks": 10,
+      "bullish_pct": 52.0,
+      "bearish_pct": 20.0,
+      "constituent_recommendation": "CALL",
+      "market_regime": "unknown",
+      "analysis_time": 6.61,
+      "top_movers": {
+        "bullish": [
+          {
+            "symbol": "LT",
+            "probability": 100.0,
+            "rsi": 66.18
+          },
+          {
+            "symbol": "NESTLEIND",
+            "probability": 100.0,
+            "rsi": 69.85
+          },
+          {
+            "symbol": "NTPC",
+            "probability": 100.0,
+            "rsi": 66.96
+          }
+        ],
+        "bearish": [
+          {
+            "symbol": "INFY",
+            "probability": 100.0,
+            "rsi": 39.41
+          },
+          {
+            "symbol": "AXISBANK",
+            "probability": 100.0,
+            "rsi": 28.6
+          },
+          {
+            "symbol": "SHRIRAMFIN",
+            "probability": 100.0,
+            "rsi": 37.5
+          }
+        ],
+        "volume_surge": []
+      }
+    },
+    "constituent_recommendation": "CALL",
+    "enhanced_ml_prediction": {
+      "timestamp": "2026-02-03T03:24:13.921616+05:30",
+      "available_modules": {
+        "direction": true,
+        "speed": true,
+        "iv": true,
+        "theta": true,
+        "simulator": true
+      },
+      "direction_prediction": {
+        "direction": "DOWN",
+        "confidence": 0.575,
+        "expected_move_pct": -0.25,
+        "expected_move_points": -62.721000000000004,
+        "trade_signal": "SELL",
+        "signal_strength": "MODERATE",
+        "probabilities": {
+          "strong_up": 0.03071710411479382,
+          "up": 0.07555188484647882,
+          "sideways": 0.18582765102217086,
+          "down": 0.45706226859311927,
+          "strong_down": 0.25084109142343713
+        },
+        "top_bullish_factors": [
+          [
+            "rsi_oversold",
+            0.3
+          ]
+        ],
+        "top_bearish_factors": [
+          [
+            "negative_momentum",
+            0.17278772134702922
+          ],
+          [
+            "macd_bearish",
+            0.2
+          ]
+        ],
+        "model_version": "rule_based_1.0"
+      },
+      "speed_prediction": {
+        "category": "SLOW",
+        "confidence": 0.5897565649353383,
+        "expected_move_pct": 0.15,
+        "expected_time_mins": 120,
+        "factors": {
+          "volume_score": 0.4,
+          "time_of_day_score": 0.0,
+          "volatility_squeeze_score": 0.683996661495569,
+          "momentum_score": 0.7
+        },
+        "options_action": "SELL_OPTIONS",
+        "reasoning": [
+          "\ud83d\udc22 SLOW move expected - theta will eat option premium",
+          "If directional view, consider futures or sell spreads",
+          "Wait for better setup or sell premium"
+        ],
+        "risk": {
+          "max_theta_loss_pct": 0.08,
+          "breakeven_time_mins": 112
+        }
+      },
+      "iv_prediction": {
+        "direction": "STABLE",
+        "confidence": 0.65,
+        "expected_iv_change_pct": -2.6999999999999997,
+        "current_iv": 13.87,
+        "predicted_iv": 13.49551,
+        "regime": {
+          "current": "LOW",
+          "percentile": 100.0
+        },
+        "factors": {
+          "event": "NO_EVENT",
+          "time": "MARKET_OPEN",
+          "trend": "SLOW_DOWN_TREND",
+          "expiry": "APPROACHING_EXPIRY"
+        },
+        "trading": {
+          "vega_exposure": "NEUTRAL",
+          "options_strategy": "DIRECTIONAL_SPREAD",
+          "reasoning": [
+            "\ud83d\udcca IV STABLE - focus on direction, not vega",
+            "IV at 100th percentile - historically high"
+          ]
+        },
+        "iv_risk_score": 0.75
+      },
+      "theta_scenarios": {
+        "greeks": {
+          "delta": 0.39944949301816,
+          "gamma": 0.000801425690231095,
+          "theta_per_hour": -0.6328932829543236,
+          "vega": 13.418093911534976
+        },
+        "scenarios": {
+          "15min": {
+            "time_horizon_mins": 15,
+            "description": "Scalping window",
+            "price_scenarios": {
+              "up_fast": {
+                "spot_move": 0.5,
+                "new_spot": 25213.842,
+                "delta_pnl": 50.11,
+                "gamma_pnl": 6.31,
+                "theta_cost": -0.16,
+                "total_pnl": 56.26,
+                "pnl_pct": 41.1,
+                "outcome": "GOOD_WIN",
+                "new_premium": 193.11
+              },
+              "up_slow": {
+                "spot_move": 0.2,
+                "new_spot": 25138.576800000003,
+                "delta_pnl": 20.04,
+                "gamma_pnl": 1.01,
+                "theta_cost": -0.16,
+                "total_pnl": 20.89,
+                "pnl_pct": 15.3,
+                "outcome": "SMALL_WIN",
+                "new_premium": 157.74
+              },
+              "flat": {
+                "spot_move": 0.0,
+                "new_spot": 25088.4,
+                "delta_pnl": 0.0,
+                "gamma_pnl": 0.0,
+                "theta_cost": -0.16,
+                "total_pnl": -0.16,
+                "pnl_pct": -0.1,
+                "outcome": "BREAKEVEN",
+                "new_premium": 136.69
+              },
+              "down_slow": {
+                "spot_move": -0.2,
+                "new_spot": 25038.2232,
+                "delta_pnl": -20.04,
+                "gamma_pnl": 1.01,
+                "theta_cost": -0.16,
+                "total_pnl": -19.19,
+                "pnl_pct": -14.0,
+                "outcome": "SMALL_LOSS",
+                "new_premium": 117.66
+              },
+              "down_fast": {
+                "spot_move": -0.5,
+                "new_spot": 24962.958000000002,
+                "delta_pnl": -50.11,
+                "gamma_pnl": 6.31,
+                "theta_cost": -0.16,
+                "total_pnl": -43.96,
+                "pnl_pct": -32.1,
+                "outcome": "BAD_LOSS",
+                "new_premium": 92.89
+              }
+            },
+            "summary": {
+              "best_case_pnl": 56.26,
+              "worst_case_pnl": -43.96,
+              "expected_pnl": 2.24,
+              "theta_decay_amt": -0.16
+            },
+            "risk": {
+              "time_decay_risk": "LOW",
+              "profitable_scenarios": 2,
+              "risk_reward_ratio": 1.28
+            }
+          },
+          "30min": {
+            "time_horizon_mins": 30,
+            "description": "Quick swing",
+            "price_scenarios": {
+              "up_fast": {
+                "spot_move": 0.5,
+                "new_spot": 25213.842,
+                "delta_pnl": 50.11,
+                "gamma_pnl": 6.31,
+                "theta_cost": -0.32,
+                "total_pnl": 56.1,
+                "pnl_pct": 41.0,
+                "outcome": "GOOD_WIN",
+                "new_premium": 192.95
+              },
+              "up_slow": {
+                "spot_move": 0.2,
+                "new_spot": 25138.576800000003,
+                "delta_pnl": 20.04,
+                "gamma_pnl": 1.01,
+                "theta_cost": -0.32,
+                "total_pnl": 20.74,
+                "pnl_pct": 15.2,
+                "outcome": "SMALL_WIN",
+                "new_premium": 157.59
+              },
+              "flat": {
+                "spot_move": 0.0,
+                "new_spot": 25088.4,
+                "delta_pnl": 0.0,
+                "gamma_pnl": 0.0,
+                "theta_cost": -0.32,
+                "total_pnl": -0.32,
+                "pnl_pct": -0.2,
+                "outcome": "BREAKEVEN",
+                "new_premium": 136.53
+              },
+              "down_slow": {
+                "spot_move": -0.2,
+                "new_spot": 25038.2232,
+                "delta_pnl": -20.04,
+                "gamma_pnl": 1.01,
+                "theta_cost": -0.32,
+                "total_pnl": -19.35,
+                "pnl_pct": -14.1,
+                "outcome": "SMALL_LOSS",
+                "new_premium": 117.5
+              },
+              "down_fast": {
+                "spot_move": -0.5,
+                "new_spot": 24962.958000000002,
+                "delta_pnl": -50.11,
+                "gamma_pnl": 6.31,
+                "theta_cost": -0.32,
+                "total_pnl": -44.12,
+                "pnl_pct": -32.2,
+                "outcome": "BAD_LOSS",
+                "new_premium": 92.73
+              }
+            },
+            "summary": {
+              "best_case_pnl": 56.1,
+              "worst_case_pnl": -44.12,
+              "expected_pnl": 2.08,
+              "theta_decay_amt": -0.32
+            },
+            "risk": {
+              "time_decay_risk": "LOW",
+              "profitable_scenarios": 2,
+              "risk_reward_ratio": 1.27
+            }
+          },
+          "1hour": {
+            "time_horizon_mins": 60,
+            "description": "1 hour hold",
+            "price_scenarios": {
+              "up_fast": {
+                "spot_move": 0.5,
+                "new_spot": 25213.842,
+                "delta_pnl": 50.11,
+                "gamma_pnl": 6.31,
+                "theta_cost": -0.63,
+                "total_pnl": 55.78,
+                "pnl_pct": 40.8,
+                "outcome": "GOOD_WIN",
+                "new_premium": 192.63
+              },
+              "up_slow": {
+                "spot_move": 0.2,
+                "new_spot": 25138.576800000003,
+                "delta_pnl": 20.04,
+                "gamma_pnl": 1.01,
+                "theta_cost": -0.63,
+                "total_pnl": 20.42,
+                "pnl_pct": 14.9,
+                "outcome": "SMALL_WIN",
+                "new_premium": 157.27
+              },
+              "flat": {
+                "spot_move": 0.0,
+                "new_spot": 25088.4,
+                "delta_pnl": 0.0,
+                "gamma_pnl": 0.0,
+                "theta_cost": -0.63,
+                "total_pnl": -0.63,
+                "pnl_pct": -0.5,
+                "outcome": "BREAKEVEN",
+                "new_premium": 136.22
+              },
+              "down_slow": {
+                "spot_move": -0.2,
+                "new_spot": 25038.2232,
+                "delta_pnl": -20.04,
+                "gamma_pnl": 1.01,
+                "theta_cost": -0.63,
+                "total_pnl": -19.67,
+                "pnl_pct": -14.4,
+                "outcome": "SMALL_LOSS",
+                "new_premium": 117.18
+              },
+              "down_fast": {
+                "spot_move": -0.5,
+                "new_spot": 24962.958000000002,
+                "delta_pnl": -50.11,
+                "gamma_pnl": 6.31,
+                "theta_cost": -0.63,
+                "total_pnl": -44.44,
+                "pnl_pct": -32.5,
+                "outcome": "BAD_LOSS",
+                "new_premium": 92.41
+              }
+            },
+            "summary": {
+              "best_case_pnl": 55.78,
+              "worst_case_pnl": -44.44,
+              "expected_pnl": 1.76,
+              "theta_decay_amt": -0.63
+            },
+            "risk": {
+              "time_decay_risk": "LOW",
+              "profitable_scenarios": 2,
+              "risk_reward_ratio": 1.26
+            }
+          },
+          "2hour": {
+            "time_horizon_mins": 120,
+            "description": "2 hour position",
+            "price_scenarios": {
+              "up_fast": {
+                "spot_move": 0.5,
+                "new_spot": 25213.842,
+                "delta_pnl": 50.11,
+                "gamma_pnl": 6.31,
+                "theta_cost": -1.27,
+                "total_pnl": 55.15,
+                "pnl_pct": 40.3,
+                "outcome": "GOOD_WIN",
+                "new_premium": 192.0
+              },
+              "up_slow": {
+                "spot_move": 0.2,
+                "new_spot": 25138.576800000003,
+                "delta_pnl": 20.04,
+                "gamma_pnl": 1.01,
+                "theta_cost": -1.27,
+                "total_pnl": 19.79,
+                "pnl_pct": 14.5,
+                "outcome": "SMALL_WIN",
+                "new_premium": 156.64
+              },
+              "flat": {
+                "spot_move": 0.0,
+                "new_spot": 25088.4,
+                "delta_pnl": 0.0,
+                "gamma_pnl": 0.0,
+                "theta_cost": -1.27,
+                "total_pnl": -1.27,
+                "pnl_pct": -0.9,
+                "outcome": "BREAKEVEN",
+                "new_premium": 135.58
+              },
+              "down_slow": {
+                "spot_move": -0.2,
+                "new_spot": 25038.2232,
+                "delta_pnl": -20.04,
+                "gamma_pnl": 1.01,
+                "theta_cost": -1.27,
+                "total_pnl": -20.3,
+                "pnl_pct": -14.8,
+                "outcome": "SMALL_LOSS",
+                "new_premium": 116.55
+              },
+              "down_fast": {
+                "spot_move": -0.5,
+                "new_spot": 24962.958000000002,
+                "delta_pnl": -50.11,
+                "gamma_pnl": 6.31,
+                "theta_cost": -1.27,
+                "total_pnl": -45.07,
+                "pnl_pct": -32.9,
+                "outcome": "BAD_LOSS",
+                "new_premium": 91.78
+              }
+            },
+            "summary": {
+              "best_case_pnl": 55.15,
+              "worst_case_pnl": -45.07,
+              "expected_pnl": 1.13,
+              "theta_decay_amt": -1.27
+            },
+            "risk": {
+              "time_decay_risk": "LOW",
+              "profitable_scenarios": 2,
+              "risk_reward_ratio": 1.22
+            }
+          },
+          "eod": {
+            "time_horizon_mins": 726,
+            "description": "End of day",
+            "price_scenarios": {
+              "up_fast": {
+                "spot_move": 0.5,
+                "new_spot": 25213.842,
+                "delta_pnl": 50.11,
+                "gamma_pnl": 6.31,
+                "theta_cost": -7.66,
+                "total_pnl": 48.76,
+                "pnl_pct": 35.6,
+                "outcome": "GOOD_WIN",
+                "new_premium": 185.61
+              },
+              "up_slow": {
+                "spot_move": 0.2,
+                "new_spot": 25138.576800000003,
+                "delta_pnl": 20.04,
+                "gamma_pnl": 1.01,
+                "theta_cost": -7.66,
+                "total_pnl": 13.39,
+                "pnl_pct": 9.8,
+                "outcome": "SMALL_WIN",
+                "new_premium": 150.24
+              },
+              "flat": {
+                "spot_move": 0.0,
+                "new_spot": 25088.4,
+                "delta_pnl": 0.0,
+                "gamma_pnl": 0.0,
+                "theta_cost": -7.66,
+                "total_pnl": -7.66,
+                "pnl_pct": -5.6,
+                "outcome": "SMALL_LOSS",
+                "new_premium": 129.19
+              },
+              "down_slow": {
+                "spot_move": -0.2,
+                "new_spot": 25038.2232,
+                "delta_pnl": -20.04,
+                "gamma_pnl": 1.01,
+                "theta_cost": -7.66,
+                "total_pnl": -26.69,
+                "pnl_pct": -19.5,
+                "outcome": "SMALL_LOSS",
+                "new_premium": 110.16
+              },
+              "down_fast": {
+                "spot_move": -0.5,
+                "new_spot": 24962.958000000002,
+                "delta_pnl": -50.11,
+                "gamma_pnl": 6.31,
+                "theta_cost": -7.66,
+                "total_pnl": -51.46,
+                "pnl_pct": -37.6,
+                "outcome": "BAD_LOSS",
+                "new_premium": 85.39
+              }
+            },
+            "summary": {
+              "best_case_pnl": 48.76,
+              "worst_case_pnl": -51.46,
+              "expected_pnl": -5.26,
+              "theta_decay_amt": -7.66
+            },
+            "risk": {
+              "time_decay_risk": "MEDIUM",
+              "profitable_scenarios": 2,
+              "risk_reward_ratio": 0.95
+            }
+          }
+        },
+        "summary": {
+          "optimal_holding_time_mins": 15,
+          "max_theta_loss_today": 7.658008723747315,
+          "breakeven_move_required": 1.58
+        },
+        "recommendations": {
+          "urgency": "HAVE_TIME",
+          "hold_recommendation": "Can hold up to 15 minutes for best risk/reward",
+          "exit_triggers": [
+            "Take profit at \u20b941 gain (+30%)",
+            "Stop loss at \u20b927 loss (-20%)",
+            "Exit if flat after 15 mins (theta erosion)"
+          ]
+        }
+      },
+      "simulation": {
+        "option_details": {
+          "type": "CE",
+          "strike": 25250.0,
+          "premium": 136.85,
+          "spot_price": 25088.4,
+          "days_to_expiry": 7.0
+        },
+        "ml_predictions": {
+          "direction": "DOWN",
+          "direction_confidence": 0.575,
+          "expected_move_pct": -0.25,
+          "speed": "SLOW",
+          "speed_confidence": 0.5897565649353383,
+          "iv_direction": "STABLE",
+          "iv_confidence": 0.65,
+          "expected_iv_change_pct": -2.6999999999999997,
+          "factors_aligned": 1,
+          "overall_signal": "WEAK_BUY"
+        },
+        "scenarios": {
+          "best_case": {
+            "name": "Best Case: Fast favorable move",
+            "probability": 0.1,
+            "price_move_pct": -0.38,
+            "time_elapsed_mins": 120,
+            "iv_change_pct": 0,
+            "delta_pnl": -37.58,
+            "gamma_pnl": 3.55,
+            "theta_pnl": -1.27,
+            "vega_pnl": 0.0,
+            "total_pnl": -35.3,
+            "pnl_pct": -25.8,
+            "final_premium": 101.55,
+            "outcome": "LOSS"
+          },
+          "likely_win": {
+            "name": "Likely Win: Move as predicted",
+            "probability": 0.25,
+            "price_move_pct": -0.25,
+            "time_elapsed_mins": 144,
+            "iv_change_pct": 0,
+            "delta_pnl": -25.05,
+            "gamma_pnl": 1.58,
+            "theta_pnl": -1.52,
+            "vega_pnl": 0.0,
+            "total_pnl": -25.0,
+            "pnl_pct": -18.3,
+            "final_premium": 111.85,
+            "outcome": "LOSS"
+          },
+          "base_case": {
+            "name": "Base Case: Slow partial move",
+            "probability": 0.35,
+            "price_move_pct": -0.07,
+            "time_elapsed_mins": 180,
+            "iv_change_pct": -1.3,
+            "delta_pnl": -7.52,
+            "gamma_pnl": 0.14,
+            "theta_pnl": -1.9,
+            "vega_pnl": -2.51,
+            "total_pnl": -11.79,
+            "pnl_pct": -8.6,
+            "final_premium": 125.06,
+            "outcome": "LOSS"
+          },
+          "likely_loss": {
+            "name": "Likely Loss: No move, theta decay",
+            "probability": 0.2,
+            "price_move_pct": 0,
+            "time_elapsed_mins": 240,
+            "iv_change_pct": -5,
+            "delta_pnl": 0.0,
+            "gamma_pnl": 0.0,
+            "theta_pnl": -2.53,
+            "vega_pnl": -9.31,
+            "total_pnl": -11.84,
+            "pnl_pct": -8.6,
+            "final_premium": 125.01,
+            "outcome": "LOSS"
+          },
+          "worst_case": {
+            "name": "Worst Case: Move against + IV crush",
+            "probability": 0.1,
+            "price_move_pct": -0.25,
+            "time_elapsed_mins": 240,
+            "iv_change_pct": -15,
+            "delta_pnl": -25.05,
+            "gamma_pnl": 1.58,
+            "theta_pnl": -2.53,
+            "vega_pnl": -27.92,
+            "total_pnl": -53.93,
+            "pnl_pct": -39.4,
+            "final_premium": 82.92,
+            "outcome": "LOSS"
+          }
+        },
+        "expected_values": {
+          "expected_pnl": -21.67,
+          "expected_pnl_pct": -15.8,
+          "win_probability": 0
+        },
+        "risk_metrics": {
+          "max_loss": -53.93,
+          "max_gain": -11.79,
+          "risk_reward_ratio": 0.22,
+          "sharpe_estimate": -1.37
+        },
+        "trade_grade": {
+          "grade": "F",
+          "factors": {
+            "ml_alignment": "1/3 factors aligned",
+            "expected_pnl": "-15.8% expected",
+            "win_probability": "0% win rate",
+            "risk_reward": "0.22:1 R/R",
+            "total_score": "20/100"
+          }
+        },
+        "recommendations": {
+          "should_trade": false,
+          "position_size_pct": 1.0,
+          "entry_timing": "RECONSIDER - Slow conditions",
+          "exit_strategy": "QUICK_PROFIT - Take profit at +20%, strict stop",
+          "stop_loss": 27.37,
+          "take_profit": 27.37,
+          "max_hold_time_mins": 30
+        }
+      },
+      "combined_recommendation": {
+        "action": "DO_NOT_TRADE",
+        "confidence": 0.7,
+        "reasoning": [
+          "\ud83d\udeab Grade F: Factors against you, avoid this trade"
+        ],
+        "key_factors": {
+          "direction": "BEARISH",
+          "direction_confidence": 0.575,
+          "speed": "SLOW",
+          "speed_confidence": 0.5897565649353383,
+          "iv_direction": "STABLE",
+          "iv_risk": 0.75,
+          "grade": "F",
+          "expected_pnl_pct": -15.8,
+          "win_probability": 0
+        },
+        "warnings": [
+          "\u26a0\ufe0f SLOW conditions - theta will dominate"
+        ]
+      }
+    },
+    "saved_to_db": true,
+    "signal_id": "ed6eb9eb-dd19-4fb5-8309-3e3f57278ad3"
+  }
+}

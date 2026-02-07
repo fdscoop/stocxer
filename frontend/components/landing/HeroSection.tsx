@@ -28,7 +28,7 @@ export default function HeroSection() {
                 {/* Badge */}
                 <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-purple-500/10 to-blue-500/10 border border-purple-500/20 mb-8 backdrop-blur-sm">
                     <Sparkles className="w-4 h-4 text-purple-400" />
-                    <span className="text-sm text-purple-300">Powered by Watchman AI v3.5</span>
+                    <span className="text-sm text-purple-300">Powered by Watchman AI v4.0 — Now with AMD Detection & P&L Simulation</span>
                 </div>
 
                 {/* Main Headline */}
@@ -47,7 +47,8 @@ export default function HeroSection() {
                     <span className="text-purple-400 font-semibold">analytical</span>,{' '}
                     <span className="text-blue-400 font-semibold">research</span>, and{' '}
                     <span className="text-cyan-400 font-semibold">informational</span> purposes 
-                    — combining Smart Money Concepts, ML models, and News Sentiment analysis.
+                    — combining ICT Top-Down Analysis, AMD Phase Detection, ML Probability Models, 
+                    Options Greeks with P&L Simulation, and Real-time News Sentiment.
                 </p>
 
                 {/* Fyers Account Requirement */}
@@ -99,9 +100,9 @@ export default function HeroSection() {
                 {/* Trust Badges */}
                 <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-16 max-w-4xl mx-auto">
                     {[
-                        'ICT Order Block & FVG Detection',
-                        'ML-Powered Probability Models',
-                        'Real-time News Sentiment Tracking'
+                        'ICT Top-Down + AMD Phase Detection',
+                        'ML Direction, Speed & IV Prediction',
+                        'Options P&L Simulation & Theta Scenarios'
                     ].map((badge, i) => (
                         <div
                             key={i}
@@ -116,10 +117,10 @@ export default function HeroSection() {
                 {/* Floating Stats */}
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-4xl mx-auto">
                     {[
-                        { label: 'Indices Tracked', value: '6+', icon: '📊' },
-                        { label: 'Stocks Analyzed', value: '500+', icon: '📈' },
-                        { label: 'News Sources', value: 'Real-time', icon: '📰' },
-                        { label: 'AI Engine', value: 'Watchman v3.5', icon: '🤖' },
+                        { label: 'Timeframes Analyzed', value: '6', icon: '📊' },
+                        { label: 'Nifty 50 Constituents', value: '50+', icon: '📈' },
+                        { label: 'ML Models', value: '5+', icon: '🧠' },
+                        { label: 'AI Engine', value: 'Watchman v4.0', icon: '🤖' },
                     ].map((stat, i) => (
                         <div
                             key={i}

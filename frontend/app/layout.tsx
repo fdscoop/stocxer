@@ -130,7 +130,7 @@ export default function RootLayout({
                 'AI Chat for signal explanation',
                 'Stock monitoring and tracking',
                 'Technical analysis screener',
-                'Watchman AI v3.5 powered',
+                'Watchman AI v4.0 powered',
                 'Paper trading for practice',
                 'No credit card required'
               ],

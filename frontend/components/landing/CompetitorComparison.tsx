@@ -3,14 +3,17 @@
 import { Check, X, AlertCircle } from 'lucide-react'
 
 const features = [
-    { name: 'ICT / Smart Money Analysis', stocxer: 'yes', sensibull: 'no', quantsapp: 'no', opstra: 'no' },
-    { name: 'ML Probability Models', stocxer: 'yes', sensibull: 'no', quantsapp: 'no', opstra: 'no' },
-    { name: 'News Sentiment Analysis', stocxer: 'yes', sensibull: 'no', quantsapp: 'limited', opstra: 'no' },
+    { name: 'ICT Top-Down Multi-Timeframe', stocxer: 'yes', sensibull: 'no', quantsapp: 'no', opstra: 'no' },
+    { name: 'AMD Phase Detection (Bear/Bull Traps)', stocxer: 'yes', sensibull: 'no', quantsapp: 'no', opstra: 'no' },
+    { name: 'ML Direction + Speed + IV Prediction', stocxer: 'yes', sensibull: 'no', quantsapp: 'no', opstra: 'no' },
+    { name: 'P&L Simulation (5 scenarios × 5 horizons)', stocxer: 'yes', sensibull: 'no', quantsapp: 'no', opstra: 'no' },
+    { name: 'Trade Grading (A–F with win probability)', stocxer: 'yes', sensibull: 'no', quantsapp: 'no', opstra: 'no' },
+    { name: 'Scalp Feasibility Analyzer', stocxer: 'yes', sensibull: 'no', quantsapp: 'no', opstra: 'no' },
     { name: 'Options Greeks Calculator', stocxer: 'yes', sensibull: 'yes', quantsapp: 'yes', opstra: 'yes' },
     { name: 'OI / IV / PCR Analysis', stocxer: 'yes', sensibull: 'yes', quantsapp: 'yes', opstra: 'yes' },
-    { name: 'Risk Assessment Tools', stocxer: 'yes', sensibull: 'limited', quantsapp: 'no', opstra: 'no' },
-    { name: 'Composite Analysis Score', stocxer: 'yes', sensibull: 'no', quantsapp: 'no', opstra: 'no' },
-    { name: 'Processed Data (No Clutter)', stocxer: 'yes', sensibull: 'no', quantsapp: 'no', opstra: 'no' },
+    { name: 'Nifty 50 Constituent Probability', stocxer: 'yes', sensibull: 'no', quantsapp: 'no', opstra: 'no' },
+    { name: 'News Sentiment Analysis', stocxer: 'yes', sensibull: 'no', quantsapp: 'limited', opstra: 'no' },
+    { name: 'AI Chat (Signal Explanations)', stocxer: 'yes', sensibull: 'no', quantsapp: 'no', opstra: 'no' },
     { name: 'Pay As You Go Pricing', stocxer: 'yes', sensibull: 'no', quantsapp: 'no', opstra: 'no' },
     { name: 'Broker Integration', stocxer: 'Fyers', sensibull: 'Multiple', quantsapp: 'no', opstra: 'no' },
 ]

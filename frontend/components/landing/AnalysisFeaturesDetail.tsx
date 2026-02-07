@@ -1,25 +1,30 @@
 'use client'
 
-import { TrendingUp, Calculator, Newspaper } from 'lucide-react'
+import { TrendingUp, Calculator, Newspaper, Layers } from 'lucide-react'
 
 const ictFeatures = [
-    { name: 'Order Block Detection', description: 'Identifies institutional buying/selling zones' },
-    { name: 'Fair Value Gap (FVG)', description: 'Spots price imbalances likely to be filled' },
-    { name: 'Liquidity Sweep Alerts', description: 'Detects stop-hunt movements' },
+    { name: 'Order Block Detection', description: 'Identifies institutional buying/selling zones across 6 timeframes' },
+    { name: 'Fair Value Gap (FVG)', description: 'Spots price imbalances likely to be filled on multiple timeframes' },
     { name: 'Market Structure (BOS/CHoCH)', description: 'Tracks Break of Structure and Change of Character' },
+    { name: 'AMD Phase Detection', description: 'Identifies Accumulation, Manipulation & Distribution cycles' },
+    { name: 'Bear & Bull Trap Detection', description: 'Alerts on manipulation phases designed to trap traders' },
+    { name: 'Multi-Timeframe Confluence', description: 'Finds overlapping zones from Monthly down to 15min for high-probability setups' },
 ]
 
 const optionsFeatures = [
-    { name: 'Greeks Calculator', description: 'Delta, Gamma, Theta, Vega, Rho' },
-    { name: 'Implied Volatility (IV)', description: 'Black-Scholes based IV calculation' },
-    { name: 'Open Interest (OI)', description: 'Track OI buildup and unwinding' },
-    { name: 'Put-Call Ratio (PCR)', description: 'Monitor market sentiment via PCR' },
+    { name: 'Greeks Calculator', description: 'Delta, Gamma, Theta, Vega with per-hour/per-minute decay rates' },
+    { name: 'P&L Simulation Engine', description: '5 scenarios (best to worst) across 5 time horizons' },
+    { name: 'Theta Scenario Modeling', description: '15min, 30min, 1hr, 2hr, EOD projections with Greek decomposition' },
+    { name: 'Scalp Feasibility Analyzer', description: 'Per-lot P&L, index move requirements & timing windows' },
+    { name: 'IV Direction Prediction', description: 'ML-based IV contraction/expansion forecasting' },
+    { name: 'Option Chain Live Scoring', description: 'Strikes ranked by LTP, Greeks, OI, Volume & momentum' },
 ]
 
 const sentimentFeatures = [
-    { name: 'News Sentiment Scoring', description: 'Analyzes market news in real-time' },
-    { name: 'Bullish/Bearish/Neutral', description: 'Classifies sentiment for quick reading' },
-    { name: 'Market Mood Indicator', description: 'Combines news sentiment into overall mood' },
+    { name: 'News Sentiment Scoring', description: 'Real-time bullish/bearish/neutral analysis from 50+ sources' },
+    { name: 'Constituent Probability', description: 'Nifty 50 stock-by-stock probability with bullish/bearish breakdown' },
+    { name: 'Futures Basis Analysis', description: 'Monitors cash-futures basis % and OI trends for sentiment cues' },
+    { name: 'Candlestick Confluence', description: 'Pattern detection with alignment scoring for confirmation' },
 ]
 
 export default function AnalysisFeaturesDetail() {
@@ -46,9 +51,9 @@ export default function AnalysisFeaturesDetail() {
                         <div className="inline-flex p-3 rounded-xl bg-gradient-to-br from-blue-500 to-cyan-500 mb-6">
                             <TrendingUp className="w-6 h-6 text-white" />
                         </div>
-                        <h3 className="text-2xl font-bold text-white mb-2">ICT / Smart Money</h3>
+                        <h3 className="text-2xl font-bold text-white mb-2">ICT Top-Down + AMD</h3>
                         <p className="text-gray-400 mb-6 text-sm">
-                            Institutional trading patterns and price action analysis
+                            6-timeframe institutional analysis with manipulation detection
                         </p>
                         <div className="space-y-4">
                             {ictFeatures.map((feature, index) => (
@@ -70,9 +75,9 @@ export default function AnalysisFeaturesDetail() {
                         <div className="inline-flex p-3 rounded-xl bg-gradient-to-br from-purple-500 to-pink-500 mb-6">
                             <Calculator className="w-6 h-6 text-white" />
                         </div>
-                        <h3 className="text-2xl font-bold text-white mb-2">Options Analytics</h3>
+                        <h3 className="text-2xl font-bold text-white mb-2">Options & Simulation</h3>
                         <p className="text-gray-400 mb-6 text-sm">
-                            Real-time Greeks, IV, OI, and PCR analysis
+                            Full P&L simulation, theta scenarios & scalp feasibility
                         </p>
                         <div className="space-y-4">
                             {optionsFeatures.map((feature, index) => (
@@ -94,9 +99,9 @@ export default function AnalysisFeaturesDetail() {
                         <div className="inline-flex p-3 rounded-xl bg-gradient-to-br from-green-500 to-emerald-500 mb-6">
                             <Newspaper className="w-6 h-6 text-white" />
                         </div>
-                        <h3 className="text-2xl font-bold text-white mb-2">Sentiment Analysis</h3>
+                        <h3 className="text-2xl font-bold text-white mb-2">Sentiment & Confirmation</h3>
                         <p className="text-gray-400 mb-6 text-sm">
-                            Market news sentiment scoring and mood tracking
+                            Multi-source confirmation stack with probability analysis
                         </p>
                         <div className="space-y-4">
                             {sentimentFeatures.map((feature, index) => (

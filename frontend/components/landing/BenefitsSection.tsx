@@ -14,7 +14,7 @@ const benefits = [
     {
         icon: Brain,
         title: 'Deep Analysis Without Clutter',
-        description: 'Get sophisticated market analysis powered by Watchman AI v3.5 without information overload.',
+        description: 'Get sophisticated market analysis powered by Watchman AI v4.0 without information overload.',
         features: ['Multi-timeframe analysis', 'Probability scoring', 'Pattern recognition'],
     },
     {

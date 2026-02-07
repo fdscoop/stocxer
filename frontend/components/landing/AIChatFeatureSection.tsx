@@ -12,7 +12,7 @@ export default function AIChatFeatureSection() {
         <div className="text-center mb-16">
           <div className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-500/10 border border-emerald-500/20 rounded-full mb-6">
             <MessageSquare className="w-4 h-4 text-emerald-400" />
-            <span className="text-sm font-medium text-emerald-400">POWERED BY WATCHMAN AI V3.5</span>
+            <span className="text-sm font-medium text-emerald-400">POWERED BY WATCHMAN AI V4.0</span>
           </div>
           <h2 className="text-4xl md:text-5xl font-bold text-white mb-6">
             Chat with AI About Market Signals

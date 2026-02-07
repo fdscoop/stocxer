@@ -13,7 +13,7 @@ const faqs = [
         questions: [
             {
                 question: 'What is Stocxer AI?',
-                answer: 'Stocxer AI is a data-driven market analytics platform powered by Watchman AI v3.5. It provides probability-based insights, technical analysis, and decision-support tools for Indian stock market instruments including stocks, options, and derivatives.'
+                answer: 'Stocxer AI is a data-driven market analytics platform powered by Watchman AI v4.0. It provides probability-based insights, technical analysis, and decision-support tools for Indian stock market instruments including stocks, options, and derivatives.'
             },
             {
                 question: 'Is Stocxer AI a SEBI registered investment advisor?',
@@ -29,8 +29,8 @@ const faqs = [
         category: 'Platform Features',
         questions: [
             {
-                question: 'What is Watchman AI v3.5?',
-                answer: 'Watchman AI v3.5 is our proprietary analytical engine that processes market data using advanced algorithms to generate probability-based insights, identify patterns, and provide comprehensive market analysis.'
+                question: 'What is Watchman AI v4.0?',
+                answer: 'Watchman AI v4.0 is our proprietary analytical engine that processes market data using ICT Top-Down analysis, AMD phase detection, ML ensemble models, P&L simulation, and news sentiment to generate probability-based insights and comprehensive market analysis.'
             },
             {
                 question: 'What markets does Stocxer AI cover?',

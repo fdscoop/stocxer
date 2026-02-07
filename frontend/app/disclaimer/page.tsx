@@ -91,9 +91,9 @@ export default function DisclaimerPage() {
                     </section>
 
                     <section>
-                        <h2 className="text-xl font-semibold text-white mb-4">About Watchman AI v3.5</h2>
+                        <h2 className="text-xl font-semibold text-white mb-4">About Watchman AI v4.0</h2>
                         <p className="text-gray-400 leading-relaxed">
-                            Watchman AI v3.5 is our proprietary analytical engine that processes market data to generate
+                            Watchman AI v4.0 is our proprietary analytical engine that processes market data to generate
                             probability-based insights. Important limitations:
                         </p>
                         <ul className="text-gray-400 leading-relaxed list-disc pl-6 space-y-2 mt-4">

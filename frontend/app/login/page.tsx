@@ -184,7 +184,7 @@ export default function LoginPage() {
             </div>
           </div>
           <h1 className="text-2xl md:text-3xl font-bold">Stocxer AI</h1>
-          <p className="text-muted-foreground text-sm md:text-base">Powered by Watchman AI v3.5</p>
+          <p className="text-muted-foreground text-sm md:text-base">Powered by Watchman AI v4.0</p>
         </div>
 
         {/* Login/Register Card */}
@@ -311,7 +311,7 @@ export default function LoginPage() {
 
         {/* Features */}
         <div className="mt-6 md:mt-8 text-center space-y-2">
-          <p className="text-xs md:text-sm text-muted-foreground">🤖 Powered by Watchman AI v3.5</p>
+          <p className="text-xs md:text-sm text-muted-foreground">🤖 Powered by Watchman AI v4.0</p>
           <p className="text-xs md:text-sm text-muted-foreground">📊 Probability-Based Data Analysis</p>
           <p className="text-xs md:text-sm text-muted-foreground">🎯 For Research & Analytical Purposes</p>
         </div>

@@ -47,7 +47,7 @@ export default function TermsPage() {
                         <p className="text-gray-400 leading-relaxed">
                             Stocxer AI is a data analysis platform that provides market data analytics, probability-based patterns,
                             and analytical tools for Indian stock market instruments. The platform includes features
-                            powered by Watchman AI v3.5, our proprietary analytical engine.
+                            powered by Watchman AI v4.0, our proprietary analytical engine.
                         </p>
                         <div className="mt-4 p-4 rounded-xl bg-yellow-500/10 border border-yellow-500/20">
                             <p className="text-yellow-300 text-sm">
@@ -94,7 +94,7 @@ export default function TermsPage() {
                     <section>
                         <h2 className="text-xl font-semibold text-white mb-4">6. Intellectual Property</h2>
                         <p className="text-gray-400 leading-relaxed">
-                            All content, including Watchman AI v3.5, analytical models, software, design, and trademarks,
+                            All content, including Watchman AI v4.0, analytical models, software, design, and trademarks,
                             are owned by Cadreago De Private Limited. You may not copy, modify, or distribute any
                             Platform content without express written permission.
                         </p>

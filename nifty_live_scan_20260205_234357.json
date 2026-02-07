@@ -1,0 +1,1616 @@
+{
+  "status": "success",
+  "index": "NIFTY",
+  "stocks_scanned": 50,
+  "timestamp": "2026-02-05T22:43:56.799250",
+  "current_level": 25642.8,
+  "prediction": {
+    "expected_direction": "BULLISH",
+    "expected_move_pct": 0.324,
+    "expected_points": 83.08,
+    "expected_range": {
+      "high": 25967.44,
+      "low": 25522.02,
+      "points_up": 324.64,
+      "points_down": 120.78
+    },
+    "confidence": 32.2,
+    "probability_up": 0.53,
+    "probability_down": 0.331,
+    "probability_neutral": 0.139
+  },
+  "regime": {
+    "type": "Range Bound",
+    "adx": 20.0,
+    "volatility_level": "normal",
+    "trend_strength": 40.0,
+    "atr_percentile": 47.1
+  },
+  "stock_summary": {
+    "total_analyzed": 50,
+    "bullish": 29,
+    "bearish": 15,
+    "neutral": 6,
+    "bullish_pct": 58.0,
+    "bearish_pct": 30.0
+  },
+  "top_bullish_contributors": [
+    {
+      "symbol": "ICICIBANK",
+      "name": "ICICI Bank Ltd",
+      "weight_pct": 4.79,
+      "expected_move": 1.8,
+      "probability": 1.0,
+      "contribution": 8.6304,
+      "confidence": 70.0
+    },
+    {
+      "symbol": "SBIN",
+      "name": "State Bank of India",
+      "weight_pct": 4.66,
+      "expected_move": 1.8,
+      "probability": 1.0,
+      "contribution": 8.3792,
+      "confidence": 70.0
+    },
+    {
+      "symbol": "M&M",
+      "name": "Mahindra & Mahindra Ltd",
+      "weight_pct": 2.34,
+      "expected_move": 1.8,
+      "probability": 1.0,
+      "contribution": 4.2165,
+      "confidence": 70.0
+    },
+    {
+      "symbol": "AXISBANK",
+      "name": "Axis Bank Ltd",
+      "weight_pct": 2.17,
+      "expected_move": 1.8,
+      "probability": 1.0,
+      "contribution": 3.9115,
+      "confidence": 70.0
+    },
+    {
+      "symbol": "SUNPHARMA",
+      "name": "Sun Pharmaceutical Industries",
+      "weight_pct": 2.09,
+      "expected_move": 1.8,
+      "probability": 1.0,
+      "contribution": 3.7679,
+      "confidence": 70.0
+    }
+  ],
+  "top_bearish_contributors": [
+    {
+      "symbol": "TCS",
+      "name": "Tata Consultancy Services",
+      "weight_pct": 5.55,
+      "expected_move": -1.8,
+      "probability": 0.72,
+      "contribution": -7.237,
+      "confidence": 50.7
+    },
+    {
+      "symbol": "BHARTIARTL",
+      "name": "Bharti Airtel Ltd",
+      "weight_pct": 5.94,
+      "expected_move": -1.8,
+      "probability": 0.4,
+      "contribution": -4.2775,
+      "confidence": 28.0
+    },
+    {
+      "symbol": "KOTAKBANK",
+      "name": "Kotak Mahindra Bank Ltd",
+      "weight_pct": 2.27,
+      "expected_move": -1.8,
+      "probability": 1.0,
+      "contribution": -4.0909,
+      "confidence": 70.0
+    },
+    {
+      "symbol": "INFY",
+      "name": "Infosys Ltd",
+      "weight_pct": 3.81,
+      "expected_move": -1.8,
+      "probability": 0.58,
+      "contribution": -3.9681,
+      "confidence": 40.5
+    },
+    {
+      "symbol": "HCLTECH",
+      "name": "HCL Technologies Ltd",
+      "weight_pct": 2.47,
+      "expected_move": -1.8,
+      "probability": 0.72,
+      "contribution": -3.2222,
+      "confidence": 50.7
+    }
+  ],
+  "ml_prediction": null,
+  "option_recommendation": {
+    "bias": "BULLISH",
+    "recommended_option": "CE (Call)",
+    "atm_strike": 25650,
+    "target_strike": 25950,
+    "suggested_strikes": {
+      "aggressive": 25650,
+      "moderate": 25700,
+      "conservative": 25750
+    },
+    "expected_target": 25967.44,
+    "stop_loss_level": 25522.02,
+    "points_to_target": 324.64,
+    "risk_reward": "Risk 121.0 pts for 325.0 pts gain"
+  },
+  "sector_analysis": {
+    "Oil & Gas": {
+      "sector_weight": 11.41,
+      "stock_count": 3,
+      "expected_move": 23.99,
+      "avg_probability": 0.48,
+      "signal": "Buy",
+      "confidence": 48.3,
+      "bullish_stocks": 2,
+      "bearish_stocks": 0,
+      "neutral_stocks": 1
+    },
+    "Banking": {
+      "sector_weight": 16.89,
+      "stock_count": 6,
+      "expected_move": 84.238,
+      "avg_probability": 0.8,
+      "signal": "Strong Buy",
+      "confidence": 79.7,
+      "bullish_stocks": 5,
+      "bearish_stocks": 1,
+      "neutral_stocks": 0
+    },
+    "Telecom": {
+      "sector_weight": 5.96,
+      "stock_count": 1,
+      "expected_move": -72.0,
+      "avg_probability": 0.4,
+      "signal": "Sell",
+      "confidence": 40.0,
+      "bullish_stocks": 0,
+      "bearish_stocks": 1,
+      "neutral_stocks": 0
+    },
+    "Information Technology": {
+      "sector_weight": 13.6,
+      "stock_count": 5,
+      "expected_move": -124.417,
+      "avg_probability": 0.72,
+      "signal": "Strong Sell",
+      "confidence": 72.1,
+      "bullish_stocks": 0,
+      "bearish_stocks": 5,
+      "neutral_stocks": 0
+    },
+    "NBFCs": {
+      "sector_weight": 6.48,
+      "stock_count": 3,
+      "expected_move": 57.0,
+      "avg_probability": 0.27,
+      "signal": "Buy",
+      "confidence": 26.7,
+      "bullish_stocks": 2,
+      "bearish_stocks": 0,
+      "neutral_stocks": 1
+    },
+    "FMCG": {
+      "sector_weight": 9.36,
+      "stock_count": 5,
+      "expected_move": -35.497,
+      "avg_probability": 0.45,
+      "signal": "Sell",
+      "confidence": 44.7,
+      "bullish_stocks": 1,
+      "bearish_stocks": 3,
+      "neutral_stocks": 1
+    },
+    "Infrastructure": {
+      "sector_weight": 4.64,
+      "stock_count": 2,
+      "expected_move": 130.345,
+      "avg_probability": 0.72,
+      "signal": "Strong Buy",
+      "confidence": 72.4,
+      "bullish_stocks": 2,
+      "bearish_stocks": 0,
+      "neutral_stocks": 0
+    },
+    "Automobiles": {
+      "sector_weight": 9.93,
+      "stock_count": 6,
+      "expected_move": 64.938,
+      "avg_probability": 0.66,
+      "signal": "Buy",
+      "confidence": 66.1,
+      "bullish_stocks": 4,
+      "bearish_stocks": 1,
+      "neutral_stocks": 1
+    },
+    "Pharmaceuticals": {
+      "sector_weight": 4.05,
+      "stock_count": 5,
+      "expected_move": 109.25,
+      "avg_probability": 0.65,
+      "signal": "Buy",
+      "confidence": 64.9,
+      "bullish_stocks": 3,
+      "bearish_stocks": 1,
+      "neutral_stocks": 1
+    },
+    "Consumer Durables": {
+      "sector_weight": 3.43,
+      "stock_count": 3,
+      "expected_move": 66.969,
+      "avg_probability": 0.76,
+      "signal": "Strong Buy",
+      "confidence": 75.6,
+      "bullish_stocks": 2,
+      "bearish_stocks": 1,
+      "neutral_stocks": 0
+    },
+    "Cement": {
+      "sector_weight": 2.73,
+      "stock_count": 2,
+      "expected_move": 180.0,
+      "avg_probability": 1.0,
+      "signal": "Strong Buy",
+      "confidence": 100.0,
+      "bullish_stocks": 2,
+      "bearish_stocks": 0,
+      "neutral_stocks": 0
+    },
+    "Power & Utilities": {
+      "sector_weight": 3.23,
+      "stock_count": 2,
+      "expected_move": 119.179,
+      "avg_probability": 0.65,
+      "signal": "Buy",
+      "confidence": 65.2,
+      "bullish_stocks": 2,
+      "bearish_stocks": 0,
+      "neutral_stocks": 0
+    },
+    "Metals & Mining": {
+      "sector_weight": 3.44,
+      "stock_count": 4,
+      "expected_move": 106.383,
+      "avg_probability": 0.58,
+      "signal": "Buy",
+      "confidence": 58.1,
+      "bullish_stocks": 3,
+      "bearish_stocks": 0,
+      "neutral_stocks": 1
+    },
+    "Diversified": {
+      "sector_weight": 0.72,
+      "stock_count": 1,
+      "expected_move": 180.0,
+      "avg_probability": 1.0,
+      "signal": "Strong Buy",
+      "confidence": 100.0,
+      "bullish_stocks": 1,
+      "bearish_stocks": 0,
+      "neutral_stocks": 0
+    },
+    "Insurance": {
+      "sector_weight": 0.82,
+      "stock_count": 2,
+      "expected_move": -180.0,
+      "avg_probability": 1.0,
+      "signal": "Strong Sell",
+      "confidence": 100.0,
+      "bullish_stocks": 0,
+      "bearish_stocks": 2,
+      "neutral_stocks": 0
+    }
+  },
+  "stock_signals": [
+    {
+      "symbol": "RELIANCE",
+      "name": "Reliance Industries Ltd",
+      "sector": "Oil & Gas",
+      "weight_pct": 9.28,
+      "current_price": 1443.4,
+      "price_change_pct": -0.92,
+      "signal": "Neutral",
+      "probability": 0.0,
+      "expected_move": 0.0,
+      "contribution": 0.0,
+      "confidence": 0.0,
+      "rsi": 47.6,
+      "trend": "neutral",
+      "ema_alignment": "mixed",
+      "vwap_position": "below",
+      "volume_surge": false,
+      "correlation": 0.82,
+      "bullish_factors": [
+        "MACD bullish crossover"
+      ],
+      "bearish_factors": [
+        "Below VWAP"
+      ]
+    },
+    {
+      "symbol": "HDFCBANK",
+      "name": "HDFC Bank Ltd",
+      "sector": "Banking",
+      "weight_pct": 6.93,
+      "current_price": 949.7,
+      "price_change_pct": -0.36,
+      "signal": "Weak Buy",
+      "probability": 0.13,
+      "expected_move": 0.6,
+      "contribution": 0.5363,
+      "confidence": 9.0,
+      "rsi": 60.5,
+      "trend": "up",
+      "ema_alignment": "mixed",
+      "vwap_position": "below",
+      "volume_surge": false,
+      "correlation": 0.85,
+      "bullish_factors": [
+        "Uptrend confirmed",
+        "MACD bullish crossover"
+      ],
+      "bearish_factors": [
+        "RSI elevated (60.5)",
+        "Below VWAP"
+      ]
+    },
+    {
+      "symbol": "BHARTIARTL",
+      "name": "Bharti Airtel Ltd",
+      "sector": "Telecom",
+      "weight_pct": 5.94,
+      "current_price": 1992.4,
+      "price_change_pct": -1.65,
+      "signal": "Strong Sell",
+      "probability": 0.4,
+      "expected_move": -1.8,
+      "contribution": -4.2775,
+      "confidence": 28.0,
+      "rsi": 44.3,
+      "trend": "down",
+      "ema_alignment": "mixed",
+      "vwap_position": "below",
+      "volume_surge": false,
+      "correlation": 0.72,
+      "bullish_factors": [
+        "MACD bullish crossover"
+      ],
+      "bearish_factors": [
+        "Downtrend confirmed",
+        "Below VWAP"
+      ]
+    },
+    {
+      "symbol": "TCS",
+      "name": "Tata Consultancy Services",
+      "sector": "Information Technology",
+      "weight_pct": 5.55,
+      "current_price": 2991.5,
+      "price_change_pct": -0.25,
+      "signal": "Strong Sell",
+      "probability": 0.72,
+      "expected_move": -1.8,
+      "contribution": -7.237,
+      "confidence": 50.7,
+      "rsi": 33.6,
+      "trend": "down",
+      "ema_alignment": "bearish",
+      "vwap_position": "below",
+      "volume_surge": false,
+      "correlation": 0.68,
+      "bullish_factors": [
+        "RSI low (33.6)"
+      ],
+      "bearish_factors": [
+        "EMA bearish alignment",
+        "Downtrend confirmed",
+        "Below VWAP"
+      ]
+    },
+    {
+      "symbol": "ICICIBANK",
+      "name": "ICICI Bank Ltd",
+      "sector": "Banking",
+      "weight_pct": 4.79,
+      "current_price": 1396.5,
+      "price_change_pct": -0.84,
+      "signal": "Strong Buy",
+      "probability": 1.0,
+      "expected_move": 1.8,
+      "contribution": 8.6304,
+      "confidence": 70.0,
+      "rsi": 47.1,
+      "trend": "up",
+      "ema_alignment": "bullish",
+      "vwap_position": "above",
+      "volume_surge": false,
+      "correlation": 0.88,
+      "bullish_factors": [
+        "EMA bullish alignment",
+        "Uptrend confirmed",
+        "Above VWAP"
+      ],
+      "bearish_factors": []
+    },
+    {
+      "symbol": "SBIN",
+      "name": "State Bank of India",
+      "sector": "Banking",
+      "weight_pct": 4.66,
+      "current_price": 1073.5,
+      "price_change_pct": 0.5,
+      "signal": "Strong Buy",
+      "probability": 1.0,
+      "expected_move": 1.8,
+      "contribution": 8.3792,
+      "confidence": 70.0,
+      "rsi": 57.3,
+      "trend": "up",
+      "ema_alignment": "bullish",
+      "vwap_position": "above",
+      "volume_surge": false,
+      "correlation": 0.85,
+      "bullish_factors": [
+        "EMA bullish alignment",
+        "Uptrend confirmed",
+        "Above VWAP"
+      ],
+      "bearish_factors": []
+    },
+    {
+      "symbol": "INFY",
+      "name": "Infosys Ltd",
+      "sector": "Information Technology",
+      "weight_pct": 3.81,
+      "current_price": 1520.2,
+      "price_change_pct": -1.02,
+      "signal": "Strong Sell",
+      "probability": 0.58,
+      "expected_move": -1.8,
+      "contribution": -3.9681,
+      "confidence": 40.5,
+      "rsi": 22.3,
+      "trend": "down",
+      "ema_alignment": "bearish",
+      "vwap_position": "below",
+      "volume_surge": false,
+      "correlation": 0.72,
+      "bullish_factors": [
+        "RSI oversold (22.3)"
+      ],
+      "bearish_factors": [
+        "EMA bearish alignment",
+        "Downtrend confirmed",
+        "Below VWAP"
+      ]
+    },
+    {
+      "symbol": "BAJFINANCE",
+      "name": "Bajaj Finance Ltd",
+      "sector": "NBFCs",
+      "weight_pct": 3.44,
+      "current_price": 964.75,
+      "price_change_pct": 0.15,
+      "signal": "Strong Buy",
+      "probability": 0.4,
+      "expected_move": 1.8,
+      "contribution": 2.4761,
+      "confidence": 28.0,
+      "rsi": 53.4,
+      "trend": "up",
+      "ema_alignment": "mixed",
+      "vwap_position": "below",
+      "volume_surge": false,
+      "correlation": 0.78,
+      "bullish_factors": [
+        "Uptrend confirmed",
+        "MACD bullish crossover"
+      ],
+      "bearish_factors": [
+        "Below VWAP"
+      ]
+    },
+    {
+      "symbol": "HINDUNILVR",
+      "name": "Hindustan Unilever Ltd",
+      "sector": "FMCG",
+      "weight_pct": 3.11,
+      "current_price": 2354.4,
+      "price_change_pct": -0.7,
+      "signal": "Strong Sell",
+      "probability": 0.4,
+      "expected_move": -1.8,
+      "contribution": -2.2392,
+      "confidence": 28.0,
+      "rsi": 48.9,
+      "trend": "down",
+      "ema_alignment": "mixed",
+      "vwap_position": "above",
+      "volume_surge": false,
+      "correlation": 0.55,
+      "bullish_factors": [
+        "Above VWAP"
+      ],
+      "bearish_factors": [
+        "Downtrend confirmed",
+        "MACD bearish crossover"
+      ]
+    },
+    {
+      "symbol": "LT",
+      "name": "Larsen & Toubro Ltd",
+      "sector": "Infrastructure",
+      "weight_pct": 2.88,
+      "current_price": 4063.3,
+      "price_change_pct": -0.58,
+      "signal": "Strong Buy",
+      "probability": 0.72,
+      "expected_move": 1.8,
+      "contribution": 3.7549,
+      "confidence": 50.7,
+      "rsi": 62.9,
+      "trend": "up",
+      "ema_alignment": "bullish",
+      "vwap_position": "above",
+      "volume_surge": false,
+      "correlation": 0.8,
+      "bullish_factors": [
+        "EMA bullish alignment",
+        "Uptrend confirmed",
+        "Above VWAP"
+      ],
+      "bearish_factors": [
+        "RSI elevated (62.9)"
+      ]
+    },
+    {
+      "symbol": "MARUTI",
+      "name": "Maruti Suzuki India Ltd",
+      "sector": "Automobiles",
+      "weight_pct": 2.55,
+      "current_price": 15059.0,
+      "price_change_pct": -0.08,
+      "signal": "Strong Sell",
+      "probability": 0.64,
+      "expected_move": -1.8,
+      "contribution": -2.9479,
+      "confidence": 44.9,
+      "rsi": 38.1,
+      "trend": "neutral",
+      "ema_alignment": "bearish",
+      "vwap_position": "below",
+      "volume_surge": false,
+      "correlation": 0.75,
+      "bullish_factors": [
+        "RSI low (38.1)"
+      ],
+      "bearish_factors": [
+        "EMA bearish alignment",
+        "Below VWAP",
+        "MACD bearish crossover"
+      ]
+    },
+    {
+      "symbol": "HCLTECH",
+      "name": "HCL Technologies Ltd",
+      "sector": "Information Technology",
+      "weight_pct": 2.47,
+      "current_price": 1610.0,
+      "price_change_pct": -0.73,
+      "signal": "Strong Sell",
+      "probability": 0.72,
+      "expected_move": -1.8,
+      "contribution": -3.2222,
+      "confidence": 50.7,
+      "rsi": 34.2,
+      "trend": "down",
+      "ema_alignment": "bearish",
+      "vwap_position": "below",
+      "volume_surge": false,
+      "correlation": 0.7,
+      "bullish_factors": [
+        "RSI low (34.2)"
+      ],
+      "bearish_factors": [
+        "EMA bearish alignment",
+        "Downtrend confirmed",
+        "Below VWAP"
+      ]
+    },
+    {
+      "symbol": "M&M",
+      "name": "Mahindra & Mahindra Ltd",
+      "sector": "Automobiles",
+      "weight_pct": 2.34,
+      "current_price": 3572.0,
+      "price_change_pct": -0.06,
+      "signal": "Strong Buy",
+      "probability": 1.0,
+      "expected_move": 1.8,
+      "contribution": 4.2165,
+      "confidence": 70.0,
+      "rsi": 44.3,
+      "trend": "neutral",
+      "ema_alignment": "mixed",
+      "vwap_position": "above",
+      "volume_surge": false,
+      "correlation": 0.73,
+      "bullish_factors": [
+        "Above VWAP",
+        "MACD bullish crossover"
+      ],
+      "bearish_factors": []
+    },
+    {
+      "symbol": "KOTAKBANK",
+      "name": "Kotak Mahindra Bank Ltd",
+      "sector": "Banking",
+      "weight_pct": 2.27,
+      "current_price": 408.75,
+      "price_change_pct": -0.87,
+      "signal": "Strong Sell",
+      "probability": 1.0,
+      "expected_move": -1.8,
+      "contribution": -4.0909,
+      "confidence": 70.0,
+      "rsi": 42.1,
+      "trend": "down",
+      "ema_alignment": "bearish",
+      "vwap_position": "below",
+      "volume_surge": false,
+      "correlation": 0.82,
+      "bullish_factors": [],
+      "bearish_factors": [
+        "EMA bearish alignment",
+        "Downtrend confirmed",
+        "Below VWAP"
+      ]
+    },
+    {
+      "symbol": "ITC",
+      "name": "ITC Ltd",
+      "sector": "FMCG",
+      "weight_pct": 2.23,
+      "current_price": 310.2,
+      "price_change_pct": -1.16,
+      "signal": "Sell",
+      "probability": 0.38,
+      "expected_move": -1.2,
+      "contribution": -1.0163,
+      "confidence": 26.6,
+      "rsi": 32.3,
+      "trend": "down",
+      "ema_alignment": "bearish",
+      "vwap_position": "below",
+      "volume_surge": false,
+      "correlation": 0.58,
+      "bullish_factors": [
+        "RSI low (32.3)",
+        "MACD bullish crossover"
+      ],
+      "bearish_factors": [
+        "EMA bearish alignment",
+        "Downtrend confirmed",
+        "Below VWAP"
+      ]
+    },
+    {
+      "symbol": "AXISBANK",
+      "name": "Axis Bank Ltd",
+      "sector": "Banking",
+      "weight_pct": 2.17,
+      "current_price": 1330.6,
+      "price_change_pct": -0.61,
+      "signal": "Strong Buy",
+      "probability": 1.0,
+      "expected_move": 1.8,
+      "contribution": 3.9115,
+      "confidence": 70.0,
+      "rsi": 55.6,
+      "trend": "neutral",
+      "ema_alignment": "bullish",
+      "vwap_position": "above",
+      "volume_surge": false,
+      "correlation": 0.85,
+      "bullish_factors": [
+        "EMA bullish alignment",
+        "Above VWAP",
+        "MACD bullish crossover"
+      ],
+      "bearish_factors": []
+    },
+    {
+      "symbol": "SUNPHARMA",
+      "name": "Sun Pharmaceutical Industries",
+      "sector": "Pharmaceuticals",
+      "weight_pct": 2.09,
+      "current_price": 1702.6,
+      "price_change_pct": -0.11,
+      "signal": "Strong Buy",
+      "probability": 1.0,
+      "expected_move": 1.8,
+      "contribution": 3.7679,
+      "confidence": 70.0,
+      "rsi": 56.3,
+      "trend": "up",
+      "ema_alignment": "mixed",
+      "vwap_position": "above",
+      "volume_surge": false,
+      "correlation": 0.62,
+      "bullish_factors": [
+        "Uptrend confirmed",
+        "Above VWAP",
+        "MACD bullish crossover"
+      ],
+      "bearish_factors": []
+    },
+    {
+      "symbol": "TITAN",
+      "name": "Titan Company Ltd",
+      "sector": "Consumer Durables",
+      "weight_pct": 2.04,
+      "current_price": 4097.6,
+      "price_change_pct": -1.12,
+      "signal": "Strong Buy",
+      "probability": 1.0,
+      "expected_move": 1.8,
+      "contribution": 3.6782,
+      "confidence": 70.0,
+      "rsi": 41.5,
+      "trend": "up",
+      "ema_alignment": "mixed",
+      "vwap_position": "above",
+      "volume_surge": false,
+      "correlation": 0.72,
+      "bullish_factors": [
+        "Uptrend confirmed",
+        "Above VWAP",
+        "MACD bullish crossover"
+      ],
+      "bearish_factors": []
+    },
+    {
+      "symbol": "ULTRACEMCO",
+      "name": "UltraTech Cement Ltd",
+      "sector": "Cement",
+      "weight_pct": 1.94,
+      "current_price": 12773.0,
+      "price_change_pct": -0.26,
+      "signal": "Strong Buy",
+      "probability": 1.0,
+      "expected_move": 1.8,
+      "contribution": 3.4988,
+      "confidence": 70.0,
+      "rsi": 59.6,
+      "trend": "up",
+      "ema_alignment": "bullish",
+      "vwap_position": "above",
+      "volume_surge": false,
+      "correlation": 0.75,
+      "bullish_factors": [
+        "EMA bullish alignment",
+        "Uptrend confirmed",
+        "Above VWAP"
+      ],
+      "bearish_factors": []
+    },
+    {
+      "symbol": "NTPC",
+      "name": "NTPC Ltd",
+      "sector": "Power & Utilities",
+      "weight_pct": 1.84,
+      "current_price": 367.0,
+      "price_change_pct": -0.07,
+      "signal": "Strong Buy",
+      "probability": 0.72,
+      "expected_move": 1.8,
+      "contribution": 2.4037,
+      "confidence": 50.7,
+      "rsi": 63.8,
+      "trend": "up",
+      "ema_alignment": "bullish",
+      "vwap_position": "above",
+      "volume_surge": false,
+      "correlation": 0.7,
+      "bullish_factors": [
+        "EMA bullish alignment",
+        "Uptrend confirmed",
+        "Above VWAP"
+      ],
+      "bearish_factors": [
+        "RSI elevated (63.8)"
+      ]
+    },
+    {
+      "symbol": "ADANIPORTS",
+      "name": "Adani Ports and SEZ",
+      "sector": "Infrastructure",
+      "weight_pct": 1.74,
+      "current_price": 1570.2,
+      "price_change_pct": 0.15,
+      "signal": "Strong Buy",
+      "probability": 0.72,
+      "expected_move": 1.8,
+      "contribution": 2.2738,
+      "confidence": 50.7,
+      "rsi": 62.0,
+      "trend": "up",
+      "ema_alignment": "bullish",
+      "vwap_position": "above",
+      "volume_surge": false,
+      "correlation": 0.65,
+      "bullish_factors": [
+        "EMA bullish alignment",
+        "Uptrend confirmed",
+        "Above VWAP"
+      ],
+      "bearish_factors": [
+        "RSI elevated (62.0)"
+      ]
+    },
+    {
+      "symbol": "BAJAJFINSV",
+      "name": "Bajaj Finserv Ltd",
+      "sector": "NBFCs",
+      "weight_pct": 1.67,
+      "current_price": 2000.1,
+      "price_change_pct": -0.97,
+      "signal": "Strong Buy",
+      "probability": 0.4,
+      "expected_move": 1.8,
+      "contribution": 1.2057,
+      "confidence": 28.0,
+      "rsi": 49.7,
+      "trend": "up",
+      "ema_alignment": "mixed",
+      "vwap_position": "below",
+      "volume_surge": false,
+      "correlation": 0.76,
+      "bullish_factors": [
+        "Uptrend confirmed",
+        "MACD bullish crossover"
+      ],
+      "bearish_factors": [
+        "Below VWAP"
+      ]
+    },
+    {
+      "symbol": "ONGC",
+      "name": "Oil & Natural Gas Corporation",
+      "sector": "Oil & Gas",
+      "weight_pct": 1.61,
+      "current_price": 269.2,
+      "price_change_pct": 0.84,
+      "signal": "Strong Buy",
+      "probability": 0.72,
+      "expected_move": 1.8,
+      "contribution": 2.1049,
+      "confidence": 50.7,
+      "rsi": 64.0,
+      "trend": "up",
+      "ema_alignment": "bullish",
+      "vwap_position": "above",
+      "volume_surge": false,
+      "correlation": 0.68,
+      "bullish_factors": [
+        "EMA bullish alignment",
+        "Uptrend confirmed",
+        "Above VWAP"
+      ],
+      "bearish_factors": [
+        "RSI elevated (64.0)"
+      ]
+    },
+    {
+      "symbol": "NESTLEIND",
+      "name": "Nestle India Ltd",
+      "sector": "FMCG",
+      "weight_pct": 1.55,
+      "current_price": 1303.5,
+      "price_change_pct": 0.02,
+      "signal": "Strong Buy",
+      "probability": 0.45,
+      "expected_move": 1.8,
+      "contribution": 1.2641,
+      "confidence": 31.8,
+      "rsi": 47.2,
+      "trend": "neutral",
+      "ema_alignment": "bullish",
+      "vwap_position": "above",
+      "volume_surge": false,
+      "correlation": 0.5,
+      "bullish_factors": [
+        "EMA bullish alignment",
+        "Above VWAP"
+      ],
+      "bearish_factors": [
+        "MACD bearish crossover"
+      ]
+    },
+    {
+      "symbol": "ASIANPAINT",
+      "name": "Asian Paints Ltd",
+      "sector": "Consumer Durables",
+      "weight_pct": 1.48,
+      "current_price": 2432.1,
+      "price_change_pct": -0.84,
+      "signal": "Strong Sell",
+      "probability": 0.58,
+      "expected_move": -1.8,
+      "contribution": -1.5374,
+      "confidence": 40.5,
+      "rsi": 24.1,
+      "trend": "down",
+      "ema_alignment": "bearish",
+      "vwap_position": "below",
+      "volume_surge": false,
+      "correlation": 0.65,
+      "bullish_factors": [
+        "RSI oversold (24.1)"
+      ],
+      "bearish_factors": [
+        "EMA bearish alignment",
+        "Downtrend confirmed",
+        "Below VWAP"
+      ]
+    },
+    {
+      "symbol": "BAJAJ-AUTO",
+      "name": "Bajaj Auto Ltd",
+      "sector": "Automobiles",
+      "weight_pct": 1.42,
+      "current_price": 9647.0,
+      "price_change_pct": 0.08,
+      "signal": "Strong Buy",
+      "probability": 1.0,
+      "expected_move": 1.8,
+      "contribution": 2.5478,
+      "confidence": 70.0,
+      "rsi": 57.2,
+      "trend": "up",
+      "ema_alignment": "bullish",
+      "vwap_position": "above",
+      "volume_surge": false,
+      "correlation": 0.68,
+      "bullish_factors": [
+        "EMA bullish alignment",
+        "Uptrend confirmed",
+        "Above VWAP"
+      ],
+      "bearish_factors": []
+    },
+    {
+      "symbol": "POWERGRID",
+      "name": "Power Grid Corporation",
+      "sector": "Power & Utilities",
+      "weight_pct": 1.38,
+      "current_price": 289.35,
+      "price_change_pct": -0.02,
+      "signal": "Strong Buy",
+      "probability": 0.58,
+      "expected_move": 1.8,
+      "contribution": 1.4335,
+      "confidence": 40.5,
+      "rsi": 73.6,
+      "trend": "up",
+      "ema_alignment": "bullish",
+      "vwap_position": "above",
+      "volume_surge": false,
+      "correlation": 0.62,
+      "bullish_factors": [
+        "EMA bullish alignment",
+        "Uptrend confirmed",
+        "Above VWAP"
+      ],
+      "bearish_factors": [
+        "RSI overbought (73.6)"
+      ]
+    },
+    {
+      "symbol": "SHRIRAMFIN",
+      "name": "Shriram Finance Ltd",
+      "sector": "NBFCs",
+      "weight_pct": 1.35,
+      "current_price": 992.0,
+      "price_change_pct": -0.68,
+      "signal": "Neutral",
+      "probability": 0.0,
+      "expected_move": 0.0,
+      "contribution": 0.0,
+      "confidence": 0.0,
+      "rsi": 49.1,
+      "trend": "neutral",
+      "ema_alignment": "mixed",
+      "vwap_position": "above",
+      "volume_surge": false,
+      "correlation": 0.72,
+      "bullish_factors": [
+        "Above VWAP"
+      ],
+      "bearish_factors": [
+        "MACD bearish crossover"
+      ]
+    },
+    {
+      "symbol": "TMPV",
+      "name": "Tata Motors Passenger Vehicles Ltd",
+      "sector": "Automobiles",
+      "weight_pct": 1.32,
+      "current_price": 374.15,
+      "price_change_pct": -0.35,
+      "signal": "Strong Buy",
+      "probability": 0.72,
+      "expected_move": 1.8,
+      "contribution": 1.7151,
+      "confidence": 50.7,
+      "rsi": 62.4,
+      "trend": "up",
+      "ema_alignment": "bullish",
+      "vwap_position": "above",
+      "volume_surge": false,
+      "correlation": 0.78,
+      "bullish_factors": [
+        "EMA bullish alignment",
+        "Uptrend confirmed",
+        "Above VWAP"
+      ],
+      "bearish_factors": [
+        "RSI elevated (62.4)"
+      ]
+    },
+    {
+      "symbol": "EICHERMOT",
+      "name": "Eicher Motors Ltd",
+      "sector": "Automobiles",
+      "weight_pct": 1.28,
+      "current_price": 7209.5,
+      "price_change_pct": -0.93,
+      "signal": "Neutral",
+      "probability": 0.0,
+      "expected_move": 0.0,
+      "contribution": 0.0,
+      "confidence": 0.0,
+      "rsi": 46.3,
+      "trend": "neutral",
+      "ema_alignment": "mixed",
+      "vwap_position": "below",
+      "volume_surge": false,
+      "correlation": 0.7,
+      "bullish_factors": [
+        "MACD bullish crossover"
+      ],
+      "bearish_factors": [
+        "Below VWAP"
+      ]
+    },
+    {
+      "symbol": "COALINDIA",
+      "name": "Coal India Ltd",
+      "sector": "Metals & Mining",
+      "weight_pct": 0.95,
+      "current_price": 431.85,
+      "price_change_pct": -0.7,
+      "signal": "Strong Buy",
+      "probability": 0.6,
+      "expected_move": 1.8,
+      "contribution": 1.0227,
+      "confidence": 42.0,
+      "rsi": 50.3,
+      "trend": "up",
+      "ema_alignment": "bullish",
+      "vwap_position": "above",
+      "volume_surge": false,
+      "correlation": 0.6,
+      "bullish_factors": [
+        "EMA bullish alignment",
+        "Uptrend confirmed",
+        "Above VWAP"
+      ],
+      "bearish_factors": [
+        "MACD bearish crossover"
+      ]
+    },
+    {
+      "symbol": "TATASTEEL",
+      "name": "Tata Steel Ltd",
+      "sector": "Metals & Mining",
+      "weight_pct": 0.92,
+      "current_price": 197.76,
+      "price_change_pct": 1.21,
+      "signal": "Strong Buy",
+      "probability": 1.0,
+      "expected_move": 1.8,
+      "contribution": 1.6507,
+      "confidence": 70.0,
+      "rsi": 58.6,
+      "trend": "up",
+      "ema_alignment": "bullish",
+      "vwap_position": "above",
+      "volume_surge": false,
+      "correlation": 0.72,
+      "bullish_factors": [
+        "EMA bullish alignment",
+        "Uptrend confirmed",
+        "Above VWAP"
+      ],
+      "bearish_factors": []
+    },
+    {
+      "symbol": "WIPRO",
+      "name": "Wipro Ltd",
+      "sector": "Information Technology",
+      "weight_pct": 0.88,
+      "current_price": 233.39,
+      "price_change_pct": 0.02,
+      "signal": "Strong Sell",
+      "probability": 0.58,
+      "expected_move": -1.8,
+      "contribution": -0.9141,
+      "confidence": 40.5,
+      "rsi": 20.6,
+      "trend": "down",
+      "ema_alignment": "bearish",
+      "vwap_position": "below",
+      "volume_surge": false,
+      "correlation": 0.68,
+      "bullish_factors": [
+        "RSI oversold (20.6)"
+      ],
+      "bearish_factors": [
+        "EMA bearish alignment",
+        "Downtrend confirmed",
+        "Below VWAP"
+      ]
+    },
+    {
+      "symbol": "TECHM",
+      "name": "Tech Mahindra Ltd",
+      "sector": "Information Technology",
+      "weight_pct": 0.85,
+      "current_price": 1646.2,
+      "price_change_pct": 0.05,
+      "signal": "Strong Sell",
+      "probability": 1.0,
+      "expected_move": -1.8,
+      "contribution": -1.5251,
+      "confidence": 70.0,
+      "rsi": 46.1,
+      "trend": "down",
+      "ema_alignment": "mixed",
+      "vwap_position": "below",
+      "volume_surge": false,
+      "correlation": 0.7,
+      "bullish_factors": [],
+      "bearish_factors": [
+        "Downtrend confirmed",
+        "Below VWAP",
+        "MACD bearish crossover"
+      ]
+    },
+    {
+      "symbol": "HINDALCO",
+      "name": "Hindalco Industries Ltd",
+      "sector": "Metals & Mining",
+      "weight_pct": 0.82,
+      "current_price": 935.45,
+      "price_change_pct": -3.06,
+      "signal": "Neutral",
+      "probability": 0.0,
+      "expected_move": 0.0,
+      "contribution": 0.0,
+      "confidence": 0.0,
+      "rsi": 50.1,
+      "trend": "neutral",
+      "ema_alignment": "mixed",
+      "vwap_position": "above",
+      "volume_surge": false,
+      "correlation": 0.7,
+      "bullish_factors": [
+        "Above VWAP"
+      ],
+      "bearish_factors": [
+        "MACD bearish crossover"
+      ]
+    },
+    {
+      "symbol": "GRASIM",
+      "name": "Grasim Industries Ltd",
+      "sector": "Cement",
+      "weight_pct": 0.78,
+      "current_price": 2863.9,
+      "price_change_pct": 0.67,
+      "signal": "Strong Buy",
+      "probability": 1.0,
+      "expected_move": 1.8,
+      "contribution": 1.3995,
+      "confidence": 70.0,
+      "rsi": 55.0,
+      "trend": "up",
+      "ema_alignment": "bullish",
+      "vwap_position": "above",
+      "volume_surge": false,
+      "correlation": 0.72,
+      "bullish_factors": [
+        "EMA bullish alignment",
+        "Uptrend confirmed",
+        "Above VWAP"
+      ],
+      "bearish_factors": []
+    },
+    {
+      "symbol": "JSWSTEEL",
+      "name": "JSW Steel Ltd",
+      "sector": "Metals & Mining",
+      "weight_pct": 0.75,
+      "current_price": 1239.8,
+      "price_change_pct": 0.94,
+      "signal": "Strong Buy",
+      "probability": 0.72,
+      "expected_move": 1.8,
+      "contribution": 0.9745,
+      "confidence": 50.7,
+      "rsi": 61.1,
+      "trend": "up",
+      "ema_alignment": "bullish",
+      "vwap_position": "above",
+      "volume_surge": false,
+      "correlation": 0.68,
+      "bullish_factors": [
+        "EMA bullish alignment",
+        "Uptrend confirmed",
+        "Above VWAP"
+      ],
+      "bearish_factors": [
+        "RSI elevated (61.1)"
+      ]
+    },
+    {
+      "symbol": "ADANIENT",
+      "name": "Adani Enterprises Ltd",
+      "sector": "Diversified",
+      "weight_pct": 0.72,
+      "current_price": 2236.6,
+      "price_change_pct": 0.38,
+      "signal": "Strong Buy",
+      "probability": 1.0,
+      "expected_move": 1.8,
+      "contribution": 1.2919,
+      "confidence": 70.0,
+      "rsi": 54.3,
+      "trend": "up",
+      "ema_alignment": "bullish",
+      "vwap_position": "above",
+      "volume_surge": false,
+      "correlation": 0.55,
+      "bullish_factors": [
+        "EMA bullish alignment",
+        "Uptrend confirmed",
+        "Above VWAP"
+      ],
+      "bearish_factors": []
+    },
+    {
+      "symbol": "DIVISLAB",
+      "name": "Divi's Laboratories Ltd",
+      "sector": "Pharmaceuticals",
+      "weight_pct": 0.68,
+      "current_price": 6141.5,
+      "price_change_pct": 1.44,
+      "signal": "Strong Sell",
+      "probability": 0.45,
+      "expected_move": -1.8,
+      "contribution": -0.5546,
+      "confidence": 31.8,
+      "rsi": 46.3,
+      "trend": "neutral",
+      "ema_alignment": "bearish",
+      "vwap_position": "below",
+      "volume_surge": false,
+      "correlation": 0.58,
+      "bullish_factors": [
+        "MACD bullish crossover"
+      ],
+      "bearish_factors": [
+        "EMA bearish alignment",
+        "Below VWAP"
+      ]
+    },
+    {
+      "symbol": "DRREDDY",
+      "name": "Dr. Reddy's Laboratories",
+      "sector": "Pharmaceuticals",
+      "weight_pct": 0.65,
+      "current_price": 1244.9,
+      "price_change_pct": 0.38,
+      "signal": "Strong Buy",
+      "probability": 0.72,
+      "expected_move": 1.8,
+      "contribution": 0.8445,
+      "confidence": 50.7,
+      "rsi": 64.1,
+      "trend": "up",
+      "ema_alignment": "bullish",
+      "vwap_position": "above",
+      "volume_surge": false,
+      "correlation": 0.55,
+      "bullish_factors": [
+        "EMA bullish alignment",
+        "Uptrend confirmed",
+        "Above VWAP"
+      ],
+      "bearish_factors": [
+        "RSI elevated (64.1)"
+      ]
+    },
+    {
+      "symbol": "CIPLA",
+      "name": "Cipla Ltd",
+      "sector": "Pharmaceuticals",
+      "weight_pct": 0.62,
+      "current_price": 1333.3,
+      "price_change_pct": 0.5,
+      "signal": "Neutral",
+      "probability": 0.07,
+      "expected_move": 0.0,
+      "contribution": 0.0,
+      "confidence": 4.7,
+      "rsi": 29.4,
+      "trend": "neutral",
+      "ema_alignment": "bearish",
+      "vwap_position": "below",
+      "volume_surge": false,
+      "correlation": 0.58,
+      "bullish_factors": [
+        "RSI oversold (29.4)",
+        "MACD bullish crossover"
+      ],
+      "bearish_factors": [
+        "EMA bearish alignment",
+        "Below VWAP"
+      ]
+    },
+    {
+      "symbol": "HEROMOTOCO",
+      "name": "Hero MotoCorp Ltd",
+      "sector": "Automobiles",
+      "weight_pct": 0.58,
+      "current_price": 5766.0,
+      "price_change_pct": -1.46,
+      "signal": "Strong Buy",
+      "probability": 0.6,
+      "expected_move": 1.8,
+      "contribution": 0.6244,
+      "confidence": 42.0,
+      "rsi": 54.7,
+      "trend": "up",
+      "ema_alignment": "bullish",
+      "vwap_position": "below",
+      "volume_surge": false,
+      "correlation": 0.65,
+      "bullish_factors": [
+        "EMA bullish alignment",
+        "Uptrend confirmed",
+        "MACD bullish crossover"
+      ],
+      "bearish_factors": [
+        "Below VWAP"
+      ]
+    },
+    {
+      "symbol": "BRITANNIA",
+      "name": "Britannia Industries Ltd",
+      "sector": "FMCG",
+      "weight_pct": 0.55,
+      "current_price": 5870.5,
+      "price_change_pct": -0.14,
+      "signal": "Neutral",
+      "probability": 0.0,
+      "expected_move": 0.0,
+      "contribution": 0.0,
+      "confidence": 0.0,
+      "rsi": 48.6,
+      "trend": "neutral",
+      "ema_alignment": "mixed",
+      "vwap_position": "below",
+      "volume_surge": false,
+      "correlation": 0.52,
+      "bullish_factors": [
+        "MACD bullish crossover"
+      ],
+      "bearish_factors": [
+        "Below VWAP"
+      ]
+    },
+    {
+      "symbol": "INDUSINDBK",
+      "name": "IndusInd Bank Ltd",
+      "sector": "Banking",
+      "weight_pct": 0.52,
+      "current_price": 914.4,
+      "price_change_pct": -0.75,
+      "signal": "Strong Buy",
+      "probability": 0.66,
+      "expected_move": 1.8,
+      "contribution": 0.6113,
+      "confidence": 45.9,
+      "rsi": 32.9,
+      "trend": "up",
+      "ema_alignment": "bullish",
+      "vwap_position": "above",
+      "volume_surge": false,
+      "correlation": 0.78,
+      "bullish_factors": [
+        "RSI low (32.9)",
+        "EMA bullish alignment",
+        "Uptrend confirmed"
+      ],
+      "bearish_factors": [
+        "MACD bearish crossover"
+      ]
+    },
+    {
+      "symbol": "APOLLOHOSP",
+      "name": "Apollo Hospitals Enterprise",
+      "sector": "Pharmaceuticals",
+      "weight_pct": 0.5,
+      "current_price": 7122.0,
+      "price_change_pct": 0.08,
+      "signal": "Strong Buy",
+      "probability": 1.0,
+      "expected_move": 1.8,
+      "contribution": 0.8971,
+      "confidence": 70.0,
+      "rsi": 44.3,
+      "trend": "up",
+      "ema_alignment": "mixed",
+      "vwap_position": "above",
+      "volume_surge": false,
+      "correlation": 0.62,
+      "bullish_factors": [
+        "Uptrend confirmed",
+        "Above VWAP",
+        "MACD bullish crossover"
+      ],
+      "bearish_factors": []
+    },
+    {
+      "symbol": "BPCL",
+      "name": "Bharat Petroleum Corporation",
+      "sector": "Oil & Gas",
+      "weight_pct": 0.48,
+      "current_price": 382.05,
+      "price_change_pct": -0.1,
+      "signal": "Strong Buy",
+      "probability": 0.72,
+      "expected_move": 1.8,
+      "contribution": 0.6237,
+      "confidence": 50.7,
+      "rsi": 64.0,
+      "trend": "up",
+      "ema_alignment": "bullish",
+      "vwap_position": "above",
+      "volume_surge": false,
+      "correlation": 0.65,
+      "bullish_factors": [
+        "EMA bullish alignment",
+        "Uptrend confirmed",
+        "Above VWAP"
+      ],
+      "bearish_factors": [
+        "RSI elevated (64.0)"
+      ]
+    },
+    {
+      "symbol": "TATACONSUM",
+      "name": "Tata Consumer Products",
+      "sector": "FMCG",
+      "weight_pct": 0.45,
+      "current_price": 1155.9,
+      "price_change_pct": 0.25,
+      "signal": "Strong Sell",
+      "probability": 1.0,
+      "expected_move": -1.8,
+      "contribution": -0.8074,
+      "confidence": 70.0,
+      "rsi": 45.0,
+      "trend": "neutral",
+      "ema_alignment": "bearish",
+      "vwap_position": "below",
+      "volume_surge": false,
+      "correlation": 0.6,
+      "bullish_factors": [],
+      "bearish_factors": [
+        "EMA bearish alignment",
+        "Below VWAP",
+        "MACD bearish crossover"
+      ]
+    },
+    {
+      "symbol": "SBILIFE",
+      "name": "SBI Life Insurance",
+      "sector": "Insurance",
+      "weight_pct": 0.42,
+      "current_price": 2017.8,
+      "price_change_pct": -1.17,
+      "signal": "Strong Sell",
+      "probability": 1.0,
+      "expected_move": -1.8,
+      "contribution": -0.7536,
+      "confidence": 70.0,
+      "rsi": 40.0,
+      "trend": "neutral",
+      "ema_alignment": "bearish",
+      "vwap_position": "below",
+      "volume_surge": false,
+      "correlation": 0.7,
+      "bullish_factors": [],
+      "bearish_factors": [
+        "EMA bearish alignment",
+        "Below VWAP",
+        "MACD bearish crossover"
+      ]
+    },
+    {
+      "symbol": "HDFCLIFE",
+      "name": "HDFC Life Insurance",
+      "sector": "Insurance",
+      "weight_pct": 0.4,
+      "current_price": 720.7,
+      "price_change_pct": -0.25,
+      "signal": "Strong Sell",
+      "probability": 1.0,
+      "expected_move": -1.8,
+      "contribution": -0.7177,
+      "confidence": 70.0,
+      "rsi": 42.3,
+      "trend": "down",
+      "ema_alignment": "bearish",
+      "vwap_position": "below",
+      "volume_surge": false,
+      "correlation": 0.68,
+      "bullish_factors": [],
+      "bearish_factors": [
+        "EMA bearish alignment",
+        "Downtrend confirmed",
+        "Below VWAP"
+      ]
+    },
+    {
+      "symbol": "TRENT",
+      "name": "Trent Ltd",
+      "sector": "Consumer Durables",
+      "weight_pct": 0.38,
+      "current_price": 4131.3,
+      "price_change_pct": 2.96,
+      "signal": "Strong Buy",
+      "probability": 0.69,
+      "expected_move": 1.8,
+      "contribution": 0.4693,
+      "confidence": 48.2,
+      "rsi": 61.9,
+      "trend": "up",
+      "ema_alignment": "mixed",
+      "vwap_position": "above",
+      "volume_surge": true,
+      "correlation": 0.65,
+      "bullish_factors": [
+        "Uptrend confirmed",
+        "Above VWAP",
+        "High volume on up move"
+      ],
+      "bearish_factors": [
+        "RSI elevated (61.9)"
+      ]
+    }
+  ]
+}

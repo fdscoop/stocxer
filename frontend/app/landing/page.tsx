@@ -16,7 +16,7 @@ import FooterSection from '@/components/landing/FooterSection'
 
 export const metadata: Metadata = {
     title: 'Best Free AI Stock Screener & Options Scanner India | Stocxer AI',
-    description: 'Free AI stock screener & options scanner in India for Indian stock market analysis. Best AI tool for stock analysis with NIFTY/BANKNIFTY scanner, ICT Smart Money Concepts, ML models, News Sentiment & Options Greeks. No credit card required.',
+    description: 'Free AI stock screener & options scanner in India. ICT Top-Down Analysis, AMD Phase Detection, ML Trade Grading, P&L Simulation, Theta Scenarios & Options Greeks. Best AI tool for NIFTY/BANKNIFTY analysis. No credit card required.',
     keywords: [
         'best AI for stock analysis India',
         'free AI tool for stock market India',
@@ -28,30 +28,25 @@ export const metadata: Metadata = {
         'NIFTY screener',
         'BANKNIFTY screener',
         'market scanner India',
-        'stock filter tool India',
-        'options filter India',
-        'best stock analysis tool India',
-        'AI stock analysis software',
-        'stock market analysis tool',
-        'equity screener India',
-        'derivatives screener',
-        'stock monitoring tool',
-        'options monitoring tool',
-        'market data screener',
-        'technical screener India',
-        'automated stock screener',
-        'AI stock scanner',
-        'stock analysis platform India',
-        'AI market analysis India',
-        'option analysis tool India',
-        'stock research tool India',
-        'options research tool',
-        'stock tracking tool',
         'ICT analysis India',
+        'ICT top down analysis',
+        'AMD phase detection',
+        'accumulation manipulation distribution',
         'Smart Money Concepts',
+        'order block detector',
+        'fair value gap scanner',
+        'bear trap bull trap detection',
+        'multi timeframe analysis',
         'ML market analysis',
+        'AI trade grading',
+        'options P&L simulation',
+        'theta decay calculator',
+        'scalp feasibility analyzer',
+        'options Greeks calculator',
+        'ML price prediction',
+        'IV prediction tool',
         'News sentiment analysis',
-        'Options Greeks calculator',
+        'Nifty 50 constituent analysis',
         'Watchman AI',
         'technical analysis software India',
         'free stock market analysis tool',
@@ -96,7 +91,7 @@ export default function LandingPage() {
             {/* Competitor Comparison Table */}
             <CompetitorComparison />
 
-            {/* Watchman AI v3.5 Spotlight - 6 Features */}
+            {/* Watchman AI v4.0 Spotlight - 6 Features */}
             <WatchmanAISection />
 
             {/* Analysis Features Detail - ICT + Options + Sentiment */}

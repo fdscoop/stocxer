@@ -47,9 +47,12 @@ from src.services.parallel_stock_analysis import get_fast_analyzer
 from src.analytics.candlestick_patterns import analyze_candlestick_patterns
 from src.analytics.confidence_calculator import calculate_trade_confidence
 from src.analytics.ict_analysis import (
-    analyze_multi_timeframe_ict_topdown,
-    calculate_premium_discount_zones
+    analyze_multi_timeframe_ict_topdown
 )
+
+# NEW: AMD (Accumulation, Manipulation, Distribution) Detection
+# This module detects bear traps, bull traps, and manipulation phases
+from src.analytics.topdown_ict_amd import TopDownICTAnalyzer
 
 # NEW: Option-Aware ICT Analysis
 from src.analytics.option_aware_ict import OptionAwarePracticalICT
@@ -485,6 +488,7 @@ async def shutdown_scheduler():
 async def initialize_fyers_client():
     """Initialize the Fyers client with stored token"""
     try:
+        from config.supabase_config import supabase_admin
         # Try to load Fyers token from database
         response = supabase_admin.table("fyers_tokens").select("*").limit(1).execute()
         
@@ -922,6 +926,7 @@ async def get_fyers_token_status():
             
             # Token is valid - refresh the client
             fyers_client.access_token = token_data.get("access_token")
+            fyers_client._initialize_client()
             
             time_left = expiry_time - now
             hours_left = int(time_left.total_seconds() / 3600)
@@ -4370,20 +4375,35 @@ async def get_actionable_trading_signal(
         except Exception as save_error:
             logger.warning(f"⚠️ Error saving options signal (non-fatal): {save_error}")
         
-        return signal
+        # CRITICAL: Sanitize numpy types before returning to avoid JSON serialization errors
+        # FastAPI's jsonable_encoder can't handle numpy.bool_, numpy.int64, etc.
+        return sanitize_for_json(signal)
 
         
     except Exception as e:
-        logger.error(f"Error generating actionable signal: {e}")
-        return {
-            "signal": "ERROR",
-            "reason": str(e),
-            "action": "WAIT",
-            "timing": "Check system",
-            "option": {"strike": 25000, "type": "CE"},
-            "entry": {"price": 50, "timing": "System error"},
-            "targets": {"target_1": 65, "target_2": 90, "stop_loss": 35}
-        }
+        error_str = str(e)
+        logger.error(f"Error generating actionable signal: {error_str}")
+        
+        # Check if it's a Fyers authentication error
+        if "Fyers" in error_str and ("authentication" in error_str.lower() or "auth" in error_str.lower() or "token" in error_str.lower()):
+            raise HTTPException(
+                status_code=503,
+                detail={
+                    "error": "FYERS_AUTH_REQUIRED",
+                    "message": "Fyers authentication required. Please connect your Fyers account.",
+                    "action_required": "Authenticate via /auth/url or reconnect Fyers."
+                }
+            )
+        
+        # For other errors, return error response with details
+        raise HTTPException(
+            status_code=500,
+            detail={
+                "error": "SIGNAL_GENERATION_FAILED",
+                "message": error_str,
+                "action_required": "Please try again or contact support."
+            }
+        )
 
 
 def _estimate_option_price(spot_price: float, strike: float, action: str, chain_data: dict) -> float:
@@ -4824,6 +4844,196 @@ def _generate_actionable_signal_topdown(mtf_result, session_info, chain_data, hi
             expiry_warnings.append("⚠️ NO LTF confirmation - HTF bias only (weak signal)")
             expiry_warnings.append("🎯 Consider waiting for LTF setup before entry")
     
+    # ==================== PHASE 2.5: AMD (MANIPULATION) DETECTION ====================
+    # This phase detects bear traps, bull traps, and manipulation phases that can override HTF bias
+    # Key Principle: When price sweeps liquidity and reverses, it's a manipulation - trade AGAINST the sweep
+    # 
+    # FIXED: Now passes pre-fetched candles to avoid duplicate API calls (~9 fewer Fyers requests)
+    # FIXED: Correctly reads TopDownAnalysis attributes (was broken: .ltf doesn't exist)
+    # ENHANCED: Also reads accumulation zones, distribution zones, and AMD sequences
+    logger.info("\n🎭 Phase 2.5: AMD (Accumulation, Manipulation, Distribution) Detection")
+    
+    amd_detection = {
+        'manipulation_found': False,
+        'type': None,          # 'bear_trap' or 'bull_trap'
+        'level': None,         # Price level of manipulation
+        'confidence': 0,       # 0-100 confidence score
+        'override_signal': None,  # 'bullish', 'bearish', or None
+        'description': None,
+        'recovery_pts': 0,
+        'time': None,
+        'is_active': False,    # True if manipulation is recent (<30 mins)
+        'accumulation_zones': [],
+        'distribution_zones': [],
+        'amd_sequence': None,
+        'mtf_range': None      # MTF premium/discount context
+    }
+    
+    try:
+        # Initialize AMD analyzer with Fyers client
+        amd_analyzer = TopDownICTAnalyzer(fyers_client)
+        
+        # Run AMD analysis with PRE-FETCHED candles and current price
+        # This eliminates ~9 duplicate Fyers API calls (M/W/D/4H/1H/15m/5m/3m/1m)
+        amd_result = amd_analyzer.analyze(
+            index,
+            candles_by_timeframe=candles_by_timeframe,
+            current_price=spot_price
+        )
+        
+        if amd_result:
+            # Extract bear traps and bull traps from ltf_amd_phases
+            bear_traps = [p for p in amd_result.ltf_amd_phases if p.manipulation_type == 'bear_trap']
+            bull_traps = [p for p in amd_result.ltf_amd_phases if p.manipulation_type == 'bull_trap']
+            
+            logger.info(f"   📊 AMD Phases: {len(amd_result.ltf_amd_phases)}")
+            logger.info(f"   🐻 Bear Traps: {len(bear_traps)}")
+            logger.info(f"   🐂 Bull Traps: {len(bull_traps)}")
+            logger.info(f"   📦 Accumulation Zones: {len(amd_result.accumulation_zones or [])}")
+            logger.info(f"   🎯 Distribution Moves: {len(amd_result.distribution_zones or [])}")
+            
+            # Store accumulation/distribution/sequence info for Phase 4
+            amd_detection['accumulation_zones'] = amd_result.accumulation_zones or []
+            amd_detection['distribution_zones'] = amd_result.distribution_zones or []
+            amd_detection['amd_sequence'] = amd_result.amd_sequence
+            amd_detection['mtf_range'] = {
+                'range_high': amd_result.mtf_range.range_high,
+                'range_low': amd_result.mtf_range.range_low,
+                'range_mid': amd_result.mtf_range.range_mid,
+                'position': amd_result.mtf_range.current_position,
+                'expansion': amd_result.mtf_range.expansion_phase
+            } if amd_result.mtf_range else None
+            
+            # Priority 0: Full A→M→D sequence (highest conviction)
+            if amd_result.amd_sequence and amd_result.amd_sequence.get('sequence_complete'):
+                seq = amd_result.amd_sequence
+                expected_dir = seq.get('expected_direction', '')
+                amd_detection['manipulation_found'] = True
+                amd_detection['type'] = seq['manipulation']['type']
+                amd_detection['level'] = seq['manipulation']['key_level']
+                amd_detection['confidence'] = min(seq.get('sequence_score', 0) / 3, 95)
+                amd_detection['override_signal'] = expected_dir
+                amd_detection['description'] = (
+                    f"🔥 Full A→M→D: {seq['manipulation']['type']} at "
+                    f"₹{seq['manipulation']['key_level']:.2f} → {expected_dir} distribution confirmed"
+                )
+                amd_detection['is_active'] = True
+                
+                logger.info(f"\n   🔥 FULL A→M→D SEQUENCE DETECTED (HIGHEST CONVICTION):")
+                logger.info(f"      Type: {seq['manipulation']['type'].upper()}")
+                logger.info(f"      Direction: {expected_dir.upper()}")
+                logger.info(f"      Sequence Score: {seq.get('sequence_score', 0)}")
+            
+            # Priority 1: Active manipulation (within 30 mins)
+            elif amd_result.active_manipulation:
+                manip = amd_result.active_manipulation
+                trap_time = manip.start_time
+                
+                # Calculate age
+                if isinstance(trap_time, datetime):
+                    trap_age_mins = (datetime.now() - trap_time).total_seconds() / 60
+                else:
+                    trap_age_mins = (datetime.now() - trap_time.to_pydatetime()).total_seconds() / 60
+                
+                if manip.confidence >= 60:
+                    amd_detection['manipulation_found'] = True
+                    amd_detection['type'] = manip.manipulation_type
+                    amd_detection['level'] = manip.key_level
+                    amd_detection['confidence'] = manip.confidence
+                    amd_detection['override_signal'] = 'bullish' if manip.manipulation_type == 'bear_trap' else 'bearish'
+                    amd_detection['description'] = (
+                        f"{manip.manipulation_type.replace('_', ' ').title()} at "
+                        f"₹{manip.key_level:.2f} - Reversal expected "
+                        f"{'UP' if manip.manipulation_type == 'bear_trap' else 'DOWN'}"
+                    )
+                    amd_detection['recovery_pts'] = manip.recovery_pts
+                    amd_detection['time'] = trap_time.isoformat() if hasattr(trap_time, 'isoformat') else str(trap_time)
+                    amd_detection['is_active'] = trap_age_mins <= 30
+                    
+                    # Check if distribution confirms this manipulation
+                    if amd_result.distribution_zones:
+                        expected_dir = amd_detection['override_signal']
+                        confirming = [d for d in amd_result.distribution_zones 
+                                     if d.get('confirms_trap') and d.get('direction') == expected_dir]
+                        if confirming:
+                            amd_detection['confidence'] = min(amd_detection['confidence'] + 10, 95)
+                            amd_detection['description'] += f" + {expected_dir} distribution confirmed"
+                    
+                    logger.info(f"\n   🚨 {manip.manipulation_type.upper()} DETECTED:")
+                    logger.info(f"      Level: ₹{manip.key_level:.2f}")
+                    logger.info(f"      Recovery: {manip.recovery_pts:.0f} pts")
+                    logger.info(f"      Confidence: {amd_detection['confidence']}%")
+                    logger.info(f"      Age: {trap_age_mins:.0f} mins")
+                    logger.info(f"      Action: BUY {'CALL' if manip.manipulation_type == 'bear_trap' else 'PUT'}")
+            
+            # Priority 2: Recent traps (within 60 mins) — check both lists
+            if not amd_detection['manipulation_found']:
+                # Check bear traps
+                for trap in sorted(bear_traps, key=lambda x: x.start_time, reverse=True):
+                    trap_time = trap.start_time
+                    if isinstance(trap_time, datetime):
+                        trap_age = (datetime.now() - trap_time).total_seconds() / 60
+                    else:
+                        trap_age = (datetime.now() - trap_time.to_pydatetime()).total_seconds() / 60
+                    
+                    if trap_age <= 60 and trap.confidence >= 60:
+                        amd_detection['manipulation_found'] = True
+                        amd_detection['type'] = 'bear_trap'
+                        amd_detection['level'] = trap.key_level
+                        amd_detection['confidence'] = trap.confidence
+                        amd_detection['override_signal'] = 'bullish'
+                        amd_detection['description'] = f"Bear trap at ₹{trap.key_level:.2f} - Reversal expected UP"
+                        amd_detection['recovery_pts'] = trap.recovery_pts
+                        amd_detection['time'] = trap_time.isoformat() if hasattr(trap_time, 'isoformat') else str(trap_time)
+                        amd_detection['is_active'] = trap_age <= 30
+                        
+                        logger.info(f"\n   🚨 BEAR TRAP DETECTED (BULLISH SIGNAL):")
+                        logger.info(f"      Level: ₹{trap.key_level:.2f}")
+                        logger.info(f"      Recovery: +{trap.recovery_pts:.0f} pts")
+                        logger.info(f"      Confidence: {trap.confidence}%")
+                        logger.info(f"      Age: {trap_age:.0f} mins")
+                        break
+                
+                # Check bull traps if no bear trap found
+                if not amd_detection['manipulation_found']:
+                    for trap in sorted(bull_traps, key=lambda x: x.start_time, reverse=True):
+                        trap_time = trap.start_time
+                        if isinstance(trap_time, datetime):
+                            trap_age = (datetime.now() - trap_time).total_seconds() / 60
+                        else:
+                            trap_age = (datetime.now() - trap_time.to_pydatetime()).total_seconds() / 60
+                        
+                        if trap_age <= 60 and trap.confidence >= 60:
+                            amd_detection['manipulation_found'] = True
+                            amd_detection['type'] = 'bull_trap'
+                            amd_detection['level'] = trap.key_level
+                            amd_detection['confidence'] = trap.confidence
+                            amd_detection['override_signal'] = 'bearish'
+                            amd_detection['description'] = f"Bull trap at ₹{trap.key_level:.2f} - Reversal expected DOWN"
+                            amd_detection['recovery_pts'] = trap.recovery_pts
+                            amd_detection['time'] = trap_time.isoformat() if hasattr(trap_time, 'isoformat') else str(trap_time)
+                            amd_detection['is_active'] = trap_age <= 30
+                            
+                            logger.info(f"\n   🚨 BULL TRAP DETECTED (BEARISH SIGNAL):")
+                            logger.info(f"      Level: ₹{trap.key_level:.2f}")
+                            logger.info(f"      Drop: -{trap.recovery_pts:.0f} pts")
+                            logger.info(f"      Confidence: {trap.confidence}%")
+                            logger.info(f"      Age: {trap_age:.0f} mins")
+                            break
+            
+            if not amd_detection['manipulation_found']:
+                # Log accumulation/distribution context even without active manipulation
+                if amd_result.accumulation_zones:
+                    latest = amd_result.accumulation_zones[-1]
+                    logger.info(f"   📦 Accumulation: {latest['range_low']:.0f}-{latest['range_high']:.0f}")
+                logger.info(f"   ✅ No active manipulation detected - HTF bias remains valid")
+                
+    except Exception as e:
+        logger.warning(f"   ⚠️ AMD analysis failed: {e}")
+        import traceback
+        logger.debug(f"      {traceback.format_exc()}")
+        logger.warning(f"      Proceeding with HTF bias only")
+    
     # ==================== PHASE 3: CONFIRMATION STACK ====================
     logger.info("\n🔍 Phase 3: Confirmation Stack (ML + Candlesticks + Futures)")
     
@@ -4930,6 +5140,39 @@ def _generate_actionable_signal_topdown(mtf_result, session_info, chain_data, hi
     
     # Determine trade direction (ICT first!)
     trade_direction = htf_bias.overall_direction
+    
+    # ==================== AMD OVERRIDE: Manipulation trumps HTF bias ====================
+    # When a high-confidence manipulation (bear trap/bull trap) is detected,
+    # it overrides the HTF bias because manipulations are designed to trap traders
+    # following the "obvious" direction (which is the HTF bias)
+    amd_override_applied = False
+    
+    if amd_detection['manipulation_found'] and amd_detection['is_active']:
+        override_confidence_threshold = 70  # High confidence required to override HTF
+        
+        if amd_detection['confidence'] >= override_confidence_threshold:
+            original_direction = trade_direction
+            trade_direction = amd_detection['override_signal']
+            amd_override_applied = True
+            
+            logger.info(f"\n   🚨 AMD OVERRIDE APPLIED:")
+            logger.info(f"      Original HTF Direction: {original_direction.upper()}")
+            logger.info(f"      Manipulation Type: {amd_detection['type'].upper()}")
+            logger.info(f"      Override Direction: {trade_direction.upper()}")
+            logger.info(f"      Confidence: {amd_detection['confidence']}%")
+            logger.info(f"      Reason: {amd_detection['description']}")
+            
+            # Add warning about manipulation trade
+            expiry_warnings.append(f"🎭 AMD Override: {amd_detection['type']} at ₹{amd_detection['level']:.0f}")
+            expiry_warnings.append(f"🔄 Reversal Trade: Buy {'CALL' if trade_direction == 'bullish' else 'PUT'}")
+            
+        elif amd_detection['confidence'] >= 50:
+            # Medium confidence - add warning but don't override
+            logger.info(f"\n   ⚠️ AMD ALERT (No Override - Medium Confidence):")
+            logger.info(f"      Manipulation Type: {amd_detection['type'].upper()}")
+            logger.info(f"      Confidence: {amd_detection['confidence']}% (need {override_confidence_threshold}% to override)")
+            logger.info(f"      HTF Direction Unchanged: {trade_direction.upper()}")
+            expiry_warnings.append(f"⚠️ Potential {amd_detection['type']} detected at ₹{amd_detection['level']:.0f}")
     
     # Check for liquidity reversal opportunity
     is_reversal_play = False
@@ -5295,6 +5538,24 @@ def _generate_actionable_signal_topdown(mtf_result, session_info, chain_data, hi
             "momentum_confirmed": ltf_entry.momentum_confirmed if ltf_entry else False,
             "alignment_score": ltf_entry.alignment_score if ltf_entry else 0,
             "confidence": round(ltf_entry.confidence * 100, 1) if ltf_entry else 0
+        },
+        # NEW: AMD (Manipulation) Detection
+        "amd_detection": {
+            "manipulation_found": amd_detection['manipulation_found'],
+            "type": amd_detection['type'],  # 'bear_trap' or 'bull_trap'
+            "level": round(amd_detection['level'], 2) if amd_detection['level'] else None,
+            "confidence": amd_detection['confidence'],
+            "override_signal": amd_detection['override_signal'],
+            "description": amd_detection['description'],
+            "recovery_pts": amd_detection['recovery_pts'],
+            "time": amd_detection['time'],
+            "is_active": amd_detection['is_active'],
+            "override_applied": amd_override_applied,
+            # NEW: Full AMD context (accumulation, distribution, sequence)
+            "accumulation_zones": amd_detection.get('accumulation_zones', []),
+            "distribution_zones": amd_detection.get('distribution_zones', []),
+            "amd_sequence": amd_detection.get('amd_sequence'),
+            "mtf_range": amd_detection.get('mtf_range')
         },
         # NEW: Confirmation Stack
         "confirmation_stack": {
@@ -8155,6 +8416,7 @@ async def get_ai_chat_history(
         user = await auth_service.get_current_user(token)
         
         from datetime import datetime, timedelta, timezone
+        from config.supabase_config import supabase_admin as supabase
         time_threshold = (datetime.now(timezone.utc) - timedelta(hours=hours)).isoformat()
         
         # Fetch chat history
@@ -8432,13 +8694,13 @@ async def debug_auth_status(authorization: str = Header(None)):
         token = authorization.split(' ')[1]
         
         # Try to decode/validate the token
-        from src.auth.auth_config import verify_token
+        # Use auth_service to validate token (verify_token is not exposed directly)
         try:
-            user_data = verify_token(token)
+            user_data = await auth_service.get_current_user(token)
             return {
                 "status": "success",
                 "message": "Token is valid",
-                "user_id": user_data.get("sub") or user_data.get("user_id"),
+                "user_id": str(user_data.id) if hasattr(user_data, 'id') else user_data.get("sub") or user_data.get("user_id"),
                 "token_type": "valid_jwt",
                 "has_user_data": bool(user_data)
             }
@@ -8752,54 +9014,35 @@ async def scan_options(
             logger.info(f"⚠️ Probability analysis disabled (INDEX_ANALYSIS_AVAILABLE={INDEX_ANALYSIS_AVAILABLE})")
         # ====================================================================
         
-        # Get option chain data - FAIL if no live data available
-        # We do NOT return demo data in production to prevent:
-        # 1. Charging users for failed scans
-        # 2. Showing misleading demo signals
+        # Get option chain data - Try to get live data, but continue with analysis if unavailable
+        # When market is closed, we can still provide signal analysis using historical data
+        chain = None
+        option_chain_available = False
+        option_chain_error = None
+        
         try:
             logger.info(f"🎯 Getting index analyzer for {index}...")
             analyzer = get_index_analyzer(fyers_client)
             logger.info(f"🎯 Calling analyze_option_chain for {index}/{expiry}...")
             chain = analyzer.analyze_option_chain(index.upper(), expiry)
             
-            if not chain:
-                logger.error(f"❌ No option chain data available for {index}.")
-                raise HTTPException(
-                    status_code=503,
-                    detail={
-                        "error": "MARKET_DATA_UNAVAILABLE",
-                        "message": "Market data is currently unavailable. Markets operate from 9:15 AM to 3:30 PM IST.",
-                        "action_required": "Please try again during market hours."
-                    }
-                )
+            if chain:
+                option_chain_available = True
+                logger.info(f"✅ Option chain data available for {index}")
+            else:
+                logger.warning(f"⚠️ No option chain data available for {index} - market may be closed")
+                option_chain_error = "Option chain unavailable - market may be closed"
                 
-        except HTTPException:
-            raise  # Re-raise HTTP exceptions as-is
         except Exception as chain_error:
             error_msg = str(chain_error)
-            # Check if it's a market closed error
-            if "429" in error_msg or "Market" in error_msg:
-                logger.error(f"❌ Market data unavailable: {chain_error}")
-                raise HTTPException(
-                    status_code=503,
-                    detail={
-                        "error": "MARKET_CLOSED",
-                        "message": "Markets are closed. Trading hours: 9:15 AM - 3:30 PM IST.",
-                        "action_required": "Please try again during market hours."
-                    }
-                )
-            logger.error(f"❌ Option chain analysis failed: {chain_error}")
-            raise HTTPException(
-                status_code=503,
-                detail={
-                    "error": "FYERS_DATA_UNAVAILABLE",
-                    "message": f"Failed to fetch option chain data: {str(chain_error)}",
-                    "action_required": "Please check your Fyers connection and try again."
-                }
-            )
+            logger.warning(f"⚠️ Option chain fetch failed: {chain_error}")
+            option_chain_error = error_msg
+            # Continue without option chain - we can still provide signal analysis
         
-        # Process options for scanning
-        scanned_options = process_options_scan(chain, min_volume, min_oi, strategy)
+        # Process options for scanning (only if chain is available)
+        scanned_options = []
+        if chain:
+            scanned_options = process_options_scan(chain, min_volume, min_oi, strategy)
         
         # If we have a recommended option type, boost those options' scores
         if recommended_option_type and recommended_option_type in ["CALL", "PUT"]:
@@ -8951,6 +9194,44 @@ async def scan_options(
         # Generate a scan_id for linking opportunities to this scan
         scan_id = str(uuid.uuid4())
         
+        # Build market_data based on whether option chain is available
+        if chain:
+            market_data = {
+                "spot_price": chain.spot_price,
+                "atm_strike": chain.atm_strike,
+                "vix": getattr(chain, 'vix', None),
+                "expiry_date": chain.expiry_date,
+                "days_to_expiry": chain.days_to_expiry,
+                "future_price": chain.future_price,
+                "pcr_oi": chain.pcr_oi
+            }
+        else:
+            # No option chain available - use placeholder data
+            # Try to get spot price from cached candle data
+            cached_spot = None
+            try:
+                # Get last known spot price from candle cache if available
+                for cache_key in CANDLE_CACHE:
+                    if index.upper() in cache_key:
+                        candles, _ = CANDLE_CACHE[cache_key]
+                        if candles is not None and not candles.empty:
+                            cached_spot = candles['close'].iloc[-1]
+                            break
+            except:
+                pass
+            
+            market_data = {
+                "spot_price": cached_spot,
+                "atm_strike": None,
+                "vix": None,
+                "expiry_date": None,
+                "days_to_expiry": None,
+                "future_price": None,
+                "pcr_oi": None,
+                "option_chain_unavailable": True,
+                "option_chain_error": option_chain_error
+            }
+        
         result = {
             "status": "success",
             "scan_time": datetime.now().isoformat(),
@@ -8969,15 +9250,8 @@ async def scan_options(
                 "estimated_api_calls": "50-100" if quick_scan else "100-150",
                 "estimated_time": "90-180 seconds" if quick_scan else "3-5 minutes"
             },
-            "market_data": {
-                "spot_price": chain.spot_price,
-                "atm_strike": chain.atm_strike,
-                "vix": getattr(chain, 'vix', None),
-                "expiry_date": chain.expiry_date,
-                "days_to_expiry": chain.days_to_expiry,
-                "future_price": chain.future_price,
-                "pcr_oi": chain.pcr_oi
-            },
+            "market_data": market_data,
+            "option_chain_available": option_chain_available,
             "probability_analysis": probability_analysis,
             "mtf_ict_analysis": mtf_analysis_result,  # NEW: MTF/ICT analysis on index chart
             "recommended_option_type": recommended_option_type,
@@ -8988,33 +9262,34 @@ async def scan_options(
             "data_source": data_source
         }
         
-        # 🆕 Save scan opportunities to database
-        try:
-            save_opps_result = await screener_service.save_scan_opportunities(
-                user_id=str(user.id),
-                scan_id=scan_id,
-                index=index.upper(),
-                expiry_date=chain.expiry_date,
-                scan_mode="quick" if quick_scan else "full",
-                options=scanned_options,
-                market_data={
-                    "spot_price": chain.spot_price,
-                    "future_price": chain.future_price,
-                    "pcr_oi": chain.pcr_oi,
-                    "vix": getattr(chain, 'vix', None)
-                },
-                recommended_strike=scanned_options[0].get("strike") if scanned_options else None,
-                recommended_type=recommended_option_type,
-                max_options=20  # Save top 20 options
-            )
+        # 🆕 Save scan opportunities to database (only if chain is available)
+        if chain and scanned_options:
+            try:
+                save_opps_result = await screener_service.save_scan_opportunities(
+                    user_id=str(user.id),
+                    scan_id=scan_id,
+                    index=index.upper(),
+                    expiry_date=chain.expiry_date,
+                    scan_mode="quick" if quick_scan else "full",
+                    options=scanned_options,
+                    market_data={
+                        "spot_price": chain.spot_price,
+                        "future_price": chain.future_price,
+                        "pcr_oi": chain.pcr_oi,
+                        "vix": getattr(chain, 'vix', None)
+                    },
+                    recommended_strike=scanned_options[0].get("strike") if scanned_options else None,
+                    recommended_type=recommended_option_type,
+                    max_options=20  # Save top 20 options
+                )
             
-            if save_opps_result.get("saved"):
-                logger.info(f"✅ Saved {save_opps_result.get('count')} scan opportunities")
-                result["opportunities_saved"] = save_opps_result.get("count")
-            else:
-                logger.warning(f"⚠️ Could not save scan opportunities: {save_opps_result.get('error')}")
-        except Exception as save_err:
-            logger.warning(f"⚠️ Error saving scan opportunities (non-fatal): {save_err}")
+                if save_opps_result.get("saved"):
+                    logger.info(f"✅ Saved {save_opps_result.get('count')} scan opportunities")
+                    result["opportunities_saved"] = save_opps_result.get("count")
+                else:
+                    logger.warning(f"⚠️ Could not save scan opportunities: {save_opps_result.get('error')}")
+            except Exception as save_err:
+                logger.warning(f"⚠️ Error saving scan opportunities (non-fatal): {save_err}")
         
         # Sanitize numpy types for JSON serialization
         return sanitize_for_json(result)

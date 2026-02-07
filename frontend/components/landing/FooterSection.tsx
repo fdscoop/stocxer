@@ -44,7 +44,7 @@ export default function FooterSection() {
                             </div>
                             <div>
                                 <span className="text-xl font-bold text-white">Stocxer AI</span>
-                                <div className="text-xs text-purple-400">Powered by Watchman AI v3.5</div>
+                                <div className="text-xs text-purple-400">Powered by Watchman AI v4.0</div>
                             </div>
                         </div>
 

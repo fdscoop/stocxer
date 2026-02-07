@@ -47,6 +47,19 @@ export interface OptionAwareSignal {
         spot_price: number
         expected_move: number
     }
+    // NEW: AMD (Manipulation) Detection
+    amd_detection?: {
+        manipulation_found: boolean
+        type: 'bear_trap' | 'bull_trap' | null
+        level: number | null
+        confidence: number
+        override_signal: 'bullish' | 'bearish' | null
+        description: string | null
+        recovery_pts: number
+        time: string | null
+        is_active: boolean
+        override_applied: boolean
+    }
     lot_size?: number
     reasoning?: string[]
     timestamp?: string
@@ -187,6 +200,7 @@ export function OptionAwareSignalCard({
     const targets = signal.targets
     const rr = signal.risk_reward
     const ctx = signal.index_context
+    const amd = signal.amd_detection
 
     return (
         <Card className={cn('border-purple-500/30', className)}>
@@ -238,6 +252,60 @@ export function OptionAwareSignalCard({
                         <div className="text-xs text-yellow-500">Move: {ctx?.expected_move}pts</div>
                     </div>
                 </div>
+
+                {/* AMD (Manipulation) Detection Alert */}
+                {amd?.manipulation_found && (
+                    <div className={cn(
+                        "rounded-xl p-4 border space-y-2",
+                        amd.type === 'bear_trap' 
+                            ? "bg-green-900/30 border-green-500/50" 
+                            : "bg-red-900/30 border-red-500/50"
+                    )}>
+                        <div className="flex items-center gap-2">
+                            <span className="text-xl">{amd.type === 'bear_trap' ? '🐻' : '🐂'}</span>
+                            <h4 className={cn(
+                                "text-sm font-bold",
+                                amd.type === 'bear_trap' ? "text-green-300" : "text-red-300"
+                            )}>
+                                {amd.type === 'bear_trap' ? 'BEAR TRAP DETECTED' : 'BULL TRAP DETECTED'}
+                                {amd.override_applied && (
+                                    <Badge variant="outline" className="ml-2 bg-yellow-600/30 text-yellow-300">
+                                        OVERRIDE
+                                    </Badge>
+                                )}
+                            </h4>
+                            {amd.is_active && (
+                                <Badge variant="outline" className="bg-blue-600/30 animate-pulse">
+                                    ACTIVE
+                                </Badge>
+                            )}
+                        </div>
+                        
+                        <div className="grid grid-cols-3 gap-2 text-center">
+                            <div className="bg-muted/50 rounded p-2">
+                                <div className="text-xs text-muted-foreground">Level</div>
+                                <div className="text-sm font-bold">₹{amd.level?.toLocaleString()}</div>
+                            </div>
+                            <div className="bg-muted/50 rounded p-2">
+                                <div className="text-xs text-muted-foreground">Recovery</div>
+                                <div className="text-sm font-bold text-bullish">+{amd.recovery_pts}pts</div>
+                            </div>
+                            <div className="bg-muted/50 rounded p-2">
+                                <div className="text-xs text-muted-foreground">Confidence</div>
+                                <div className={cn(
+                                    "text-sm font-bold",
+                                    amd.confidence >= 80 ? "text-green-400" : "text-yellow-400"
+                                )}>{amd.confidence}%</div>
+                            </div>
+                        </div>
+                        
+                        {amd.description && (
+                            <div className="text-xs text-muted-foreground bg-muted/30 rounded p-2 mt-2">
+                                💡 {amd.description}
+                            </div>
+                        )}
+                    </div>
+                )}
 
                 {/* Option Details */}
                 {option && (

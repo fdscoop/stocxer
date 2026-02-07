@@ -78,7 +78,7 @@ const plans: PlanOption[] = [
         period: 'month',
         features: [
             '30,000 scans/month',
-            'Watchman AI v3.5',
+            'Watchman AI v4.0',
             '25 stocks per bulk scan',
             'Email support'
         ],

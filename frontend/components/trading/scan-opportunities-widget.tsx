@@ -49,6 +49,8 @@ interface ScanOpportunitiesWidgetProps {
   index?: string
   apiUrl: string
   token: string
+  signalOptionType?: string  // 'CE' | 'PE' from signal
+  signalAction?: string  // 'BUY CALL' | 'BUY PUT' from signal
   onSelectOption?: (option: ScanOpportunity) => void
 }
 
@@ -57,17 +59,31 @@ export function ScanOpportunitiesWidget({
   index, 
   apiUrl, 
   token,
+  signalOptionType,
+  signalAction,
   onSelectOption 
 }: ScanOpportunitiesWidgetProps) {
   const [opportunities, setOpportunities] = useState<ScanOpportunity[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [expanded, setExpanded] = useState(false)
-  const [activeTab, setActiveTab] = useState<'all' | 'calls' | 'puts'>('all')
+  
+  // Auto-select tab based on signal direction
+  const getDefaultTab = (): 'all' | 'calls' | 'puts' => {
+    if (signalOptionType === 'PE' || signalAction?.includes('PUT')) return 'puts'
+    if (signalOptionType === 'CE' || signalAction?.includes('CALL')) return 'calls'
+    return 'all'
+  }
+  const [activeTab, setActiveTab] = useState<'all' | 'calls' | 'puts'>(getDefaultTab())
 
   useEffect(() => {
     fetchOpportunities()
   }, [scanId, index])
+
+  // Update tab when signal direction changes
+  useEffect(() => {
+    setActiveTab(getDefaultTab())
+  }, [signalOptionType, signalAction])
 
   const fetchOpportunities = async () => {
     try {
@@ -177,6 +193,13 @@ export function ScanOpportunitiesWidget({
             </CardTitle>
             <CardDescription>
               Top {opportunities.length} options from latest scan
+              {signalAction && (
+                <span className={`ml-2 font-medium ${
+                  signalAction.includes('PUT') ? 'text-red-400' : 'text-green-400'
+                }`}>
+                  • Signal: {signalAction}
+                </span>
+              )}
             </CardDescription>
           </div>
           <Badge variant="outline" className="text-blue-400 border-blue-400">

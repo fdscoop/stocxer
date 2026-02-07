@@ -421,6 +421,19 @@ interface TradingSignal {
     available_modules?: string[]
     timestamp?: string
   }
+  // AMD (Accumulation, Manipulation, Distribution) Detection
+  amd_detection?: {
+    manipulation_found: boolean
+    type?: 'bear_trap' | 'bull_trap' | null
+    level?: number | null
+    confidence: number
+    override_signal?: 'bullish' | 'bearish' | null
+    description?: string | null
+    recovery_pts: number
+    time?: string | null
+    is_active: boolean
+    override_applied?: boolean
+  }
 }
 
 interface NewsArticle {
@@ -444,12 +457,15 @@ interface ScanResults {
   spot_price?: number
   timestamp?: string
   market_sentiment?: string
+  option_chain_available?: boolean
   market_data?: {
     spot_price: number
     atm_strike: number
     vix?: number
     expiry_date: string
     days_to_expiry: number
+    option_chain_unavailable?: boolean
+    option_chain_error?: string
   }
   data_source?: 'live' | 'demo'
   mtf_ict_analysis?: {
@@ -1058,6 +1074,32 @@ export default function DashboardPage() {
     const token = localStorage.getItem('auth_token') || localStorage.getItem('token') || localStorage.getItem('jwt_token')
     if (!token) return
 
+    // ========== EARLY FYERS AUTH CHECK ==========
+    // Verify Fyers is actually authenticated before spending time/credits on scan
+    try {
+      const apiUrl = getApiUrl()
+      const fyersCheck = await fetch(`${apiUrl}/api/fyers/token/status`)
+      if (fyersCheck.ok) {
+        const fyersStatus = await fyersCheck.json()
+        if (!fyersStatus.has_token || fyersStatus.status === 'no_token' || fyersStatus.status === 'expired') {
+          console.warn('🔐 Fyers not authenticated, blocking scan')
+          setToast({
+            message: '🔐 Fyers broker connection required to scan. Connecting now...',
+            type: 'error'
+          })
+          setTimeout(() => {
+            setToast(null)
+            openFyersAuthPopup()
+          }, 1500)
+          return
+        }
+      }
+    } catch (fyersCheckErr) {
+      console.warn('⚠️ Could not verify Fyers status, proceeding with scan:', fyersCheckErr)
+      // Don't block scan if the status check itself fails - let it proceed
+    }
+    // ========== END FYERS AUTH CHECK ==========
+
     setLoading(true)
     setLoadingMessage('Loading Data...')
     setLoadingProgress(0)
@@ -1225,21 +1267,99 @@ export default function DashboardPage() {
         }
       })
 
+      // Handle signal fetch errors (especially Fyers auth issues)
+      if (!signalResponse.ok) {
+        const signalErrorData = await signalResponse.json().catch(() => ({}))
+        const signalDetail = typeof signalErrorData.detail === 'object' 
+          ? signalErrorData.detail 
+          : { message: signalErrorData.detail || 'Signal generation failed' }
+
+        console.error('❌ Signal fetch failed:', signalResponse.status, signalDetail)
+
+        // Handle Fyers authentication required (503)
+        if (signalResponse.status === 503 && signalDetail.error === 'FYERS_AUTH_REQUIRED') {
+          setToast({
+            message: '🔐 Fyers authentication required. Please connect your broker account.',
+            type: 'error'
+          })
+          updateStep('6', 'error', 85)
+          setLoading(false)
+          
+          // Show Fyers auth popup after a short delay
+          setTimeout(() => {
+            setToast(null)
+            openFyersAuthPopup()
+          }, 2000)
+          return
+        }
+
+        // Handle other 503 errors
+        if (signalResponse.status === 503) {
+          setToast({
+            message: `⚠️ ${signalDetail.message || 'Service unavailable. Please try again.'}`,
+            type: 'error'
+          })
+          updateStep('6', 'error', 85)
+          setLoading(false)
+          return
+        }
+
+        // Handle 500 errors
+        if (signalResponse.status === 500) {
+          setToast({
+            message: `❌ ${signalDetail.message || 'Signal generation failed. Please try again.'}`,
+            type: 'error'
+          })
+          updateStep('6', 'error', 85)
+          setLoading(false)
+          return
+        }
+
+        // For other errors, show message but try fallback
+        console.warn('⚠️ Signal fetch failed, will attempt fallback calculation')
+      }
+
       if (signalResponse.ok) {
         const backendSignal = await signalResponse.json()
+
+        // Check if backend returned an error signal
+        if (backendSignal.signal === 'ERROR') {
+          console.error('❌ Backend returned error signal:', backendSignal.reason)
+          setToast({
+            message: `⚠️ Signal Error: ${backendSignal.reason || 'Failed to generate signal'}`,
+            type: 'error'
+          })
+          updateStep('6', 'error', 85)
+          setLoading(false)
+          return
+        }
 
         // Step 6 complete
         updateStep('6', 'complete', 100)
         setLoadingProgress(100)
 
         // Map backend signal to frontend format
-        // Use reversal_probability from setup_details as the numeric confidence (72% etc)
-        // backendSignal.confidence is a string like "HIGH", "VERY HIGH" etc
-        const numericConfidence = backendSignal.setup_details?.reversal_probability ||
-          (backendSignal.confidence === 'VERY HIGH' ? 85 :
+        // Handle both new format (object with score/level) and legacy format (string)
+        let numericConfidence: number
+        
+        if (backendSignal.confidence_breakdown?.total) {
+          // NEW: Use confidence_breakdown.total (the actual calculated score)
+          numericConfidence = Math.round(backendSignal.confidence_breakdown.total)
+        } else if (typeof backendSignal.confidence === 'object' && backendSignal.confidence?.score !== undefined) {
+          // NEW FORMAT: confidence is an object { score: 26.5, level: "AVOID" }
+          numericConfidence = Math.round(backendSignal.confidence.score)
+        } else if (backendSignal.setup_details?.reversal_probability) {
+          numericConfidence = backendSignal.setup_details.reversal_probability
+        } else if (typeof backendSignal.confidence === 'string') {
+          // LEGACY FORMAT: confidence is a string like "HIGH", "VERY HIGH"
+          numericConfidence = 
+            backendSignal.confidence === 'VERY HIGH' ? 85 :
             backendSignal.confidence === 'HIGH' ? 72 :
-              backendSignal.confidence === 'MODERATE' ? 55 :
-                backendSignal.confidence === 'MEDIUM' ? 50 : 35)
+            backendSignal.confidence === 'MODERATE' ? 55 :
+            backendSignal.confidence === 'MEDIUM' ? 50 : 35
+        } else {
+          numericConfidence = 35 // Default fallback
+        }
 
         // Get entry price - prefer best_entry_price from discount zone analysis
         const entryPrice = backendSignal.entry.best_entry_price || backendSignal.entry.price
@@ -1499,7 +1619,21 @@ export default function DashboardPage() {
           } : undefined,
 
           // Keep legacy for backward compatibility
-          confidence_adjustments: backendSignal.confidence_adjustments
+          confidence_adjustments: backendSignal.confidence_adjustments,
+
+          // AMD (Manipulation) Detection - NEW Feb 2026
+          amd_detection: backendSignal.amd_detection ? {
+            manipulation_found: backendSignal.amd_detection.manipulation_found,
+            type: backendSignal.amd_detection.type,
+            level: backendSignal.amd_detection.level,
+            confidence: backendSignal.amd_detection.confidence,
+            override_signal: backendSignal.amd_detection.override_signal,
+            description: backendSignal.amd_detection.description,
+            recovery_pts: backendSignal.amd_detection.recovery_pts,
+            time: backendSignal.amd_detection.time,
+            is_active: backendSignal.amd_detection.is_active,
+            override_applied: backendSignal.amd_detection.override_applied
+          } : undefined
         }
 
         setTradingSignal(tradingSignal)
@@ -1839,6 +1973,24 @@ export default function DashboardPage() {
               </div>
             </CardHeader>
             <CardContent className="space-y-4">
+              {/* Option Chain Unavailable Warning */}
+              {scanResults.option_chain_available === false && (
+                <div className="p-3 bg-yellow-500/20 rounded-lg border border-yellow-500/50">
+                  <div className="flex items-center gap-2">
+                    <span className="text-2xl">⚠️</span>
+                    <div>
+                      <div className="text-sm font-bold text-yellow-400">Option Chain Data Unavailable</div>
+                      <div className="text-xs text-yellow-300/80 mt-1">
+                        {scanResults.market_data?.option_chain_error || 'Market may be closed. Signal analysis shown is based on historical index data only.'}
+                      </div>
+                      <div className="text-xs text-yellow-200/60 mt-1">
+                        💡 No specific options are displayed. Re-scan during market hours (9:15 AM - 3:30 PM IST) for option chain data.
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+              
               {/* WAIT/AVOID Warning if applicable */}
               {(tradingSignal.action.includes('WAIT') || tradingSignal.action.includes('AVOID')) && (
                 <div className={`p-3 rounded-lg border ${tradingSignal.action.includes('AVOID')
@@ -1861,6 +2013,55 @@ export default function DashboardPage() {
                       </p>
                     )}
                   </div>
+                </div>
+              )}
+
+              {/* AMD (Manipulation) Detection Alert - NEW Feb 2026 */}
+              {tradingSignal.amd_detection?.manipulation_found && (
+                <div className={`p-4 rounded-lg border ${
+                  tradingSignal.amd_detection.type === 'bear_trap'
+                    ? 'bg-green-900/30 border-green-500/50'
+                    : 'bg-red-900/30 border-red-500/50'
+                }`}>
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="text-2xl">{tradingSignal.amd_detection.type === 'bear_trap' ? '🐻' : '🐂'}</span>
+                    <span className={`font-bold ${
+                      tradingSignal.amd_detection.type === 'bear_trap' ? 'text-green-400' : 'text-red-400'
+                    }`}>
+                      {tradingSignal.amd_detection.type === 'bear_trap' ? 'BEAR TRAP DETECTED' : 'BULL TRAP DETECTED'}
+                    </span>
+                    {tradingSignal.amd_detection.override_applied && (
+                      <Badge variant="outline" className="bg-yellow-600/30 text-yellow-300 border-yellow-500">
+                        OVERRIDE
+                      </Badge>
+                    )}
+                    {tradingSignal.amd_detection.is_active && (
+                      <Badge variant="outline" className="bg-blue-600/30 text-blue-300 border-blue-500 animate-pulse">
+                        ACTIVE
+                      </Badge>
+                    )}
+                  </div>
+                  <div className="grid grid-cols-3 gap-2 text-center">
+                    <div className="bg-muted/50 rounded p-2">
+                      <div className="text-xs text-muted-foreground">Trap Level</div>
+                      <div className="text-sm font-bold">₹{tradingSignal.amd_detection.level?.toLocaleString()}</div>
+                    </div>
+                    <div className="bg-muted/50 rounded p-2">
+                      <div className="text-xs text-muted-foreground">Recovery</div>
+                      <div className="text-sm font-bold text-green-400">+{tradingSignal.amd_detection.recovery_pts}pts</div>
+                    </div>
+                    <div className="bg-muted/50 rounded p-2">
+                      <div className="text-xs text-muted-foreground">Confidence</div>
+                      <div className={`text-sm font-bold ${
+                        tradingSignal.amd_detection.confidence >= 80 ? 'text-green-400' : 'text-yellow-400'
+                      }`}>{tradingSignal.amd_detection.confidence}%</div>
+                    </div>
+                  </div>
+                  {tradingSignal.amd_detection.description && (
+                    <div className="text-xs text-muted-foreground bg-muted/30 rounded p-2 mt-2">
+                      💡 {tradingSignal.amd_detection.description}
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -2658,6 +2859,45 @@ export default function DashboardPage() {
                       </div>
                     </div>
                   )}
+
+                  {/* ============ DIVERGENCE WARNING ============ */}
+                  {/* Show warning when signal direction conflicts with constituent sentiment */}
+                  {(() => {
+                    const signalAction = tradingSignal.action?.toUpperCase();
+                    const constituentRec = tradingSignal.probability_analysis.constituent_recommendation?.toUpperCase();
+                    const bullishPct = tradingSignal.probability_analysis.bullish_pct || 0;
+                    const bearishPct = tradingSignal.probability_analysis.bearish_pct || 0;
+                    
+                    // Detect divergence: Signal says one thing, constituents say another
+                    const signalIsBullish = signalAction === 'CALL' || signalAction === 'BUY';
+                    const signalIsBearish = signalAction === 'PUT' || signalAction === 'SELL';
+                    const constituentsBullish = bullishPct > 55; // More than 55% stocks bullish
+                    const constituentsBearish = bearishPct > 55; // More than 55% stocks bearish
+                    
+                    const hasDivergence = (signalIsBullish && constituentsBearish) || (signalIsBearish && constituentsBullish);
+                    
+                    if (hasDivergence) {
+                      const divergenceText = signalIsBearish && constituentsBullish
+                        ? `Signal suggests ${signalAction} (bearish), but ${bullishPct.toFixed(0)}% of constituent stocks are bullish`
+                        : `Signal suggests ${signalAction} (bullish), but ${bearishPct.toFixed(0)}% of constituent stocks are bearish`;
+                      
+                      return (
+                        <div className="mt-3 p-3 bg-orange-500/20 rounded-lg border-2 border-orange-500/50 animate-pulse">
+                          <div className="flex items-center gap-2">
+                            <span className="text-2xl">⚠️</span>
+                            <div>
+                              <div className="text-sm font-bold text-orange-400">SIGNAL ↔ CONSTITUENT DIVERGENCE</div>
+                              <div className="text-xs text-orange-300 mt-1">{divergenceText}</div>
+                              <div className="text-xs text-orange-200/70 mt-1">
+                                💡 This mismatch often indicates a potential trap or low-conviction setup. Consider waiting for alignment.
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    }
+                    return null;
+                  })()}
                 </div>
               )}
 
@@ -2951,6 +3191,8 @@ export default function DashboardPage() {
             index={selectedIndex}
             apiUrl={getApiUrl()}
             token={localStorage.getItem('auth_token') || localStorage.getItem('token') || ''}
+            signalOptionType={tradingSignal.type}
+            signalAction={tradingSignal.action}
             onSelectOption={(option) => {
               console.log('Selected alternative option:', option)
               // TODO: Handle option selection to update the signal
